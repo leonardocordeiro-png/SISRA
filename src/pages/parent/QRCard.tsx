@@ -335,22 +335,22 @@ export default function ParentQRCard() {
                     #qr-card-printable .h-12 { height: 8mm !important; }
 
                     /* Fix for info boxes (CPF, Code, Validity) in Parent View */
-                    #qr-card-printable .grid-cols-2.lg\:grid-cols-3 {
+                    #qr-card-printable .grid-cols-2.lg:grid-cols-3 {
                         display: grid !important;
                         grid-template-columns: repeat(3, 1fr) !important;
                         gap: 2mm !important;
                     }
-                    #qr-card-printable .grid-cols-2.lg\:grid-cols-3 > div {
+                    #qr-card-printable .grid-cols-2.lg:grid-cols-3 > div {
                         padding: 2mm 1.5mm !important;
                         border-radius: 4mm !important;
                     }
-                    #qr-card-printable .grid-cols-2.lg\:grid-cols-3 p:first-child {
+                    #qr-card-printable .grid-cols-2.lg:grid-cols-3 p:first-child {
                         font-size: 8px !important;
                         margin-bottom: 1mm !important;
                     }
-                    #qr-card-printable .grid-cols-2.lg\:grid-cols-3 p:last-child,
-                    #qr-card-printable .grid-cols-2.lg\:grid-cols-3 .text-sm,
-                    #qr-card-printable .grid-cols-2.lg\:grid-cols-3 .text-base {
+                    #qr-card-printable .grid-cols-2.lg:grid-cols-3 p:last-child,
+                    #qr-card-printable .grid-cols-2.lg:grid-cols-3 .text-sm,
+                    #qr-card-printable .grid-cols-2.lg:grid-cols-3 .text-base {
                         font-size: 10px !important;
                         letter-spacing: normal !important;
                     }

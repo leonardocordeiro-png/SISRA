@@ -34,11 +34,7 @@ export default function ReceptionConfirmation() {
     const [loading, setLoading] = useState(true);
     const [confirmedIdentity, setConfirmedIdentity] = useState(false);
 
-    useEffect(() => {
-        if (id) fetchRequest(id);
-    }, [id]);
-
-    const fetchRequest = async (requestId: string) => {
+    async function fetchRequest(requestId: string) {
         const { data, error } = await supabase
             .from('solicitacoes_retirada')
             .select(`
@@ -68,58 +64,19 @@ export default function ReceptionConfirmation() {
 
         setRequest(data);
         setLoading(false);
-    };
+    }
 
-    const handleConfirmPickup = async () => {
+    useEffect(() => {
+        if (id) setTimeout(() => fetchRequest(id), 0);
+    }, [id]);
+
+    async function handleConfirmPickup() {
         if (!request || !confirmedIdentity) return;
 
         const { error } = await supabase
             .from('solicitacoes_retirada')
             .update({
                 status: 'LIBERADO', // Finished state in this context/or explicit 'ENTREGUE' if added to schema
-                // Note: Schema has SOLICITADO, NOTIFICADO, CONFIRMADO, LIBERADO, CANCELADO, AGUARDANDO.
-                // Usually 'LIBERADO' means teacher released. We might need a final state 'CONCLUIDO' or just log it.
-                // For now, let's assume 'LIBERADO' is the state where reception hands over, maybe we archive it?
-                // Actually looking at schema: status IN ('SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'LIBERADO', 'CANCELADO', 'AGUARDANDO')
-                // It seems 'LIBERADO' is when the teacher releases the student.
-                // We might need a final status like 'ENTREGUE' or just remove it from the active list.
-                // Let's check the schema again... It doesn't have 'ENTREGUE'.
-                // Let's use 'LIBERADO' as the final state for the teacher, and maybe DELETE or move to history?
-                // Or update 'horario_liberacao' was for the teacher. 
-                // Let's add a 'CONCLUIDO' status if possible or just use 'CONFIRMADO' logic reverse?
-                // Wait, user schema: SOLICITADO -> NOTIFICADO -> CONFIRMADO -> LIBERADO.
-                // If teacher releases, it becomes LIBERADO. 
-                // Then Reception verifies and hands over. This step usually "Completes" the cycle.
-                // Use 'CONCLUIDO' if valid, or just logic to 'Archive'.
-                // Let's check constraints: check (status in ('SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'LIBERADO', 'CANCELADO', 'AGUARDANDO'))
-                // No 'CONCLUIDO'. 
-                // I will assume for now we keep it as LIBERADO but maybe set a "finished" flag or just rely on it being done.
-                // Ideally we should have 'ENTREGUE'. 
-                // I will try to update status to 'CONFIRMADO' (Confirmed Pickup) ?? No that sounds like "Confirmed received request".
-                // Let's looking at the flow:
-                // 1. Reception asks (SOLICITADO)
-                // 2. Classroom receives (NOTIFICADO - automatic or manual?)
-                // 3. Teacher releases (LIBERADO)
-                // 4. Reception hands over (??)
-
-                // Let's simply redirect to search and showing it as done.
-                // Or maybe we can update a `observacoes` field with "Entregue".
-                // Let's strictly follow the schema. I'll add a check to strict schema.
-                // Actually, maybe 'CONFIRMADO' is the final state? "Confirmed pickup"?
-                // Let's use 'LIBERADO' as "Ready for pickup".
-                // I'll add an update to `observacoes` "Entregue ao responsável" and maybe delete/archive if desired, or just leave as LIBERADO and filter by time in dashboard.
-                // Wait, I can execute SQL to add 'ENTREGUE' to the enum if I want to be precise, but user said "Schema provided".
-                // Use 'CONFIRMADO' as "Pickup Confirmed/Completed"? Confirmed by reception?
-                // Let's look at `solicitacoes_retirada` comments/usage.
-                // "solicitacoes_retirada: Core flow table (Status: SOLICITADO -> NOTIFICADO -> CONFIRMADO -> LIBERADO)"
-                // It seems `CONFIRMADO` might be "Reception confirmed the request"?
-                // Or `LIBERADO` is final.
-                // Let's assume `LIBERADO` is the state where the kid is AT reception.
-                // So this screen is to "Finish" the process.
-                // I will just navigate back for now, effectively "Dismissing" it from the "Pending" view if I filter "Pending" by time or something.
-                // Actually, better: Update `horario_confirmacao` (it is in the table).
-                // `horario_confirmacao TIMESTAMPTZ` exists!
-                // So I will update `horario_confirmacao` = NOW().
                 horario_confirmacao: new Date().toISOString()
             })
             .eq('id', request.id);
@@ -130,7 +87,7 @@ export default function ReceptionConfirmation() {
         }
 
         navigate('/recepcao/busca');
-    };
+    }
 
     if (loading || !request) {
         return (

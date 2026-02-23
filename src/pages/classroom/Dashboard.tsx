@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Bell, Clock, LogOut, Check, X, User as UserIcon, Volume2, VolumeX, Send, AlertTriangle, MessageSquare } from 'lucide-react';
@@ -17,12 +17,12 @@ type PickupRequest = {
         nome_completo: string;
         turma: string;
         sala: string;
-        foto_url: string;
-        observacoes?: string;
+        foto_url: string | null;
+        observacoes: string | null;
     };
-    mensagem_recepcao?: string;
-    status_geofence?: string;
-    distancia_estimada_metros?: number;
+    mensagem_recepcao: string | null;
+    status_geofence: string | null;
+    distancia_estimada_metros: number | null;
 };
 
 export default function ClassroomDashboard() {
@@ -38,7 +38,6 @@ export default function ClassroomDashboard() {
     const [customNote, setCustomNote] = useState('');
     const [sendingNote, setSendingNote] = useState(false);
     const [escolaId, setEscolaId] = useState<string | undefined>();
-    const [prevTotalRequests, setPrevTotalRequests] = useState(0);
 
     // Fetch teacher's assigned class or all classes if admin/coordinator
     useEffect(() => {
@@ -80,49 +79,54 @@ export default function ClassroomDashboard() {
         }
     }, [user, role]);
 
-    // Sound notification logic when requests change
-    useEffect(() => {
-        if (requests.length > prevTotalRequests) {
-            if (soundEnabled) {
-                playNotificationSound();
-            }
-        }
-        setPrevTotalRequests(requests.length);
-    }, [requests.length, soundEnabled]);
-
-    // Auto-select and details sync
-    useEffect(() => {
-        if (requests.length > 0) {
-            if (!activeRequest) {
-                setActiveRequest(requests[0]);
-            } else {
-                const refreshed = requests.find(r => r.id === activeRequest.id);
-                if (refreshed) {
-                    // Update if details (like message) changed
-                    if (JSON.stringify(refreshed) !== JSON.stringify(activeRequest)) {
-                        setActiveRequest(refreshed);
-                    }
-                } else {
-                    // Previous active request is no longer in queue, pick the next first one
-                    setActiveRequest(requests[0]);
-                }
-            }
-        } else {
-            setActiveRequest(null);
-        }
-    }, [requests]);
-
-    // Handle Request Selection from Pipeline
-    const handleSelectRequest = (req: any) => {
-        setActiveRequest(req);
-    };
-
     const playNotificationSound = () => {
         // High quality notification sound
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         audio.volume = 0.5;
         audio.play().catch(e => console.log('Audio play failed - ensure user interacted with page', e));
     };
+
+    const handleSelectRequest = (req: PickupRequest) => {
+        setActiveRequest(req);
+    };
+
+    const prevTotalRequestsRef = useRef(requests.length);
+
+    // Sound notification logic when requests change
+    useEffect(() => {
+        if (requests.length > prevTotalRequestsRef.current) {
+            if (soundEnabled) {
+                playNotificationSound();
+            }
+        }
+        prevTotalRequestsRef.current = requests.length;
+    }, [requests.length, soundEnabled]);
+
+    // Auto-select and details sync
+    useEffect(() => {
+        if (requests.length > 0) {
+            if (!activeRequest) {
+                const firstReq = requests[0];
+                setTimeout(() => setActiveRequest(firstReq), 0);
+            } else {
+                const refreshed = requests.find(r => r.id === activeRequest.id);
+                if (refreshed) {
+                    // Update if details (like message) changed
+                    if (JSON.stringify(refreshed) !== JSON.stringify(activeRequest)) {
+                        setTimeout(() => setActiveRequest(refreshed), 0);
+                    }
+                } else {
+                    // Previous active request is no longer in queue, pick the next first one
+                    const nextReq = requests[0];
+                    setTimeout(() => setActiveRequest(nextReq), 0);
+                }
+            }
+        } else {
+            if (activeRequest) {
+                setTimeout(() => setActiveRequest(null), 0);
+            }
+        }
+    }, [requests]);
 
     // Requests are handled by PriorityPipeline now
 
@@ -292,7 +296,7 @@ export default function ClassroomDashboard() {
                                                 <span className="px-4 py-1.5 bg-rose-500/20 text-rose-500 border border-rose-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">Médico/Alerta</span>
                                             )}
                                         </div>
-                                        <h2 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] text-white italic">
+                                        <h2 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-tight text-white italic">
                                             {activeRequest.aluno.nome_completo.split(' ')[0]}<br />
                                             <span className="text-emerald-500">{activeRequest.aluno.nome_completo.split(' ').slice(1).join(' ')}</span>
                                         </h2>

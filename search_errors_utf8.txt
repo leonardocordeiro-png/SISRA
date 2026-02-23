@@ -1,0 +1,24 @@
+﻿
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\reception\Search.tsx
+   20:5   error  'AlertTriangle' is defined but never used              @typescript-eslint/no-unused-vars
+   21:5   error  'Eye' is defined but never used                        @typescript-eslint/no-unused-vars
+   22:5   error  'TrendingUp' is defined but never used                 @typescript-eslint/no-unused-vars
+   23:5   error  'Clock' is defined but never used                      @typescript-eslint/no-unused-vars
+   24:5   error  'Filter' is defined but never used                     @typescript-eslint/no-unused-vars
+   25:5   error  'Activity' is defined but never used                   @typescript-eslint/no-unused-vars
+   26:5   error  'Users' is defined but never used                      @typescript-eslint/no-unused-vars
+   27:5   error  'ChevronDown' is defined but never used                @typescript-eslint/no-unused-vars
+   28:5   error  'ArrowLeft' is defined but never used                  @typescript-eslint/no-unused-vars
+   29:5   error  'ArrowRight' is defined but never used                 @typescript-eslint/no-unused-vars
+  115:52  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  142:17  error  'combined' is never reassigned. Use 'const' instead    prefer-const
+  143:32  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  169:50  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  247:23  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  265:23  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  281:45  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  327:11  error  'selectedGuardian' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Ô£û 18 problems (18 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

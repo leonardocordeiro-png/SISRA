@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { CheckCircle2, AlertCircle, Info, AlertTriangle, X, Copy, ExternalLink } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════
 // TIPOS
@@ -254,4 +254,5 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 // Exportar ícones úteis para actions
-export { Copy, ExternalLink };
+// Removed re-exports of Copy and ExternalLink to satisfy Fast Refresh
+// Consumers should import them directly from lucide-react

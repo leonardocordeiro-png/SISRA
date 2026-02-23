@@ -4,13 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Clock, User as UserIcon, MessageSquare, AlertCircle, Check, MapPin } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 
-type Student = {
-    id: string;
-    nome_completo: string;
-    turma: string;
-    sala: string;
-    foto_url: string;
-};
+import type { Student } from '../../types';
 
 type PickupRequest = {
     id: string;

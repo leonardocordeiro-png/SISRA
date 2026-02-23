@@ -6,16 +6,7 @@ import domtoimage from 'dom-to-image-more';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 
-type Guardian = {
-    id: string;
-    nome_completo: string;
-    cpf: string;
-    telefone: string;
-    foto_url?: string;
-    qr_code?: string;
-    expires_at?: string;
-    codigo_acesso?: string;
-};
+import type { Guardian } from '../../types';
 
 export default function AdminQRGenerator() {
     const toast = useToast();

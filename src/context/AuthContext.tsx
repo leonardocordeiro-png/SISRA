@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => subscription.unsubscribe();
     }, []);
 
-    const fetchUserProfile = async (userId: string) => {
+    async function fetchUserProfile(userId: string) {
         try {
             const { data, error } = await supabase
                 .from('usuarios')
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     const signOut = async () => {
         await supabase.auth.signOut();

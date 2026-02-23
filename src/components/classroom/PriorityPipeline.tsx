@@ -3,11 +3,31 @@ import { supabase } from '../../lib/supabase';
 import { Clock, User as UserIcon, Check } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 
+interface Aluno {
+    id: string;
+    nome_completo: string;
+    turma: string;
+    sala: string;
+    foto_url: string | null;
+    observacoes: string | null;
+}
+
+interface RequestItem {
+    id: string;
+    status: string;
+    tipo_solicitacao: string;
+    horario_solicitacao: string;
+    aluno: Aluno;
+    mensagem_recepcao: string | null;
+    status_geofence: string | null;
+    distancia_estimada_metros: number | null;
+}
+
 interface PriorityPipelineProps {
     selectedClass: string;
     activeRequestId?: string;
-    onSelectRequest: (request: any) => void;
-    onQueueChange?: (requests: any[]) => void;
+    onSelectRequest: (request: RequestItem) => void;
+    onQueueChange?: (requests: RequestItem[]) => void;
     userId: string;
     escolaId?: string;
 }
@@ -21,10 +41,10 @@ export default function PriorityPipeline({
     escolaId
 }: PriorityPipelineProps) {
     const toast = useToast();
-    const [requests, setRequests] = useState<any[]>([]);
+    const [requests, setRequests] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchRequests = async () => {
+    async function fetchRequests() {
         let query = supabase
             .from('solicitacoes_retirada')
             .select(`
@@ -61,13 +81,14 @@ export default function PriorityPipeline({
         const { data, error } = await query.order('horario_solicitacao', { ascending: true });
 
         if (!error && data) {
-            setRequests(data);
-            if (onQueueChange) onQueueChange(data);
+            const typedData = data as unknown as RequestItem[];
+            setRequests(typedData);
+            if (onQueueChange) onQueueChange(typedData);
         }
         setLoading(false);
-    };
+    }
 
-    const handleLiberarTodos = async () => {
+    async function handleLiberarTodos() {
         if (requests.length === 0) return;
 
         const ids = requests.map(r => r.id);
@@ -86,15 +107,18 @@ export default function PriorityPipeline({
         } else {
             toast.error('Erro ao liberar alunos', error.message);
         }
-    };
+    }
 
     useEffect(() => {
         if (!userId) return;
 
-        fetchRequests();
+        // Initial fetch
+        setTimeout(() => fetchRequests(), 0);
 
         // High-frequency polling (1 second) for ultra-fast sync
-        const interval = setInterval(fetchRequests, 1000);
+        const interval = setInterval(() => {
+            fetchRequests();
+        }, 1000);
 
         // Also keep Realtime for immediate push notification response
         const channel = supabase
@@ -106,7 +130,9 @@ export default function PriorityPipeline({
                     schema: 'public',
                     table: 'solicitacoes_retirada'
                 },
-                () => fetchRequests()
+                () => {
+                    fetchRequests();
+                }
             )
             .subscribe();
 
@@ -168,7 +194,7 @@ export default function PriorityPipeline({
                                 )}
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <p className={`font-black uppercase italic tracking-tighter truncate leading-none mb-1 ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}>
+                                <p className={`font-black uppercase italic tracking-tighter leading-none mb-1 ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}>
                                     {req.aluno.nome_completo.split(' ')[0]} {req.aluno.nome_completo.split(' ')[1] || ''}
                                 </p>
                                 <div className="flex items-center gap-2">

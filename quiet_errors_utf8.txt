@@ -1,0 +1,347 @@
+﻿
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\admin\AddGuardianForm.tsx
+   41:46   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:23   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  268:121  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\admin\BulkImportModal.tsx
+   18:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   48:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\classroom\PriorityPipeline.tsx
+   9:32  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  10:32  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  24:46  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  94:9   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\classroom\PriorityPipeline.tsx:94:9
+  92 |         if (!userId) return;
+  93 |
+> 94 |         fetchRequests();
+     |         ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  95 |
+  96 |         // High-frequency polling (1 second) for ultra-fast sync
+  97 |         const interval = setInterval(fetchRequests, 1000);  react-hooks/set-state-in-effect
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\parent\GeoTracker.tsx
+  14:5   error  Unexpected var, use let or const instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-var
+  15:5   error  Unexpected var, use let or const instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-var
+  16:5   error  Unexpected var, use let or const instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-var
+  17:5   error  Unexpected var, use let or const instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-var
+  21:5   error  Unexpected var, use let or const instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-var
+  22:5   error  Unexpected var, use let or const instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-var
+  56:21  error  Error: Cannot access variable before it is declared
+
+`updateStatus` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\parent\GeoTracker.tsx:56:21
+  54 |
+  55 |                     setDistance(Math.round(dist));
+> 56 |                     updateStatus(pickupId, dist, latitude, longitude);
+     |                     ^^^^^^^^^^^^ `updateStatus` accessed before it is declared
+  57 |                 },
+  58 |                 (err) => setError(err.message),
+  59 |                 {
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\parent\GeoTracker.tsx:72:5
+  70 |     }, [tracking, pickupId]);
+  71 |
+> 72 |     const updateStatus = async (id: string, dist: number, lat: number, lng: number) => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 73 |         let statusGeofence = 'LONGE';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 74 |         if (dist < 50) statusGeofence = 'CHEGOU';
+     ÔÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 89 |         // If "CHEGOU", we can also auto-update the main status if business logic requires
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 90 |     };
+     | ^^^^^^^ `updateStatus` is declared here
+  91 |
+  92 |     return (
+  93 |         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 mt-4">  react-hooks/immutability
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\reception\WithdrawalQueue.tsx
+   54:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  120:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\components\ui\Toast.tsx
+  40:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\context\AuthContext.tsx
+  23:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\lib\audit.ts
+  29:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\lib\imageUtils.ts
+  36:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  47:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\Setup.tsx
+  63:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\AccountRecovery.tsx
+  28:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\AddGuardian.tsx
+  16:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\AuthorizationRules.tsx
+   29:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   30:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\ClassroomManagement.tsx
+   94:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  141:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\Dashboard.tsx
+  19:9  error  Error: Cannot access variable before it is declared
+
+`fetchStats` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\Dashboard.tsx:19:9
+  17 |
+  18 |     useEffect(() => {
+> 19 |         fetchStats();
+     |         ^^^^^^^^^^ `fetchStats` accessed before it is declared
+  20 |
+  21 |         // Refresh stats every minute
+  22 |         const interval = setInterval(fetchStats, 60000);
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\Dashboard.tsx:26:5
+  24 |     }, []);
+  25 |
+> 26 |     const fetchStats = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         try {
+     | ^^^^^^^^^^^^^
+> 28 |             // Total Students
+     ÔÇª
+     | ^^^^^^^^^^^^^
+> 69 |         }
+     | ^^^^^^^^^^^^^
+> 70 |     };
+     | ^^^^^^^ `fetchStats` is declared here
+  71 |
+  72 |     const handleLogout = async () => {
+  73 |         await signOut();  react-hooks/immutability
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\DataExportCenter.tsx
+  70:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\Login.tsx
+  44:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\PickupHistory.tsx
+    5:36  error  'ChevronDown' is defined but never used   @typescript-eslint/no-unused-vars
+  133:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  294:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\QRGenerator.tsx
+  117:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\SecurityAuditLog.tsx
+   14:15   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  223:159  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\StudentManagement.tsx
+    4:61  error  'LinkIcon' is defined but never used      @typescript-eslint/no-unused-vars
+   84:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  115:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\StudentRegistration.tsx
+  184:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\SystemSettings.tsx
+   14:13  error  'user' is assigned a value but never used                  @typescript-eslint/no-unused-vars
+   18:12  error  'loading' is assigned a value but never used               @typescript-eslint/no-unused-vars
+   82:23  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+   94:17  error  'payload' is never reassigned. Use 'const' instead         prefer-const
+   94:26  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  106:17  error  'missingColumns' is never reassigned. Use 'const' instead  prefer-const
+  144:23  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  159:27  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  357:82  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  405:87  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  441:82  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  477:88  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\admin\UserManagement.tsx
+   58:35   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:25   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:25   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  374:111  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\Dashboard.tsx
+   87:17  error  Error: Cannot access variable before it is declared
+
+`playNotificationSound` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\Dashboard.tsx:87:17
+  85 |         if (requests.length > prevTotalRequests) {
+  86 |             if (soundEnabled) {
+> 87 |                 playNotificationSound();
+     |                 ^^^^^^^^^^^^^^^^^^^^^ `playNotificationSound` accessed before it is declared
+  88 |             }
+  89 |         }
+  90 |         setPrevTotalRequests(requests.length);
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\Dashboard.tsx:120:5
+  118 |     };
+  119 |
+> 120 |     const playNotificationSound = () => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 121 |         // High quality notification sound
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 122 |         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 123 |         audio.volume = 0.5;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 124 |         audio.play().catch(e => console.log('Audio play failed - ensure user interacted with page', e));
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 125 |     };
+      | ^^^^^^^ `playNotificationSound` is declared here
+  126 |
+  127 |     // Requests are handled by PriorityPipeline now
+  128 |  react-hooks/immutability
+  116:39  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\EndOfDaySummary.tsx
+  36:9  error  Error: Cannot access variable before it is declared
+
+`fetchDayStats` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\EndOfDaySummary.tsx:36:9
+  34 |
+  35 |     useEffect(() => {
+> 36 |         fetchDayStats();
+     |         ^^^^^^^^^^^^^ `fetchDayStats` accessed before it is declared
+  37 |     }, []);
+  38 |
+  39 |     const fetchDayStats = async () => {
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\EndOfDaySummary.tsx:39:5
+  37 |     }, []);
+  38 |
+> 39 |     const fetchDayStats = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |         // Simulating data fetching for the demo/implementation
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 41 |         // In a real scenario, we would query the database for the current date's stats
+     ÔÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 50 |         }, 1000);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 51 |     };
+     | ^^^^^^^ `fetchDayStats` is declared here
+  52 |
+  53 |     if (loading) {
+  54 |         return (  react-hooks/immutability
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\classroom\Login.tsx
+  44:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\parent\Login.tsx
+  12:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\parent\PickupStatus.tsx
+  177:18  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\parent\QRCard.tsx
+  338:55  error  Unnecessary escape character: \:  no-useless-escape
+  343:55  error  Unnecessary escape character: \:  no-useless-escape
+  347:55  error  Unnecessary escape character: \:  no-useless-escape
+  351:55  error  Unnecessary escape character: \:  no-useless-escape
+  352:55  error  Unnecessary escape character: \:  no-useless-escape
+  353:55  error  Unnecessary escape character: \:  no-useless-escape
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\parent\SelfRegistration.tsx
+   20:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   23:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:18  error  'err' is defined but never used           @typescript-eslint/no-unused-vars
+  108:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\reception\Confirmation.tsx
+  38:17  error  Error: Cannot access variable before it is declared
+
+`fetchRequest` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\reception\Confirmation.tsx:38:17
+  36 |
+  37 |     useEffect(() => {
+> 38 |         if (id) fetchRequest(id);
+     |                 ^^^^^^^^^^^^ `fetchRequest` accessed before it is declared
+  39 |     }, [id]);
+  40 |
+  41 |     const fetchRequest = async (requestId: string) => {
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\reception\Confirmation.tsx:41:5
+  39 |     }, [id]);
+  40 |
+> 41 |     const fetchRequest = async (requestId: string) => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |         const { data, error } = await supabase
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |             .from('solicitacoes_retirada')
+     ÔÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 70 |         setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 71 |     };
+     | ^^^^^^^ `fetchRequest` is declared here
+  72 |
+  73 |     const handleConfirmPickup = async () => {
+  74 |         if (!request || !confirmedIdentity) return;  react-hooks/immutability
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\reception\Login.tsx
+  44:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\reception\Search.tsx
+   20:5   error  'AlertTriangle' is defined but never used              @typescript-eslint/no-unused-vars
+   21:5   error  'Eye' is defined but never used                        @typescript-eslint/no-unused-vars
+   22:5   error  'TrendingUp' is defined but never used                 @typescript-eslint/no-unused-vars
+   23:5   error  'Clock' is defined but never used                      @typescript-eslint/no-unused-vars
+   24:5   error  'Filter' is defined but never used                     @typescript-eslint/no-unused-vars
+   25:5   error  'Activity' is defined but never used                   @typescript-eslint/no-unused-vars
+   26:5   error  'Users' is defined but never used                      @typescript-eslint/no-unused-vars
+   27:5   error  'ChevronDown' is defined but never used                @typescript-eslint/no-unused-vars
+   28:5   error  'ArrowLeft' is defined but never used                  @typescript-eslint/no-unused-vars
+   29:5   error  'ArrowRight' is defined but never used                 @typescript-eslint/no-unused-vars
+  115:52  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  142:17  error  'combined' is never reassigned. Use 'const' instead    prefer-const
+  143:32  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  169:50  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  247:23  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  265:23  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  281:45  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  327:11  error  'selectedGuardian' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\staff\OnboardingDashboard.tsx
+  24:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Andrea\Downloads\stitch\sisra\src\pages\system\SystemStatus.tsx
+  65:18  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+Ô£û 110 problems (110 errors, 0 warnings)
+  9 errors and 0 warnings potentially fixable with the `--fix` option.
+

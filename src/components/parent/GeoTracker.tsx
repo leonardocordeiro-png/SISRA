@@ -11,20 +11,40 @@ const SCHOOL_COORDS = {
 
 // Haversine formula to calculate distance in meters
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-    var R = 6371; // Radius of the earth in km
-    var dLat = deg2rad(lat2 - lat1);
-    var dLon = deg2rad(lon2 - lon1);
-    var a =
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    var d = R * c; // Distance in km
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
     return d * 1000; // Meters
 }
 
 function deg2rad(deg: number) {
     return deg * (Math.PI / 180);
+}
+
+async function updateStatus(id: string, dist: number, lat: number, lng: number) {
+    let statusGeofence = 'LONGE';
+    if (dist < 50) statusGeofence = 'CHEGOU';
+    else if (dist < 500) statusGeofence = 'PERTO';
+
+    // Update database
+    // Debounce this in real production to save writes
+    await supabase
+        .from('solicitacoes_retirada')
+        .update({
+            latitude: lat,
+            longitude: lng,
+            distancia_estimada_metros: dist,
+            status_geofence: statusGeofence
+        })
+        .eq('id', id);
+
+    // If "CHEGOU", we can also auto-update the main status if business logic requires
 }
 
 export default function GeoTracker({ pickupId }: { pickupId: string }) {
@@ -37,11 +57,11 @@ export default function GeoTracker({ pickupId }: { pickupId: string }) {
 
         if (tracking) {
             if (!navigator.geolocation) {
-                setError('Geolocalização não suportada');
+                setTimeout(() => setError('Geolocalização não suportada'), 0);
                 return;
             }
 
-            setError(null); // Clear previous errors
+            setTimeout(() => setError(null), 0); // Clear previous errors
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
@@ -68,26 +88,6 @@ export default function GeoTracker({ pickupId }: { pickupId: string }) {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
     }, [tracking, pickupId]);
-
-    const updateStatus = async (id: string, dist: number, lat: number, lng: number) => {
-        let statusGeofence = 'LONGE';
-        if (dist < 50) statusGeofence = 'CHEGOU';
-        else if (dist < 500) statusGeofence = 'PERTO';
-
-        // Update database
-        // Debounce this in real production to save writes
-        await supabase
-            .from('solicitacoes_retirada')
-            .update({
-                latitude: lat,
-                longitude: lng,
-                distancia_estimada_metros: dist,
-                status_geofence: statusGeofence
-            })
-            .eq('id', id);
-
-        // If "CHEGOU", we can also auto-update the main status if business logic requires
-    };
 
     return (
         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 mt-4">

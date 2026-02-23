@@ -1,0 +1,24 @@
+﻿node.exe : The 
+compact formatter is 
+no longer part of 
+core ESLint. Install 
+it manually with `npm 
+install -D eslint-form
+atter-compact`
+No C:\Program Files\no
+dejs\npx.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (The compac   
+ t for...matter-co    
+mpact`:String) []    
+, RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 

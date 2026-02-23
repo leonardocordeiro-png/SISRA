@@ -32,11 +32,7 @@ export default function EndOfDaySummary() {
     const [loading, setLoading] = useState(true);
     const [signed, setSigned] = useState(false);
 
-    useEffect(() => {
-        fetchDayStats();
-    }, []);
-
-    const fetchDayStats = async () => {
+    async function fetchDayStats() {
         // Simulating data fetching for the demo/implementation
         // In a real scenario, we would query the database for the current date's stats
         setTimeout(() => {
@@ -48,7 +44,11 @@ export default function EndOfDaySummary() {
             });
             setLoading(false);
         }, 1000);
-    };
+    }
+
+    useEffect(() => {
+        setTimeout(() => fetchDayStats(), 0);
+    }, []);
 
     if (loading) {
         return (

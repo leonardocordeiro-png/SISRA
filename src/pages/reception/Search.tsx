@@ -4,25 +4,21 @@ import { useAuth } from '../../context/AuthContext';
 import NavigationControls from '../../components/NavigationControls';
 import WithdrawalQueue from '../../components/reception/WithdrawalQueue';
 import QRScannerModal from '../../components/reception/QRScannerModal';
-import { Search as SearchIcon, Bell, X, User as UserIcon, QrCode, LogOut, Hash, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
+import type { Student, Guardian } from '../../types';
+import {
+    Search as SearchIcon,
+    QrCode,
+    CheckCircle2,
+    LogOut,
+    AlertCircle,
+    Hash,
+    X,
+    Bell,
+    User as UserIcon
+} from 'lucide-react';
 
-type Student = {
-    id: string;
-    nome_completo: string;
-    turma: string;
-    sala: string;
-    foto_url: string;
-};
-
-type Guardian = {
-    id: string;
-    nome_completo: string;
-    foto_url: string | null;
-    parentesco?: string;
-    codigo_acesso?: string;
-};
 
 // ─── Code Entry Modal ────────────────────────────────────────────────────────
 
@@ -135,7 +131,8 @@ export default function ReceptionSearch() {
 
             let combined: Student[] = directStudents || [];
             auths?.forEach((a: any) => {
-                if (a.alunos && !combined.some(s => s.id === a.alunos.id)) combined.push(a.alunos);
+                const student = Array.isArray(a.alunos) ? a.alunos[0] : a.alunos;
+                if (student && !combined.some(s => s.id === student.id)) combined.push(student);
             });
 
             setResults(combined.slice(0, 8));
@@ -160,7 +157,7 @@ export default function ReceptionSearch() {
             .eq('ativa', true)
             .then(({ data, error }) => {
                 if (!error && data) {
-                    setGuardians(data.map((item: any) => ({
+                    setGuardians(data.map((item: { responsaveis: any; parentesco: string | null; tipo_autorizacao: string }) => ({
                         ...item.responsaveis,
                         parentesco: item.parentesco || item.tipo_autorizacao
                     })));
@@ -192,7 +189,8 @@ export default function ReceptionSearch() {
 
             if (error) throw error;
 
-            const guardianName = guardians.find(g => g.id === selectedGuardianId)?.nome_completo;
+            const selectedGuardianLocal = guardians.find(g => g.id === selectedGuardianId);
+            const guardianName = selectedGuardianLocal?.nome_completo;
             toast.success(
                 studentIds.length === 1 ? 'Aluno chamado!' : `${studentIds.length} alunos chamados!`,
                 guardianName ? `Responsável: ${guardianName}` : 'Notificação enviada às salas.'
@@ -272,7 +270,7 @@ export default function ReceptionSearch() {
         if (error) throw error;
         if (!auths || auths.length === 0) throw new Error('Nenhum aluno vinculado a este responsável.');
 
-        const foundStudents = auths.map((a: any) => a.alunos).filter(Boolean);
+        const foundStudents = auths.map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos).filter((s): s is Student => s !== null);
 
         // Fetch guardian info for the list
         const { data: guard } = await supabase
@@ -478,8 +476,8 @@ export default function ReceptionSearch() {
                                                             key={student.id}
                                                             onClick={() => toggleStudentSelection(student.id)}
                                                             className={`flex items-center gap-4 p-4 rounded-3xl border-2 transition-all text-left group relative overflow-hidden ${isSelected
-                                                                    ? 'bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/5'
-                                                                    : 'bg-white/5 border-white/5 hover:border-white/10'
+                                                                ? 'bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/5'
+                                                                : 'bg-white/5 border-white/5 hover:border-white/10'
                                                                 }`}
                                                         >
                                                             <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${isSelected ? 'border-emerald-500' : 'border-white/10'}`}>
@@ -570,7 +568,7 @@ export default function ReceptionSearch() {
                                                 {selectedGuardianId ? (
                                                     <div className="flex items-center gap-2 px-5 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
                                                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                                                        <p className="text-xs font-bold text-emerald-400">Responsável identificado: <span className="text-white">{guardians.find(g => g.id === selectedGuardianId)?.nome_completo}</span></p>
+                                                        <p className="text-xs font-bold text-emerald-400">Responsável identificado: <span className="text-white">{selectedGuardian?.nome_completo}</span></p>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2 px-5 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">

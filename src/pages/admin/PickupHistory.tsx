@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
     BarChart2, Calendar, Clock, User, Shield, CheckCircle2,
-    AlertCircle, Search, Download, ChevronDown, TrendingUp,
+    AlertCircle, Search, Download, TrendingUp,
     TrendingDown, Minus, Filter, Eye, X, AlertTriangle,
     Activity, FileText, Users, RefreshCw, ArrowLeft, ArrowRight
 } from 'lucide-react';
@@ -470,8 +470,8 @@ export default function PickupHistoryView() {
                         {(['day', 'week', 'month', 'year'] as Period[]).map(p => (
                             <button key={p} onClick={() => { setPeriod(p); setPage(0); }}
                                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${period === p
-                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                                        : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
                                     }`}>{PERIOD_LABELS[p]}</button>
                         ))}
                         <div className="h-5 w-px bg-slate-200 mx-1" />
@@ -479,8 +479,8 @@ export default function PickupHistoryView() {
                         {(['pick-day', 'pick-month', 'pick-year', 'custom'] as Period[]).map(p => (
                             <button key={p} onClick={() => { setPeriod(p); setPage(0); }}
                                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${period === p
-                                        ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200'
-                                        : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600'
+                                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600'
                                     }`}>{PERIOD_LABELS[p]}</button>
                         ))}
                     </div>

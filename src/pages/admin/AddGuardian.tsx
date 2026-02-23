@@ -6,14 +6,7 @@ import CameraCapture from '../../components/admin/CameraCapture';
 import { fileToDataUrl } from '../../lib/imageUtils';
 import { useToast } from '../../components/ui/Toast';
 
-type Guardian = {
-    id: string;
-    nome_completo: string;
-    cpf: string;
-    telefone: string;
-    parentesco: string;
-    foto_url?: string;
-};
+import type { Guardian } from '../../types';
 
 export default function AddGuardian() {
     const navigate = useNavigate();

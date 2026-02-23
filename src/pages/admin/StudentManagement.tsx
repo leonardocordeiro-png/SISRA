@@ -1,21 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Search, Trash2, Edit2, User, Upload, Link as LinkIcon, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import { generateToken } from '../../lib/utils';
 import NavigationControls from '../../components/NavigationControls';
 import BulkImportModal from '../../components/admin/BulkImportModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 
-type Student = {
-    id: string;
-    nome_completo: string;
-    matricula: string;
-    turma: string;
-    sala: string;
-    escola_id: string;
-};
+import type { Student } from '../../types';
+
 
 
 export default function StudentManagement() {
@@ -236,7 +230,7 @@ export default function StudentManagement() {
 
     const filteredStudents = students.filter(s => {
         const matchesSearch = s.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.matricula.toLowerCase().includes(searchTerm.toLowerCase());
+            s.matricula?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesTurma = filterTurma === 'TODAS' || s.turma === filterTurma;
         const matchesSala = filterSala === 'TODAS' || s.sala === filterSala;
 

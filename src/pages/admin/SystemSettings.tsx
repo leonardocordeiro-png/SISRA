@@ -5,17 +5,14 @@ import {
     Calendar, Upload, ChevronRight, Loader2, Trash2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../context/AuthContext';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 import { fileToDataUrl } from '../../lib/imageUtils';
 
 export default function SystemSettings() {
-    const { user } = useAuth();
     const toast = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [activeTab, setActiveTab] = useState('general');
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
     const [settings, setSettings] = useState({
@@ -52,7 +49,6 @@ export default function SystemSettings() {
 
     const fetchSettings = async () => {
         try {
-            setLoading(true);
             const { data, error } = await supabase
                 .from('escolas')
                 .select('*')
@@ -83,7 +79,6 @@ export default function SystemSettings() {
             console.error('Error fetching settings:', err);
             toast.error('Erro ao carregar configurações', err.message);
         } finally {
-            setLoading(false);
         }
     };
 
