@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Save, Clock, AlertTriangle, Activity, ArrowLeft, Check, Info, Bell, Loader2, Copy, AlertCircle } from 'lucide-react';
+import { Shield, Save, Clock, AlertTriangle, Activity, ArrowLeft, Check, Info, Bell, Loader2, Copy, AlertCircle, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import NavigationControls from '../../components/NavigationControls';
@@ -271,26 +271,55 @@ export default function AuthorizationRules() {
 
                 {/* Student summary bar */}
                 {studentData && (
-                    <div className="mb-8 bg-white rounded-2xl border border-slate-200 px-6 py-4 flex items-center gap-4 shadow-sm">
-                        {studentData.photo ? (
-                            <img src={studentData.photo} alt="" className="w-10 h-10 rounded-xl object-cover border-2 border-slate-100" />
-                        ) : (
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-lg">
-                                {studentData.nome_completo?.[0] || '?'}
-                            </div>
+                    <div className="mb-8 bg-white rounded-2xl border border-slate-200 px-6 py-5 flex items-center gap-6 shadow-sm relative overflow-hidden">
+                        {settings.securityAlertsEnabled && (
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
                         )}
-                        <div className="min-w-0">
-                            <p className="font-bold text-slate-900 text-sm truncate">{studentData.nome_completo}</p>
-                            <p className="text-xs text-slate-500 truncate">
-                                {studentData.fullTurma || (studentData.serie && studentData.turma ? `${studentData.serie} (${studentData.turma})` : studentData.turma || '—')}
-                                {studentData.matricula ? ` · Matrícula: ${studentData.matricula}` : ''}
-                            </p>
+
+                        <div className="relative">
+                            {studentData.photo ? (
+                                <img src={studentData.photo} alt="" className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm" />
+                            ) : (
+                                <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xl border-2 border-white shadow-sm">
+                                    {studentData.nome_completo?.[0] || '?'}
+                                </div>
+                            )}
+                            {settings.securityAlertsEnabled && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center animate-pulse">
+                                    <AlertTriangle className="w-3 h-3 text-white" />
+                                </div>
+                            )}
                         </div>
-                        {isEditMode && (
-                            <span className="ml-auto shrink-0 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
-                                Editando
-                            </span>
-                        )}
+
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                                <h2 className="font-bold text-slate-900 text-lg md:text-xl truncate">{studentData.nome_completo}</h2>
+                                {isEditMode && (
+                                    <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg">
+                                        Modo Edição
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-sm text-slate-500">
+                                <span className="flex items-center gap-1.5 font-medium">
+                                    <GraduationCap className="w-4 h-4 text-blue-500" />
+                                    {studentData.fullTurma || (studentData.serie && studentData.turma ? `${studentData.serie} (${studentData.turma})` : studentData.turma || 'Turma não informada')}
+                                </span>
+                                {studentData.matricula && (
+                                    <span className="flex items-center gap-1.5 opacity-60">
+                                        <Info className="w-4 h-4" />
+                                        ID: {studentData.matricula}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="hidden md:flex flex-col items-end gap-2">
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-xs uppercase tracking-wider ${settings.securityAlertsEnabled ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                <Shield className="w-3.5 h-3.5" />
+                                {settings.securityAlertsEnabled ? 'Segurança Reforçada' : 'Acesso Padrão'}
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -434,22 +463,35 @@ export default function AuthorizationRules() {
 
                         {/* Security Alerts */}
                         <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-                            <div className={`px-6 py-4 flex items-center justify-between gap-2 transition-colors ${settings.securityAlertsEnabled ? 'bg-red-500' : 'bg-slate-400'}`}>
-                                <div className="flex items-center gap-2">
-                                    <AlertTriangle className="text-white w-5 h-5" />
-                                    <h3 className="text-xs font-black text-white uppercase tracking-widest">Alertas de Segurança</h3>
+                            <div className={`px-6 py-5 flex items-center justify-between gap-2 transition-all duration-500 ${settings.securityAlertsEnabled ? 'bg-red-600 shadow-inner' : 'bg-slate-400'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${settings.securityAlertsEnabled ? 'bg-red-500 shadow-lg' : 'bg-slate-300'}`}>
+                                        <AlertTriangle className="text-white w-5 h-5" />
+                                    </div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Protocolos de Segurança</h3>
                                 </div>
                                 {settings.securityAlertsEnabled && (
-                                    <span className="text-[9px] font-black text-red-200 bg-red-400/40 px-2 py-0.5 rounded-full uppercase tracking-widest">
-                                        Ativo
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                                        <span className="text-[10px] font-black text-white bg-red-800/20 px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">
+                                            Monitoramento Ativo
+                                        </span>
+                                    </div>
                                 )}
                             </div>
-                            <div className="p-6 space-y-5">
+                            <div className="p-8 space-y-6">
                                 {/* Custody restriction */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-700">Restrição de Custódia</span>
+                                <div className={`p-5 rounded-2xl border transition-all ${settings.custodyRestriction ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-transparent hover:border-slate-100'}`}>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-sm font-bold ${settings.custodyRestriction ? 'text-red-700' : 'text-slate-700'}`}>Restrição de Custódia Legal</span>
+                                                {settings.custodyRestriction && <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>}
+                                            </div>
+                                            <p className="text-[11px] text-slate-500 leading-relaxed pr-8">
+                                                Impede a saída do aluno com qualquer pessoa não listada como responsável legal (ex: decisões judiciais).
+                                            </p>
+                                        </div>
                                         <button
                                             onClick={() => {
                                                 const next = !settings.custodyRestriction;
@@ -459,20 +501,25 @@ export default function AuthorizationRules() {
                                                     securityAlertsEnabled: next || s.restrictedPersonnel,
                                                 }));
                                             }}
-                                            className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${settings.custodyRestriction ? 'bg-red-500' : 'bg-slate-200'}`}
+                                            className={`w-12 h-6 rounded-full relative transition-all shrink-0 shadow-inner ${settings.custodyRestriction ? 'bg-red-500' : 'bg-slate-300'}`}
                                         >
-                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.custodyRestriction ? 'left-6' : 'left-1'}`}></div>
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all ${settings.custodyRestriction ? 'left-7' : 'left-1'}`}></div>
                                         </button>
                                     </div>
-                                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                                        Bloqueia retirada por qualquer pessoa não listada explicitamente na custódia legal do aluno.
-                                    </p>
                                 </div>
 
                                 {/* Restricted persons */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-700">Pessoas Não Autorizadas</span>
+                                <div className={`p-5 rounded-2xl border transition-all ${settings.restrictedPersonnel ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-transparent hover:border-slate-100'}`}>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-sm font-bold ${settings.restrictedPersonnel ? 'text-red-700' : 'text-slate-700'}`}>Pessoas Não Autorizadas</span>
+                                                {settings.restrictedPersonnel && <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>}
+                                            </div>
+                                            <p className="text-[11px] text-slate-500 leading-relaxed pr-8">
+                                                Sinaliza imediatamente se houver tentativa de retirada por indivíduos bloqueados ou estranhos.
+                                            </p>
+                                        </div>
                                         <button
                                             onClick={() => {
                                                 const next = !settings.restrictedPersonnel;
@@ -482,22 +529,28 @@ export default function AuthorizationRules() {
                                                     securityAlertsEnabled: s.custodyRestriction || next,
                                                 }));
                                             }}
-                                            className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${settings.restrictedPersonnel ? 'bg-red-500' : 'bg-slate-200'}`}
+                                            className={`w-12 h-6 rounded-full relative transition-all shrink-0 shadow-inner ${settings.restrictedPersonnel ? 'bg-red-500' : 'bg-slate-300'}`}
                                         >
-                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.restrictedPersonnel ? 'left-6' : 'left-1'}`}></div>
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all ${settings.restrictedPersonnel ? 'left-7' : 'left-1'}`}></div>
                                         </button>
                                     </div>
-                                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                                        Sinaliza o aluno ao detectar tentativas de retirada por pessoas marcadas como restritas.
-                                    </p>
                                 </div>
 
-                                <div className={`p-4 rounded-2xl border transition-all ${settings.securityAlertsEnabled ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
-                                    <p className="text-[11px] leading-relaxed italic">
+                                <div className={`p-6 rounded-2xl border flex gap-4 ${settings.securityAlertsEnabled ? 'bg-red-50 border-red-100 border-dashed' : 'bg-slate-50 border-slate-100'}`}>
+                                    <div className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center ${settings.securityAlertsEnabled ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-400'}`}>
+                                        {settings.securityAlertsEnabled ? <Bell className="w-5 h-5 animate-bounce" /> : <Shield className="w-5 h-5" />}
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed">
                                         {settings.securityAlertsEnabled ? (
-                                            <span>Alertas críticos sinalizarão o estudante em <span className="text-red-500 font-bold">vermelho</span> na recepção. A diretoria será notificada imediatamente.</span>
+                                            <span className="text-red-800">
+                                                <strong className="block mb-1 text-xs">⚠️ Alertas Críticos Ativos</strong>
+                                                O perfil deste estudante aparecerá em <span className="font-bold underline decoration-red-500 underline-offset-2 text-red-600 uppercase">vermelho pulsar</span> nos monitores da recepção e portaria.
+                                            </span>
                                         ) : (
-                                            <span className="text-slate-400">Alertas desativados. Nenhum sinal crítico será exibido na recepção.</span>
+                                            <span className="text-slate-500">
+                                                <strong className="block mb-1 text-xs font-bold text-slate-700">Protocolo Padrão</strong>
+                                                Alertas desativados. O aluno será tratado sob o fluxo normal de saída sem sinalizações críticas.
+                                            </span>
                                         )}
                                     </p>
                                 </div>

@@ -207,7 +207,17 @@ export default function StudentRegistration() {
         e.preventDefault();
         setLoading(true);
         const calculatedSala = getSalaBySerie(formData.serie);
-        sessionStorage.setItem('temp_student_data', JSON.stringify({ ...formData, sala: calculatedSala, photo }));
+
+        // Retrieve fullTurma from original sessionStorage to preserve it
+        const originalData = JSON.parse(sessionStorage.getItem('temp_student_data') || '{}');
+        const fullTurma = originalData.fullTurma || '';
+
+        sessionStorage.setItem('temp_student_data', JSON.stringify({
+            ...formData,
+            fullTurma,
+            sala: calculatedSala,
+            photo
+        }));
         navigate('/admin/guardians/add');
     };
 
