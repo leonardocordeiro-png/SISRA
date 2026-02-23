@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Fluid Typography Scale */
+    /* Mobile: 16px -> Desktop: 18px */
+    --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+    /* Mobile: 24px -> Desktop: 36px */
+    --text-2xl: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+    /* Mobile: 20px -> Desktop: 24px */
+    --text-xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-900 dark:text-gray-100;
+    font-size: var(--text-base);
+  }
+
+  h1 {
+    @apply text-[length:var(--text-2xl)] font-bold;
+  }
+
+  h2 {
+    @apply text-[length:var(--text-xl)] font-semibold;
+  }
+
+  /* Ensure media is responsive */
+  img,
+  video,
+  canvas,
+  svg {
+    @apply max-w-full h-auto;
+  }
+}
+
+@keyframes bounce-subtle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s infinite ease-in-out;
+}
+
+/* Toast Notification Animations */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.animate-toast-out {
+  animation: toast-out 0.25s cubic-bezier(0.06, 0.71, 0.55, 1) forwards;
+}
