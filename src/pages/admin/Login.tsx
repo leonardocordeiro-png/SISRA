@@ -69,10 +69,10 @@ export default function AdminLogin() {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">Command Manifest</h1>
+                        <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">Manifesto de Comando</h1>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
                             <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-pulse"></span>
-                            Secure Administrative Gateway
+                            Portal Administrativo Seguro
                         </p>
                     </div>
                 </div>
@@ -87,7 +87,7 @@ export default function AdminLogin() {
                             <div className="space-y-2 group/input">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
                                     <Mail className="w-3 h-3" />
-                                    Terminal Identity
+                                    Identidade de Acesso
                                 </label>
                                 <div className="relative">
                                     <input
@@ -96,7 +96,7 @@ export default function AdminLogin() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="w-full bg-[#020617]/50 border border-white/5 rounded-2xl px-6 py-4 text-white font-mono placeholder:text-slate-700 focus:outline-none focus:border-slate-500/50 focus:ring-4 focus:ring-slate-500/10 transition-all duration-500"
-                                        placeholder="ADMIN.ACCESS@SYSTEM.EXEC"
+                                        placeholder="admin@lasalle.org.br"
                                     />
                                 </div>
                             </div>
@@ -105,7 +105,7 @@ export default function AdminLogin() {
                             <div className="space-y-2 group/input">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
                                     <Lock className="w-3 h-3" />
-                                    Security Cipher
+                                    Senha de Segurança
                                 </label>
                                 <div className="relative">
                                     <input
@@ -145,11 +145,11 @@ export default function AdminLogin() {
                                 {loading ? (
                                     <>
                                         <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-                                        <span className="text-sm font-black text-white uppercase italic tracking-[0.3em]">Authenticating...</span>
+                                        <span className="text-sm font-black text-white uppercase italic tracking-[0.3em]">Autenticando...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <span className="text-sm font-black text-white uppercase italic tracking-[0.3em]">Initialize Command</span>
+                                        <span className="text-sm font-black text-white uppercase italic tracking-[0.3em]">Iniciar Acesso</span>
                                         <ChevronRight className="w-5 h-5 text-slate-400 group-hover/submit:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -161,11 +161,11 @@ export default function AdminLogin() {
                 {/* Manifest Footer */}
                 <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between opacity-50">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Access Protocol</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">v4.0.2 // ENCRYPTED</span>
+                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Protocolo de Acesso</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">v4.0.2 // CRIPTOGRAFADO</span>
                     </div>
                     <div className="flex flex-col items-end space-y-1">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">System Node</span>
+                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Nó do Sistema</span>
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">SISRA.ADM.NODE_07</span>
                     </div>
                 </div>

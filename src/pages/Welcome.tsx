@@ -30,7 +30,7 @@ export default function Welcome() {
                     <div className="space-y-4 text-center">
                         <div className="flex items-center justify-center gap-3 mb-2 animate-in slide-in-from-bottom-4 duration-700">
                             <div className="h-px w-8 bg-emerald-500/30" />
-                            <span className="text-emerald-500 font-black tracking-[0.4em] text-[10px] uppercase">System Access Terminal</span>
+                            <span className="text-emerald-500 font-black tracking-[0.4em] text-[10px] uppercase">Terminal de Acesso ao Sistema</span>
                             <div className="h-px w-8 bg-emerald-500/30" />
                         </div>
                         <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter italic uppercase leading-none">
@@ -56,7 +56,7 @@ export default function Welcome() {
                             <h2 className="text-2xl font-black text-white mb-3 italic tracking-tighter uppercase">Recepção</h2>
                             <p className="text-slate-500 text-sm font-bold leading-relaxed uppercase tracking-tight mb-8">Controle tático de entrada e saída de ativos.</p>
                             <div className="mt-auto w-full pt-6 border-t border-white/5 flex items-center justify-between group-hover/card:border-emerald-500/20 transition-colors">
-                                <span className="text-[10px] font-black text-emerald-500/60 tracking-[0.2em] uppercase">Open Mission</span>
+                                <span className="text-[10px] font-black text-emerald-500/60 tracking-[0.2em] uppercase">Iniciar Missão</span>
                                 <ChevronRight className="w-5 h-5 text-emerald-500 group-hover/card:translate-x-1 transition-transform" />
                             </div>
                         </div>
@@ -73,7 +73,7 @@ export default function Welcome() {
                             <h2 className="text-2xl font-black text-white mb-3 italic tracking-tighter uppercase">SCT</h2>
                             <p className="text-slate-500 text-sm font-bold leading-relaxed uppercase tracking-tight mb-8">Gestão operacional de sala e liberação.</p>
                             <div className="mt-auto w-full pt-6 border-t border-white/5 flex items-center justify-between group-hover/card:border-blue-500/20 transition-colors">
-                                <span className="text-[10px] font-black text-blue-500/60 tracking-[0.2em] uppercase">Access Portal</span>
+                                <span className="text-[10px] font-black text-blue-500/60 tracking-[0.2em] uppercase">Portal de Acesso</span>
                                 <ChevronRight className="w-5 h-5 text-blue-500 group-hover/card:translate-x-1 transition-transform" />
                             </div>
                         </div>
@@ -90,7 +90,7 @@ export default function Welcome() {
                             <h2 className="text-2xl font-black text-white mb-3 italic tracking-tighter uppercase">Admin</h2>
                             <p className="text-slate-500 text-sm font-bold leading-relaxed uppercase tracking-tight mb-8">Configurações globais e telemetria de dados.</p>
                             <div className="mt-auto w-full pt-6 border-t border-white/5 flex items-center justify-between group-hover/card:border-white/10 transition-colors">
-                                <span className="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase">Control Center</span>
+                                <span className="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase">Central de Controle</span>
                                 <ChevronRight className="w-5 h-5 text-slate-500 group-hover/card:translate-x-1 transition-transform" />
                             </div>
                         </div>
@@ -105,8 +105,8 @@ export default function Welcome() {
                     </div>
                     <div className="flex items-center gap-6">
                         <div className="flex flex-col items-end">
-                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Global Sequence</span>
-                            <span className="text-xs font-bold text-slate-400">v4.0.2 // STABLE</span>
+                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Sequência Global</span>
+                            <span className="text-xs font-bold text-slate-400">v4.0.2 // ESTÁVEL</span>
                         </div>
                         <div className="w-12 h-12 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center group hover:bg-emerald-500/10 transition-all cursor-crosshair">
                             <Globe className="w-5 h-5 text-slate-600 group-hover:text-emerald-500 transition-colors" />
