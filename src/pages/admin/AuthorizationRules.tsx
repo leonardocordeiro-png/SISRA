@@ -149,10 +149,12 @@ export default function AuthorizationRules() {
 
             // Process Guardians
             for (const g of guardiansData) {
+                const cleanCpf = g.cpf.replace(/\D/g, '');
+
                 const { data: existingGuardian } = await supabase
                     .from('responsaveis')
                     .select('id')
-                    .eq('cpf', g.cpf)
+                    .eq('cpf', cleanCpf)
                     .maybeSingle();
 
                 let guardianId = existingGuardian?.id;
@@ -162,7 +164,7 @@ export default function AuthorizationRules() {
                         .from('responsaveis')
                         .insert({
                             nome_completo: g.nome_completo,
-                            cpf: g.cpf,
+                            cpf: cleanCpf,
                             telefone: g.telefone,
                             foto_url: g.foto_url || null
                         })

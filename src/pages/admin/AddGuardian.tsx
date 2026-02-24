@@ -16,6 +16,7 @@ export default function AddGuardian() {
     const [studentData, setStudentData] = useState<any>(null);
     const [guardians, setGuardians] = useState<Guardian[]>([]);
     const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         nome_completo: '',
         cpf: '',
@@ -71,13 +72,33 @@ export default function AddGuardian() {
 
     const handleAddGuardian = (e: React.FormEvent) => {
         e.preventDefault();
-        const newGuardian: Guardian = {
-            id: Math.random().toString(36).substr(2, 9),
-            ...formData
-        };
-        setGuardians([...guardians, newGuardian]);
+        const cleanCpf = formData.cpf.replace(/\D/g, '');
+
+        if (editingId) {
+            setGuardians(guardians.map(g => g.id === editingId ? { ...formData, id: editingId, cpf: cleanCpf } : g));
+            setEditingId(null);
+        } else {
+            const newGuardian: Guardian = {
+                id: Math.random().toString(36).substr(2, 9),
+                ...formData,
+                cpf: cleanCpf
+            };
+            setGuardians([...guardians, newGuardian]);
+        }
         setShowForm(false);
         setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '' });
+    };
+
+    const handleEditGuardian = (g: Guardian) => {
+        setFormData({
+            nome_completo: g.nome_completo || '',
+            cpf: g.cpf || '',
+            telefone: g.telefone || '',
+            parentesco: g.parentesco || 'Pai',
+            foto_url: g.foto_url || ''
+        });
+        setEditingId(g.id);
+        setShowForm(true);
     };
 
     const removeGuardian = (id: string) => {
@@ -180,7 +201,10 @@ export default function AddGuardian() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all">
+                                        <button
+                                            onClick={() => handleEditGuardian(guardian)}
+                                            className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all"
+                                        >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button
@@ -200,9 +224,9 @@ export default function AddGuardian() {
                                 <div className="bg-blue-500/5 px-8 py-5 border-b border-blue-500/10 flex items-center justify-between">
                                     <h3 className="font-bold flex items-center gap-2 text-slate-900">
                                         <User className="text-blue-600 w-5 h-5" />
-                                        Detalhes do Novo Responsável
+                                        {editingId ? 'Editar Responsável' : 'Detalhes do Novo Responsável'}
                                     </h3>
-                                    <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                                    <button onClick={() => { setShowForm(false); setEditingId(null); setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '' }); }} className="text-slate-400 hover:text-slate-600 p-1">
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -337,7 +361,7 @@ export default function AddGuardian() {
                                     <div className="mt-10 flex justify-end gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => setShowForm(false)}
+                                            onClick={() => { setShowForm(false); setEditingId(null); setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '' }); }}
                                             className="px-6 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-sm"
                                         >
                                             Descartar
