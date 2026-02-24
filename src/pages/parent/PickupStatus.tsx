@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
     CheckCircle,
-    Clock,
-    ArrowRight,
     Phone,
     ShieldCheck,
     Bell,
@@ -15,8 +13,7 @@ import {
     Navigation,
     Activity,
     Wifi,
-    MapPin,
-    AlertTriangle
+    MapPin
 } from 'lucide-react';
 import GeoTracker from '../../components/parent/GeoTracker';
 import { useToast } from '../../components/ui/Toast';

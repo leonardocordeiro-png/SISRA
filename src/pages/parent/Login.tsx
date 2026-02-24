@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { User, ArrowRight, ShieldCheck, Loader2, Search, Smartphone, ChevronRight, Lock } from 'lucide-react';
+import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, ChevronRight, Lock } from 'lucide-react';
 
 export default function ParentLogin() {
     const navigate = useNavigate();
