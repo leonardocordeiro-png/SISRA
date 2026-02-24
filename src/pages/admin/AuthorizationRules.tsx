@@ -151,6 +151,11 @@ export default function AuthorizationRules() {
             for (const g of guardiansData) {
                 const cleanCpf = g.cpf.replace(/\D/g, '');
 
+                if (!cleanCpf) {
+                    console.error('Invalid CPF for guardian:', g.nome_completo);
+                    continue;
+                }
+
                 const { data: existingGuardian } = await supabase
                     .from('responsaveis')
                     .select('id')
@@ -205,9 +210,9 @@ export default function AuthorizationRules() {
                     });
 
                 if (linkError) {
-                    console.error('Warning: could not create junction table link', linkError);
-                    // Decide if we throw here depending on RLS policy. 
-                    // Let's at least log it if it fails.
+                    console.error('Error creating junction table link (alunos_responsaveis):', linkError);
+                    // We don't throw here to avoid blocking the whole process if RLS is tight,
+                    // but we do log it clearly for debugging.
                 }
             }
 

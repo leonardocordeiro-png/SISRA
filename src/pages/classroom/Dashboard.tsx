@@ -282,7 +282,7 @@ export default function ClassroomDashboard() {
                     {activeRequest ? (
                         <div className="w-full max-w-6xl animate-in fade-in zoom-in-95 duration-700">
                             {/* Spotlight Main Engine Card */}
-                            <div className="relative bg-white/[0.03] border border-white/10 rounded-[3rem] md:rounded-[5rem] p-8 md:p-16 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center gap-12 md:gap-24 overflow-hidden ring-1 ring-white/5">
+                            <div className="relative bg-white/[0.03] border border-white/10 rounded-[3rem] md:rounded-[5rem] p-8 md:p-12 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center gap-12 md:gap-16 ring-1 ring-white/5 overflow-hidden">
 
                                 {/* UI HUD Elements (Decorative) */}
                                 <div className="absolute top-12 left-12 opacity-20 hidden lg:block">
@@ -300,7 +300,7 @@ export default function ClassroomDashboard() {
                                 {/* Student Visual Core */}
                                 <div className="relative group shrink-0">
                                     <div className="absolute -inset-12 bg-emerald-500/20 rounded-full blur-[80px] opacity-40 group-hover:opacity-70 transition-all duration-1000 animate-pulse"></div>
-                                    <div className="relative w-72 h-72 md:w-[450px] md:h-[450px] bg-slate-900 rounded-[4rem] md:rounded-[6rem] border-[12px] border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-3 group-hover:border-emerald-500/20 transition-all duration-700">
+                                    <div className="relative w-64 h-64 md:w-[350px] md:h-[350px] bg-slate-900 rounded-[4rem] md:rounded-[5rem] border-[10px] border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-3 group-hover:border-emerald-500/20 transition-all duration-700">
                                         <div className="w-full h-full rounded-[3rem] md:rounded-[5rem] overflow-hidden bg-slate-800 relative">
                                             {activeRequest.aluno.foto_url ? (
                                                 <img src={activeRequest.aluno.foto_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
@@ -342,39 +342,39 @@ export default function ClassroomDashboard() {
                                             )}
                                         </div>
 
-                                        <h2 className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tighter leading-[0.85] text-white italic uppercase">
+                                        <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.9] text-white italic uppercase break-words">
                                             {activeRequest.aluno.nome_completo.split(' ')[0]}<br />
                                             <span className="text-emerald-500 drop-shadow-[0_0_30px_rgba(16,185,129,0.2)]">{activeRequest.aluno.nome_completo.split(' ').slice(1).join(' ')}</span>
                                         </h2>
                                     </div>
 
-                                    <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-14">
-                                        <div className="flex flex-col items-center lg:items-start">
-                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Localização</h3>
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center shadow-inner group-hover:border-emerald-500/50 transition-all">
-                                                    <School className="w-7 h-7 text-emerald-500" />
+                                    <div className="flex flex-wrap items-center gap-6 lg:gap-10">
+                                        <div className="flex flex-col items-center lg:items-start shrink-0">
+                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Localização</h3>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center shadow-inner group-hover:border-emerald-500/50 transition-all">
+                                                    <School className="w-6 h-6 text-emerald-500" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-2xl font-black italic tracking-tighter text-white leading-none mb-1">{activeRequest.aluno.sala}</p>
+                                                    <p className="text-xl font-black italic tracking-tighter text-white leading-none mb-1">{activeRequest.aluno.sala}</p>
                                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{activeRequest.aluno.turma}</p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="h-12 w-px bg-white/10 hidden lg:block" />
+                                        <div className="h-10 w-px bg-white/10 hidden lg:block" />
 
-                                        <div className="flex flex-col items-center lg:items-start">
-                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Status Portaria</h3>
+                                        <div className="flex flex-col items-center lg:items-start shrink-0">
+                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Status Portaria</h3>
                                             {activeRequest.status_geofence === 'CHEGOU' ? (
-                                                <div className="bg-emerald-500/20 px-6 py-3 rounded-2xl border-2 border-emerald-500/30 flex items-center gap-3">
-                                                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping shadow-[0_0_10px_rgba(16,185,129,1)]"></div>
-                                                    <span className="text-sm font-black italic text-emerald-400 uppercase tracking-tight">RESPONSÁVEL NO LOCAL</span>
+                                                <div className="bg-emerald-500/20 px-5 py-2.5 rounded-2xl border-2 border-emerald-500/30 flex items-center gap-3">
+                                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping shadow-[0_0_10px_rgba(16,185,129,1)]"></div>
+                                                    <span className="text-xs font-black italic text-emerald-400 uppercase tracking-tight">RESPONSÁVEL NO LOCAL</span>
                                                 </div>
                                             ) : (
-                                                <div className="bg-white/5 px-6 py-3 rounded-2xl border-2 border-white/5 flex items-center gap-3">
-                                                    <Clock className="w-5 h-5 text-slate-500" />
-                                                    <span className="text-sm font-black italic text-slate-500 uppercase tracking-tight">EM DESLOCAMENTO</span>
+                                                <div className="bg-white/5 px-5 py-2.5 rounded-2xl border-2 border-white/5 flex items-center gap-3">
+                                                    <Clock className="w-4 h-4 text-slate-500" />
+                                                    <span className="text-xs font-black italic text-slate-500 uppercase tracking-tight">EM DESLOCAMENTO</span>
                                                 </div>
                                             )}
                                         </div>

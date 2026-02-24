@@ -47,7 +47,7 @@ export default function ParentLogin() {
             if (linkError) throw linkError;
 
             if (!links || links.length === 0) {
-                throw new Error('Nenhum aluno vinculado a este responsável em nossa base.');
+                throw new Error('Identificamos seu CPF, mas não há estudantes vinculados a ele. Por favor, entre em contato com a secretaria da escola para regularizar seu cadastro.');
             }
 
             setStudents(links.map((l: any) => l.aluno));
