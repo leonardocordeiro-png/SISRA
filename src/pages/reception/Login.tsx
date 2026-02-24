@@ -49,85 +49,105 @@ export default function ReceptionLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-12 overflow-x-hidden relative font-sans">
-            {/* Background Decorative Elements */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[120px]"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/5 rounded-full blur-[120px]"></div>
+        <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-8 overflow-hidden relative font-sans">
+            {/* Advanced Background with Animated Orbs */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/10 rounded-full blur-[160px] animate-pulse"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-600/10 rounded-full blur-[160px] animate-pulse delay-1000"></div>
 
-            <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-white rounded-3xl md:rounded-[3rem] shadow-2xl overflow-hidden relative z-10 border border-slate-100">
-                {/* Left Side: Brand/Visual */}
-                <div className="hidden lg:flex flex-col justify-between p-16 bg-[#0f172a] relative">
-                    <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 bg-white/5 backdrop-blur-2xl rounded-[2.5rem] md:rounded-[4rem] shadow-[0_0_80px_rgba(0,0,0,0.4)] overflow-hidden relative z-10 border border-white/10 ring-1 ring-white/5">
+
+                {/* Left Side: Brand/Visual (40%) */}
+                <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-16 bg-gradient-to-br from-slate-950 via-[#0f172a] to-emerald-950 relative overflow-hidden">
+                    {/* Decorative Geometric Overlay */}
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
                         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <circle cx="50" cy="50" r="40" fill="white" />
+                            <defs>
+                                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
+                                </pattern>
+                            </defs>
+                            <rect width="100" height="100" fill="url(#grid)" />
                         </svg>
                     </div>
 
                     <div className="relative z-10">
-                        <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mb-8 shadow-xl shadow-emerald-500/20">
-                            <Lock className="w-8 h-8 text-white" />
+                        <div className="w-20 h-20 bg-emerald-500/10 backdrop-blur-xl border border-emerald-500/20 rounded-3xl flex items-center justify-center mb-10 shadow-inner group">
+                            <Lock className="w-10 h-10 text-emerald-400 group-hover:scale-110 transition-transform duration-500" />
                         </div>
-                        <h2 className="text-6xl font-black text-white italic tracking-tighter leading-none mb-6 uppercase">
-                            Terminal <br /> Recepção
+                        <h2 className="text-7xl font-black text-white italic tracking-tighter leading-[0.9] mb-8 uppercase">
+                            Terminal <br /> <span className="text-emerald-500">Recepção</span>
                         </h2>
-                        <div className="w-20 h-2 bg-emerald-500 rounded-full"></div>
+                        <div className="flex gap-2">
+                            <div className="w-12 h-1.5 bg-emerald-500 rounded-full"></div>
+                            <div className="w-4 h-1.5 bg-emerald-500/30 rounded-full"></div>
+                        </div>
                     </div>
 
                     <div className="relative z-10">
-                        <p className="text-slate-400 font-bold text-lg leading-tight italic">
-                            Controle total de fluxo para <br /> máxima segurança institucional.
+                        <p className="text-slate-400 font-medium text-xl leading-relaxed italic opacity-80 decoration-emerald-500/30 underline-offset-4 decoration-2">
+                            Segurança inteligente para a rotina escolar de quem protege.
                         </p>
                     </div>
                 </div>
 
-                {/* Right Side: Form */}
-                <div className="p-6 sm:p-16 flex flex-col justify-center bg-white">
-                    <div className="mb-6 md:mb-10 text-center lg:text-left">
-                        <h1 className="text-2xl md:text-4xl font-black text-slate-900 italic tracking-tighter mb-2 uppercase">Acesso Seguro</h1>
-                        <p className="text-emerald-600 font-black uppercase tracking-widest text-[10px]">Identifique-se para gerenciar retiradas</p>
+                {/* Right Side: Form (60%) */}
+                <div className="lg:col-span-7 p-8 sm:p-20 flex flex-col justify-center bg-[#050a18]/40 backdrop-blur-md">
+                    <div className="mb-12 text-center lg:text-left">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-4">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
+                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sistema Ativo</span>
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-4 uppercase leading-none">Acesso Seguro</h1>
+                        <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[11px] opacity-60">Autenticação de Operador</p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-6">
+                    <form onSubmit={handleLogin} className="space-y-8">
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">E-mail Corporativo</label>
+                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2 flex items-center gap-2">
+                                <Mail className="w-3 h-3" />
+                                E-mail Corporativo
+                            </label>
                             <div className="relative group">
-                                <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
                                 <input
                                     type="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-14 md:pl-16 pr-6 md:pr-8 py-4 md:py-5 rounded-2xl md:rounded-3xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium"
+                                    className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium shadow-2xl"
                                     placeholder="voce@escola.com"
                                 />
+                                <div className="absolute bottom-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
                             </div>
                         </div>
 
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Senha de Acesso</label>
+                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2 flex items-center gap-2">
+                                <Lock className="w-3 h-3" />
+                                Senha de Acesso
+                            </label>
                             <div className="relative group">
-                                <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-14 md:pl-16 pr-14 md:pr-16 py-4 md:py-5 rounded-2xl md:rounded-3xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium tracking-widest"
+                                    className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium tracking-widest shadow-2xl"
                                     placeholder="••••••••"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-emerald-500 transition-colors"
+                                    className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 transition-colors"
                                 >
                                     {showPassword ? <EyeOff className="w-7 h-7" /> : <Eye className="w-7 h-7" />}
                                 </button>
+                                <div className="absolute bottom-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
                             </div>
                         </div>
 
                         {error && (
-                            <div className="p-5 bg-red-50 text-red-600 font-bold text-sm rounded-3xl border border-red-100 flex items-center gap-3 animate-shake">
-                                <AlertCircle className="w-5 h-5" />
+                            <div className="p-6 bg-red-500/10 text-red-400 font-bold text-sm rounded-[2rem] border border-red-500/20 flex items-center gap-4 animate-shake backdrop-blur-xl">
+                                <AlertCircle className="w-6 h-6 shrink-0" />
                                 {error}
                             </div>
                         )}
@@ -135,25 +155,26 @@ export default function ReceptionLogin() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 md:py-6 rounded-2xl md:rounded-3xl transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 text-lg md:text-xl uppercase tracking-widest shadow-2xl shadow-emerald-500/20 group"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-6 md:py-7 rounded-3xl transition-all transform hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 text-xl md:text-2xl uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(16,185,129,0.25)] group relative overflow-hidden"
                         >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
                             {loading ? (
-                                <Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin" />
+                                <Loader2 className="w-8 h-8 animate-spin" />
                             ) : (
                                 <>
-                                    Entrar no Terminal
-                                    <ChevronRight className="w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
+                                    <span>Entrar no Terminal</span>
+                                    <ChevronRight className="w-6 h-6 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-12 text-center lg:text-left flex items-center justify-between">
-                        <a href="#" className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest">
+                    <div className="mt-16 text-center lg:text-left flex flex-col sm:flex-row items-center justify-between gap-6 opacity-40 hover:opacity-100 transition-opacity duration-500">
+                        <a href="#" className="text-[11px] font-black text-slate-500 hover:text-emerald-500 uppercase tracking-widest transition-colors">
                             Esqueceu sua senha?
                         </a>
-                        <p className="text-slate-300 font-bold text-[10px] uppercase tracking-widest">
-                            v2.4.0 • La Salle, Cheguei!
+                        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
+                            v2.5.0 • La Salle, Cheguei!
                         </p>
                     </div>
                 </div>
