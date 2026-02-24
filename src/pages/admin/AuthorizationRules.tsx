@@ -193,6 +193,20 @@ export default function AuthorizationRules() {
                     });
 
                 if (authError) throw authError;
+
+                // FIX: Also link the student and guardian in the junction table
+                const { error: linkError } = await supabase
+                    .from('alunos_responsaveis')
+                    .insert({
+                        aluno_id: studentId,
+                        responsavel_id: guardianId
+                    });
+
+                if (linkError) {
+                    console.error('Warning: could not create junction table link', linkError);
+                    // Decide if we throw here depending on RLS policy. 
+                    // Let's at least log it if it fails.
+                }
             }
 
             toast.success(
