@@ -176,15 +176,15 @@ export default function ClassroomDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f172a] text-white flex flex-col font-sans selection:bg-emerald-500/30 overflow-hidden">
+        <div className="min-h-screen bg-[#0f172a] text-white flex flex-col font-sans selection:bg-emerald-500/30 overflow-x-hidden">
             {/* Ambient Background Glows */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
             </div>
 
-            <header className="px-8 py-5 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#0f172a]/80 backdrop-blur-xl z-[60] no-print">
-                <div className="flex items-center gap-12">
+            <header className="px-4 md:px-8 py-4 md:py-5 border-b border-white/5 flex flex-col md:flex-row items-center justify-between sticky top-0 bg-[#0f172a]/80 backdrop-blur-xl z-[60] no-print gap-4">
+                <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
                     <NavigationControls />
                     <div className="flex flex-col">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -244,7 +244,7 @@ export default function ClassroomDashboard() {
                 </div>
             </header>
 
-            <main className="flex-1 flex overflow-hidden">
+            <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 {/* Priority Pipeline (Left Sidebar) */}
                 <PriorityPipeline
                     userId={user?.id || ''}
@@ -256,11 +256,11 @@ export default function ClassroomDashboard() {
                 />
 
                 {/* Focus Spotlight (Main Content) */}
-                <div className="flex-1 relative flex flex-col justify-center items-center p-12 overflow-y-auto">
+                <div className="flex-1 relative flex flex-col justify-center items-center p-4 md:p-12 overflow-y-auto w-full">
                     {activeRequest ? (
                         <div className="w-full max-w-5xl animate-in fade-in slide-in-from-right-8 duration-500">
                             {/* Spotlight Header Card */}
-                            <div className="relative bg-white/5 border border-white/10 rounded-[4rem] p-12 backdrop-blur-3xl shadow-3xl flex flex-col lg:flex-row items-center gap-16 overflow-hidden">
+                            <div className="relative bg-white/5 border border-white/10 rounded-[2rem] md:rounded-[4rem] p-6 md:p-12 backdrop-blur-3xl shadow-3xl flex flex-col lg:flex-row items-center gap-8 md:gap-16 overflow-hidden">
                                 {/* Geometric Accents */}
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32"></div>
                                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full -ml-32 -mb-32"></div>

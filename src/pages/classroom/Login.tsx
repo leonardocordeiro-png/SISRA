@@ -49,12 +49,12 @@ export default function ClassroomLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 sm:p-12 overflow-hidden relative font-sans">
+        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 sm:p-12 overflow-x-hidden relative font-sans">
             {/* Background Decorative Elements */}
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
 
-            <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-slate-900/50 backdrop-blur-3xl rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden relative z-10">
+            <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-slate-900/50 backdrop-blur-3xl rounded-3xl md:rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden relative z-10">
                 {/* Left Side: Brand/Visual */}
                 <div className="hidden lg:flex flex-col justify-between p-16 bg-gradient-to-br from-emerald-600 to-emerald-900 relative">
                     <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -81,10 +81,10 @@ export default function ClassroomLogin() {
                 </div>
 
                 {/* Right Side: Form */}
-                <div className="p-10 sm:p-16 flex flex-col justify-center">
-                    <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-4xl font-black text-white italic tracking-tighter mb-2 uppercase">Acesso Tablet</h1>
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Identifique sua sala para iniciar</p>
+                <div className="p-6 sm:p-16 flex flex-col justify-center">
+                    <div className="mb-6 md:mb-10 text-center lg:text-left">
+                        <h1 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter mb-2 uppercase">Acesso Tablet</h1>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Identifique sua sala para iniciar</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6">
@@ -95,7 +95,7 @@ export default function ClassroomLogin() {
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-8 py-5 rounded-3xl bg-slate-800/50 border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-0 outline-none transition-all text-xl font-medium shadow-inner"
+                                className="w-full px-6 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl bg-slate-800/50 border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium shadow-inner"
                                 placeholder="sala@escola.com"
                             />
                         </div>
@@ -108,7 +108,7 @@ export default function ClassroomLogin() {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-8 py-5 rounded-3xl bg-slate-800/50 border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-0 outline-none transition-all text-xl font-medium pr-16 shadow-inner tracking-widest"
+                                    className="w-full px-6 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl bg-slate-800/50 border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium pr-16 shadow-inner tracking-widest"
                                     placeholder="••••"
                                 />
                                 <button
@@ -131,14 +131,14 @@ export default function ClassroomLogin() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-6 rounded-3xl transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 text-xl uppercase tracking-widest shadow-2xl shadow-emerald-500/20 group"
+                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-4 md:py-6 rounded-2xl md:rounded-3xl transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 text-lg md:text-xl uppercase tracking-widest shadow-2xl shadow-emerald-500/20 group"
                         >
                             {loading ? (
-                                <Loader2 className="w-8 h-8 animate-spin" />
+                                <Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin" />
                             ) : (
                                 <>
                                     Conectar Terminal
-                                    <School className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                                    <School className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-12 transition-transform" />
                                 </>
                             )}
                         </button>

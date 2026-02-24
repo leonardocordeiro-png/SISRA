@@ -4,7 +4,7 @@ import { School, User, GraduationCap, Shield } from 'lucide-react';
 
 export default function Welcome() {
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 md:p-8">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8 w-full max-w-full overflow-x-hidden">
             <div className="w-full max-w-4xl text-center space-y-6 md:space-y-8">
                 <div className="flex justify-center mb-4 md:mb-6">
                     <div className="bg-emerald-100 p-4 rounded-full border-4 border-white shadow-lg">
@@ -20,7 +20,7 @@ export default function Welcome() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-12 w-full">
                     {/* Reception */}
                     <Link to="/recepcao/login" className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group active:scale-95">
                         <div className="w-12 h-12 md:w-14 md:h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-emerald-100 transition-colors">

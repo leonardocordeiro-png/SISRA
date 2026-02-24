@@ -112,7 +112,7 @@ export default function ActiveWaitingList() {
     }
 
     return (
-        <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-emerald-500/30">
+        <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-emerald-500/30 overflow-x-hidden">
             {/* Ambient Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
@@ -130,26 +130,26 @@ export default function ActiveWaitingList() {
                             </div>
                             <span className="text-emerald-500 font-bold tracking-wider text-sm">RECEPÇÃO EM TEMPO REAL</span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+                        <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">
                             Fila de <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">Espera Ativa</span>
                         </h1>
-                        <p className="text-slate-400 mt-2 text-lg">Monitoramento dinâmico de retiradas e tempo de resposta.</p>
+                        <p className="text-slate-400 mt-2 text-base md:text-lg">Monitoramento dinâmico de retiradas e tempo de resposta.</p>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                        <div className="relative w-full sm:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                             <input
                                 type="text"
                                 placeholder="Filtrar fila..."
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500/50 outline-none w-64 transition-all"
+                                className="pl-10 pr-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500/50 outline-none w-full transition-all"
                             />
                         </div>
-                        <div className="bg-slate-900 border border-slate-800 px-6 py-3 rounded-2xl flex flex-col items-center justify-center min-w-[120px]">
-                            <span className="text-3xl font-black text-emerald-500">{waiting.length}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">ALUNOS TOTAIS</span>
+                        <div className="bg-slate-900 border border-slate-800 px-6 py-3 rounded-2xl flex flex-row sm:flex-col items-center justify-center min-w-[120px] gap-2 sm:gap-0 w-full sm:w-auto">
+                            <span className="text-2xl sm:text-3xl font-black text-emerald-500">{waiting.length}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">ALUNOS TOTAIS</span>
                         </div>
                     </div>
                 </header>

@@ -49,8 +49,8 @@ export default function AdminLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-8 border-t-4 border-slate-800">
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 w-full max-w-full overflow-x-hidden">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 md:p-8 space-y-6 md:space-y-8 border-t-4 border-slate-800">
                 <div className="text-center">
                     <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-white">
                         <GraduationCap className="w-8 h-8" />
