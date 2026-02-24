@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Loader2, Eye, EyeOff, Settings } from 'lucide-react';
+import { GraduationCap, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLogin() {
     const navigate = useNavigate();
@@ -58,13 +58,6 @@ export default function AdminLogin() {
                     <h1 className="text-2xl font-bold text-slate-900">Portal Administrativo</h1>
                     <p className="text-slate-500 mt-2">Gerenciamento do Sistema La Salle, Cheguei!</p>
 
-                    <button
-                        onClick={() => navigate('/admin/setup')}
-                        className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest group"
-                    >
-                        <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform" />
-                        Configurar Sistema (Setup)
-                    </button>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-6">

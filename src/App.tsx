@@ -42,7 +42,6 @@ import ParentLogin from './pages/parent/Login';
 import SelfRegistration from './pages/parent/SelfRegistration';
 
 import SystemStatus from './pages/system/SystemStatus';
-import Setup from './pages/Setup';
 
 const ADMIN_ROLES = ['ADMIN'];
 const RECEPTION_ROLES = ['RECEPCIONISTA', 'ADMIN', 'COORDENADOR'];
@@ -60,7 +59,6 @@ function App() {
             <Route path="/recepcao/login" element={<ReceptionLogin />} />
             <Route path="/sala/login" element={<ClassroomLogin />} />
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/setup" element={<Setup />} />
             <Route path="/system/status" element={<SystemStatus />} />
 
             {/* Parent Routes (public — accessed via QR code links) */}
