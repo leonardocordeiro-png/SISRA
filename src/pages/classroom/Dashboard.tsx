@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, Clock, LogOut, Check, X, User as UserIcon, Volume2, VolumeX, Send, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Bell, Clock, LogOut, Check, X, User as UserIcon, Volume2, VolumeX, Send, AlertTriangle, MessageSquare, ChevronRight, School, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NavigationControls from '../../components/NavigationControls';
 import PriorityPipeline from '../../components/classroom/PriorityPipeline';
@@ -32,7 +32,6 @@ export default function ClassroomDashboard() {
     const [requests, setRequests] = useState<PickupRequest[]>([]);
     const [activeRequest, setActiveRequest] = useState<PickupRequest | null>(null);
     const [soundEnabled, setSoundEnabled] = useState(true);
-    const [teacherClass, setTeacherClass] = useState<string | null>(null);
     const [allClasses, setAllClasses] = useState<string[]>([]);
     const [selectedClass, setSelectedClass] = useState<string | 'TODAS'>('TODAS');
     const [customNote, setCustomNote] = useState('');
@@ -53,10 +52,8 @@ export default function ClassroomDashboard() {
                     }
 
                     if (data?.sala_atribuida) {
-                        setTeacherClass(data.sala_atribuida);
                         setSelectedClass(data.sala_atribuida === 'TODAS' ? 'TODAS' : data.sala_atribuida);
                     } else if (data?.turma_atribuida) {
-                        setTeacherClass(data.turma_atribuida);
                         setSelectedClass(data.turma_atribuida);
                     }
                 });
@@ -176,75 +173,100 @@ export default function ClassroomDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f172a] text-white flex flex-col font-sans selection:bg-emerald-500/30 overflow-x-hidden">
-            {/* Ambient Background Glows */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+        <div className="min-h-screen bg-[#020617] text-white flex flex-col font-sans selection:bg-emerald-500/30 overflow-hidden relative">
+            {/* Ultra-Premium Ambient Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-emerald-500/10 blur-[180px] rounded-full animate-pulse-slow" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[200px] rounded-full animate-pulse-slow delay-1000" />
+
+                {/* HUD Grid Overlay */}
+                <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
             </div>
 
-            <header className="px-4 md:px-8 py-4 md:py-5 border-b border-white/5 flex flex-col md:flex-row items-center justify-between sticky top-0 bg-[#0f172a]/80 backdrop-blur-xl z-[60] no-print gap-4">
-                <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
+            <header className="px-6 md:px-10 py-5 border-b border-white/10 flex flex-col md:flex-row items-center justify-between sticky top-0 bg-[#020617]/80 backdrop-blur-3xl z-[60] no-print gap-6 shadow-2xl">
+                <div className="flex flex-col md:flex-row items-center gap-6 md:gap-14 w-full md:w-auto">
                     <NavigationControls />
+
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                            <h1 className="text-xl font-black tracking-tight uppercase italic">
-                                {(role === 'ADMIN' || role === 'COORDENADOR')
-                                    ? (selectedClass === 'TODAS' ? 'Central de Controle' : selectedClass)
-                                    : (teacherClass || 'Terminal SCT')}
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.9)]"></div>
+                            <h1 className="text-2xl font-black tracking-tighter uppercase italic leading-none flex items-center gap-3">
+                                <span className="text-slate-500">CONTROL</span>
+                                <span className="text-white">CENTER</span>
                             </h1>
                         </div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] ml-5">Global Terminal • v2.5.0</p>
                     </div>
 
                     {(role === 'ADMIN' || role === 'COORDENADOR') && (
-                        <div className="flex items-center gap-3 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
+                        <div className="flex items-center gap-3 bg-white/5 p-1.5 rounded-[1.2rem] border border-white/10 backdrop-blur-xl shadow-inner">
                             <button
                                 onClick={() => setSelectedClass('TODAS')}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest ${selectedClass === 'TODAS' ? 'bg-emerald-500 text-slate-900 shadow-xl shadow-emerald-500/20' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-6 py-2.5 rounded-[0.9rem] text-[10px] font-black transition-all uppercase tracking-widest ${selectedClass === 'TODAS' ? 'bg-emerald-500 text-slate-950 shadow-[0_8px_20px_rgba(16,185,129,0.3)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                             >
-                                TODAS
+                                TODAS AS UNIDADES
                             </button>
-                            <select
-                                value={selectedClass}
-                                onChange={(e) => setSelectedClass(e.target.value)}
-                                className="bg-white/5 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl px-4 py-2 hover:bg-white/10 transition-all outline-none focus:ring-2 focus:ring-emerald-500/50"
-                            >
-                                <option value="TODAS" className="text-slate-900 bg-white">TODAS AS SALAS / TURMAS</option>
-                                {allClasses.map(c => (
-                                    <option key={c} value={c} className="text-slate-900 bg-white">{c}</option>
-                                ))}
-                            </select>
+                            <div className="relative group">
+                                <select
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    className="appearance-none bg-white/5 border border-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-[0.9rem] pl-6 pr-10 py-2.5 hover:bg-white/10 transition-all outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer"
+                                >
+                                    <option value="TODAS" className="text-slate-900 bg-white">FILTRAR POR SALA</option>
+                                    {allClasses.map(c => (
+                                        <option key={c} value={c} className="text-slate-900 bg-white">{c}</option>
+                                    ))}
+                                </select>
+                                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none rotate-90" />
+                            </div>
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <div className="hidden lg:flex flex-col text-right">
-                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Status da Fila</p>
-                        <div className="flex items-center justify-end gap-2">
-                            <span className="text-2xl font-black italic tracking-tighter leading-none">{requests.length}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Pendente(s)</span>
+                <div className="flex items-center gap-8">
+                    {/* Advanced Monitoring HUD */}
+                    <div className="hidden xl:flex items-center gap-8">
+                        <div className="flex flex-col text-right">
+                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1.5 opacity-70">Queue Integrity</p>
+                            <div className="flex items-center justify-end gap-3">
+                                <div className="flex -space-x-2">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="w-5 h-5 rounded-full border-2 border-[#020617] bg-slate-800 flex items-center justify-center">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500/40" />
+                                        </div>
+                                    ))}
+                                </div>
+                                <span className="text-2xl font-black italic tracking-tighter leading-none text-white">{requests.length}</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">SOLICITAÇÕES</span>
+                            </div>
+                        </div>
+
+                        <div className="h-10 w-px bg-white/5" />
+
+                        <div className="flex flex-col text-right">
+                            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5 opacity-70">Uptime System</p>
+                            <div className="flex items-center justify-end gap-2 text-blue-100 font-black italic tracking-tighter">
+                                <span className="text-2xl leading-none">99.9%</span>
+                                <span className="text-[10px] text-slate-500 uppercase">HEALTH</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="w-px h-10 bg-white/10 mx-2"></div>
-
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => setSoundEnabled(!soundEnabled)}
-                            className={`p-3.5 rounded-2xl transition-all border ${soundEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-lg shadow-emerald-500/5' : 'bg-slate-800/50 border-white/5 text-slate-500'}`}
+                            className={`p-4 rounded-[1.2rem] transition-all border-2 ${soundEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-xl shadow-emerald-500/10' : 'bg-slate-900/50 border-white/5 text-slate-600'}`}
                         >
                             {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                         </button>
-                        <button onClick={handleLogout} className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-2xl transition-all shadow-lg shadow-rose-500/5">
+                        <button onClick={handleLogout} className="p-4 bg-rose-500/10 border-2 border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-[1.2rem] transition-all shadow-xl shadow-rose-500/10">
                             <LogOut className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
             </header>
 
-            <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-10">
                 {/* Priority Pipeline (Left Sidebar) */}
                 <PriorityPipeline
                     userId={user?.id || ''}
@@ -256,193 +278,247 @@ export default function ClassroomDashboard() {
                 />
 
                 {/* Focus Spotlight (Main Content) */}
-                <div className="flex-1 relative flex flex-col justify-center items-center p-4 md:p-12 overflow-y-auto w-full">
+                <div className="flex-1 relative flex flex-col justify-center items-center p-6 md:p-16 overflow-y-auto w-full custom-scrollbar">
                     {activeRequest ? (
-                        <div className="w-full max-w-5xl animate-in fade-in slide-in-from-right-8 duration-500">
-                            {/* Spotlight Header Card */}
-                            <div className="relative bg-white/5 border border-white/10 rounded-[2rem] md:rounded-[4rem] p-6 md:p-12 backdrop-blur-3xl shadow-3xl flex flex-col lg:flex-row items-center gap-8 md:gap-16 overflow-hidden">
-                                {/* Geometric Accents */}
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32"></div>
-                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full -ml-32 -mb-32"></div>
+                        <div className="w-full max-w-6xl animate-in fade-in zoom-in-95 duration-700">
+                            {/* Spotlight Main Engine Card */}
+                            <div className="relative bg-white/[0.03] border border-white/10 rounded-[3rem] md:rounded-[5rem] p-8 md:p-16 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center gap-12 md:gap-24 overflow-hidden ring-1 ring-white/5">
 
+                                {/* UI HUD Elements (Decorative) */}
+                                <div className="absolute top-12 left-12 opacity-20 hidden lg:block">
+                                    <div className="flex flex-col gap-2">
+                                        <div className="w-32 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                                            <div className="w-2/3 h-full bg-emerald-500 animate-pulse"></div>
+                                        </div>
+                                        <div className="w-20 h-1 bg-white/10 rounded-full"></div>
+                                    </div>
+                                </div>
+                                <div className="absolute bottom-12 right-12 text-[8px] font-black text-white/5 uppercase tracking-[0.5em] hidden lg:block vertical-text">
+                                    SISRA • TERMINAL • OPS
+                                </div>
+
+                                {/* Student Visual Core */}
                                 <div className="relative group shrink-0">
-                                    <div className="absolute -inset-8 bg-emerald-500/20 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity"></div>
-                                    <div className="relative w-64 h-64 md:w-80 md:h-80 bg-slate-900 rounded-[3rem] border-8 border-white/5 overflow-hidden shadow-2xl p-2 group-hover:border-emerald-500/20 transition-all duration-500">
-                                        <div className="w-full h-full rounded-[2.2rem] overflow-hidden bg-slate-800">
+                                    <div className="absolute -inset-12 bg-emerald-500/20 rounded-full blur-[80px] opacity-40 group-hover:opacity-70 transition-all duration-1000 animate-pulse"></div>
+                                    <div className="relative w-72 h-72 md:w-[450px] md:h-[450px] bg-slate-900 rounded-[4rem] md:rounded-[6rem] border-[12px] border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-3 group-hover:border-emerald-500/20 transition-all duration-700">
+                                        <div className="w-full h-full rounded-[3rem] md:rounded-[5rem] overflow-hidden bg-slate-800 relative">
                                             {activeRequest.aluno.foto_url ? (
-                                                <img src={activeRequest.aluno.foto_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                <img src={activeRequest.aluno.foto_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
-                                                    <UserIcon className="w-32 h-32 text-slate-700 group-hover:text-emerald-500/40 transition-colors" />
+                                                    <UserIcon className="w-40 h-40 text-slate-700 group-hover:text-emerald-500/30 transition-colors" />
                                                 </div>
                                             )}
+
+                                            {/* Photo HUD Overlay */}
+                                            <div className="absolute inset-0 border-[2px] border-white/5 rounded-[3rem] md:rounded-[5rem] pointer-events-none"></div>
+                                            <div className="absolute top-8 right-8 w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                                                <UserIcon className="w-6 h-6" />
+                                            </div>
                                         </div>
 
                                         {activeRequest.tipo_solicitacao === 'EMERGENCIA' && (
-                                            <div className="absolute top-6 left-6 right-6">
-                                                <div className="bg-rose-500 text-white py-2 px-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-2xl shadow-rose-500/50 animate-pulse">
-                                                    <AlertTriangle className="w-3 h-3" /> EMERGÊNCIA
+                                            <div className="absolute top-10 left-10 right-10">
+                                                <div className="bg-rose-500 text-white py-3 px-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_15px_40px_rgba(244,63,94,0.5)] animate-bounce">
+                                                    <AlertTriangle className="w-4 h-4" /> PRIORIDADE CRÍTICA
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="flex-1 text-center lg:text-left space-y-8 relative">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-center lg:justify-start gap-4">
-                                            <span className="px-4 py-1.5 bg-emerald-500 text-slate-900 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20">Aluno Ativo</span>
+                                {/* Student Information Engine */}
+                                <div className="flex-1 text-center lg:text-left space-y-12 relative">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-center lg:justify-start gap-4 flex-wrap">
+                                            <div className="px-5 py-2 bg-emerald-500 text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_8px_20px_rgba(16,185,129,0.3)]">
+                                                SCT TRANSMISSION ACTIVE
+                                            </div>
                                             {activeRequest.aluno.observacoes && (
-                                                <span className="px-4 py-1.5 bg-rose-500/20 text-rose-500 border border-rose-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">Médico/Alerta</span>
+                                                <div className="px-5 py-2 bg-rose-500/20 text-rose-500 border-2 border-rose-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></div>
+                                                    ALERTA MÉDICO
+                                                </div>
                                             )}
                                         </div>
-                                        <h2 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-tight text-white italic">
+
+                                        <h2 className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tighter leading-[0.85] text-white italic uppercase">
                                             {activeRequest.aluno.nome_completo.split(' ')[0]}<br />
-                                            <span className="text-emerald-500">{activeRequest.aluno.nome_completo.split(' ').slice(1).join(' ')}</span>
+                                            <span className="text-emerald-500 drop-shadow-[0_0_30px_rgba(16,185,129,0.2)]">{activeRequest.aluno.nome_completo.split(' ').slice(1).join(' ')}</span>
                                         </h2>
                                     </div>
 
-                                    <div className="flex flex-col">
-                                        <h3 className="text-xl font-black italic tracking-tighter text-emerald-500 mb-1">DESTAQUE</h3>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">SALA DE CONTROLE</span>
+                                    <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-14">
+                                        <div className="flex flex-col items-center lg:items-start">
+                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Localização</h3>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center shadow-inner group-hover:border-emerald-500/50 transition-all">
+                                                    <School className="w-7 h-7 text-emerald-500" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-2xl font-black italic tracking-tighter text-white leading-none mb-1">{activeRequest.aluno.sala}</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{activeRequest.aluno.turma}</p>
+                                                </div>
                                             </div>
-                                            <span className="text-slate-500 py-1 font-bold text-[10px] uppercase tracking-widest px-3 border-l border-white/10">
-                                                {activeRequest.aluno.turma} • {activeRequest.aluno.sala}
-                                            </span>
+                                        </div>
+
+                                        <div className="h-12 w-px bg-white/10 hidden lg:block" />
+
+                                        <div className="flex flex-col items-center lg:items-start">
+                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Status Portaria</h3>
+                                            {activeRequest.status_geofence === 'CHEGOU' ? (
+                                                <div className="bg-emerald-500/20 px-6 py-3 rounded-2xl border-2 border-emerald-500/30 flex items-center gap-3">
+                                                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping shadow-[0_0_10px_rgba(16,185,129,1)]"></div>
+                                                    <span className="text-sm font-black italic text-emerald-400 uppercase tracking-tight">RESPONSÁVEL NO LOCAL</span>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white/5 px-6 py-3 rounded-2xl border-2 border-white/5 flex items-center gap-3">
+                                                    <Clock className="w-5 h-5 text-slate-500" />
+                                                    <span className="text-sm font-black italic text-slate-500 uppercase tracking-tight">EM DESLOCAMENTO</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
                                     {activeRequest.mensagem_recepcao && (
-                                        <div className="relative p-6 bg-blue-500/10 border border-blue-500/20 rounded-[2.5rem] flex items-start gap-4 overflow-hidden group">
-                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-150 transition-transform duration-700">
-                                                <MessageSquare className="w-16 h-16 text-blue-500" />
+                                        <div className="relative p-8 bg-blue-600/10 border-2 border-blue-500/20 rounded-[3rem] flex items-start gap-6 overflow-hidden group/msg transition-all hover:bg-blue-600/15">
+                                            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover/msg:scale-150 transition-transform duration-1000">
+                                                <MessageSquare className="w-24 h-24 text-blue-500" />
                                             </div>
-                                            <div className="relative">
-                                                <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-2">Nota Interna da Recepção</p>
-                                                <p className="text-2xl font-black italic text-blue-100 leading-tight">"{activeRequest.mensagem_recepcao}"</p>
+                                            <div className="relative text-left">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">Nota da Unidade Central</p>
+                                                </div>
+                                                <p className="text-3xl font-black italic text-blue-50 font-serif leading-tight">
+                                                    <span className="text-blue-500/40 text-4xl mr-2">"</span>
+                                                    {activeRequest.mensagem_recepcao}
+                                                    <span className="text-blue-500/40 text-4xl ml-2">"</span>
+                                                </p>
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* HUD - Arrival Alert (Fixed Size) */}
-                                    <div className="absolute top-0 right-12 mt-12 w-80">
-                                        {activeRequest.status_geofence === 'CHEGOU' ? (
-                                            <div className="bg-emerald-500/90 backdrop-blur-md text-slate-900 px-6 py-4 rounded-3xl flex items-center gap-4 shadow-2xl border border-white/20 animate-in slide-in-from-top-4 duration-500">
-                                                <div className="bg-white/30 p-2 rounded-xl">
-                                                    <Check className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1">Status Portaria</p>
-                                                    <p className="text-sm font-black italic leading-tight uppercase">RESPONSÁVEL NA PORTA</p>
-                                                </div>
-                                            </div>
-                                        ) : (activeRequest.status_geofence === 'LONGE' || (activeRequest.distancia_estimada_metros && activeRequest.distancia_estimada_metros > 1000)) ? (
-                                            <div className="bg-amber-500/80 backdrop-blur-md text-black px-6 py-4 rounded-3xl flex items-center gap-4 shadow-2xl border border-white/10 opacity-60">
-                                                <div className="bg-white/20 p-2 rounded-xl text-amber-900">
-                                                    <AlertTriangle className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1">Posição Pai/Mãe</p>
-                                                    <p className="text-xs font-black italic leading-tight uppercase">RESPONSÁVEL EM TRÂNSITO</p>
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                    </div>
                                 </div>
                             </div>
 
-                            {/* Control Interface */}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
-                                <div className="lg:col-span-8 bg-white/5 border border-white/10 rounded-[3rem] p-10 flex flex-col gap-8 backdrop-blur-xl">
+                            {/* Control Interface Hub */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">
+                                <div className="lg:col-span-8 bg-white/[0.03] border border-white/10 rounded-[3.5rem] p-10 flex flex-col gap-10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] group-hover:bg-emerald-500/10 transition-all duration-1000"></div>
+
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
-                                            <Send className="w-5 h-5 text-emerald-500" /> Notas Rápidas do Despachante
-                                        </h3>
-                                        <div className="flex gap-1">
-                                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-ping"></div>
-                                            <div className="w-1 h-1 bg-emerald-500/50 rounded-full"></div>
+                                        <div className="flex flex-col gap-1">
+                                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3">
+                                                <Send className="w-5 h-5 text-emerald-500" /> Mission Status Update
+                                            </h3>
+                                            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] ml-8">Transmissão em tempo real para a recepção</p>
+                                        </div>
+                                        <div className="bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
+                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">ENCRYPTED CHANNEL</span>
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-3">
-                                        {['A caminho', 'Terminando lanche', 'No banheiro', 'Em atendimento'].map(note => (
-                                            <div key={note} className="flex-1">
-                                                <button
-                                                    onClick={() => sendQuickNote(activeRequest.id, note)}
-                                                    disabled={sendingNote}
-                                                    className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
-                                                >
-                                                    {note === 'Liberando agora' ? 'Liberando' :
-                                                        note === 'Já desceu' ? 'Já desceu' :
-                                                            note === 'Em 5 minutos' ? '5 min' : note}
-                                                </button>
-                                            </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        {['A caminho', 'Lanchando', 'No banheiro', 'Em atendimento'].map(note => (
+                                            <button
+                                                key={note}
+                                                onClick={() => sendQuickNote(activeRequest.id, note)}
+                                                disabled={sendingNote}
+                                                className="group/note relative py-5 bg-white/5 hover:bg-emerald-500 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 overflow-hidden"
+                                            >
+                                                <span className="relative z-10 text-white group-hover/note:text-slate-950 transition-colors">{note}</span>
+                                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/note:translate-y-0 transition-transform duration-300"></div>
+                                            </button>
                                         ))}
                                     </div>
 
-                                    <div className="relative">
+                                    <div className="relative group/input">
+                                        <div className="absolute inset-x-8 -top-8 bottom-0 bg-emerald-500/5 blur-3xl opacity-0 group-focus-within/input:opacity-100 transition-all duration-1000"></div>
                                         <input
                                             value={customNote}
                                             onChange={(e) => setCustomNote(e.target.value)}
-                                            className="w-full bg-[#0a0f1d] border-2 border-white/5 rounded-[2rem] py-6 px-10 text-xl focus:border-emerald-500/50 focus:ring-0 transition-all font-black placeholder:text-white/10 italic"
-                                            placeholder="Transmitir dados de missão personalizados..."
+                                            className="w-full bg-[#050a18]/60 border-2 border-white/5 rounded-[2.5rem] py-7 px-10 text-2xl focus:border-emerald-500/50 focus:bg-[#050a18]/80 outline-none transition-all font-black placeholder:text-slate-700 italic pr-24 shadow-2xl"
+                                            placeholder="Transmitir mensagem personalizada..."
                                             onKeyPress={(e) => e.key === 'Enter' && sendQuickNote(activeRequest.id, customNote)}
                                         />
                                         <button
                                             onClick={() => sendQuickNote(activeRequest.id, customNote)}
                                             disabled={sendingNote || !customNote}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-emerald-500 p-4 rounded-2xl text-slate-900 hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-30 disabled:grayscale"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500 w-16 h-16 rounded-[1.8rem] text-slate-950 hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/30 disabled:opacity-20 flex items-center justify-center group/send"
                                         >
-                                            <Send className="w-6 h-6" />
+                                            {sendingNote ? <Loader2 className="w-7 h-7 animate-spin" /> : <Send className="w-7 h-7 group-hover/send:translate-x-1 group-hover/send:-translate-y-1 transition-transform" />}
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="lg:col-span-4 flex flex-col gap-4">
+                                <div className="lg:col-span-4 flex flex-col gap-6">
                                     <button
                                         onClick={() => handleResponse(activeRequest.id, 'LIBERAR')}
-                                        className="flex-1 group relative py-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] transition-all flex flex-col items-center justify-center gap-4 overflow-hidden shadow-2xl shadow-emerald-500/20"
+                                        className="flex-1 group relative py-10 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-[3.5rem] transition-all flex flex-col items-center justify-center gap-6 overflow-hidden shadow-[0_25px_60px_rgba(16,185,129,0.3)] border-b-4 border-emerald-800"
                                     >
-                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-                                        <div className="relative flex flex-col items-center gap-3">
-                                            <Check className="w-8 h-8" />
-                                            <span>LIBERAR AGORA</span>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex flex-col items-center justify-center p-4">
+                                            <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 border-4 border-white/10">
+                                                <Check className="w-10 h-10 text-white" />
+                                            </div>
+                                            <span className="text-xs font-black uppercase tracking-[0.4em] mb-1">FINALIZAR &</span>
+                                            <span className="text-2xl font-black italic italic tracking-tighter">LIBERAR ALUNO</span>
                                         </div>
+                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                                     </button>
 
-                                    <div className="grid grid-cols-2 gap-4 h-48">
+                                    <div className="grid grid-cols-2 gap-6 h-56">
                                         <button
                                             onClick={() => handleResponse(activeRequest.id, 'AGUARDAR')}
-                                            className="px-12 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-3"
+                                            className="bg-white/5 hover:bg-white/10 border-2 border-white/5 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 group/wait overflow-hidden relative shadow-xl"
                                         >
-                                            <Clock className="w-5 h-5 opacity-40" />
-                                            <span>AGUARDAR</span>
+                                            <div className="bg-slate-800/80 p-4 rounded-2xl group-hover/wait:bg-emerald-500/20 group-hover/wait:text-emerald-500 transition-all border border-white/10 relative z-10">
+                                                <Clock className="w-7 h-7" />
+                                            </div>
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/wait:text-white relative z-10">STANDBY</span>
+                                            <div className="absolute inset-0 bg-emerald-500/5 translate-x-full group-hover/wait:translate-x-0 transition-transform duration-500"></div>
                                         </button>
                                         <button
                                             onClick={() => handleResponse(activeRequest.id, 'RECUSAR')}
-                                            className="bg-white/5 border border-white/10 hover:border-rose-500/30 hover:bg-rose-500/10 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 transition-all group"
+                                            className="bg-white/5 hover:bg-rose-500/10 border-2 border-white/5 hover:border-rose-500/30 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 group/cancel overflow-hidden relative shadow-xl"
                                         >
-                                            <X className="w-8 h-8 text-rose-500 group-hover:scale-110 transition-transform" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white">RECUSAR</span>
+                                            <div className="bg-slate-800/80 p-4 rounded-2xl group-hover/cancel:bg-rose-500/20 group-hover/cancel:text-rose-500 transition-all border border-white/10 relative z-10">
+                                                <X className="w-7 h-7" />
+                                            </div>
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/cancel:text-rose-500 relative z-10">REJEITAR</span>
+                                            <div className="absolute inset-0 bg-rose-500/5 -translate-x-full group-hover/cancel:translate-x-0 transition-transform duration-500"></div>
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
-                            <div className="relative mx-auto w-48 h-48">
-                                <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>
-                                <div className="relative w-48 h-48 bg-slate-800/50 border border-white/10 rounded-full flex items-center justify-center backdrop-blur-xl">
-                                    <Bell className="w-20 h-20 text-slate-600 animate-bounce" />
+                        <div className="text-center space-y-12 animate-in fade-in zoom-in-95 duration-1000 relative">
+                            {/* Decorative Orbitals */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full animate-[spin_60s_linear_infinite]" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/[0.03] rounded-full animate-[spin_40s_linear_infinite_reverse]" />
+
+                            <div className="relative mx-auto w-64 h-64 md:w-80 md:h-80 group">
+                                <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-[80px] animate-pulse"></div>
+                                <div className="relative w-full h-full bg-slate-900 border-4 border-white/10 rounded-full flex flex-col items-center justify-center backdrop-blur-3xl shadow-2xl overflow-hidden ring-px ring-white/5 group-hover:border-emerald-500/30 transition-all duration-700">
+                                    <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
+                                    <Bell className="w-24 h-24 md:w-32 md:h-32 text-slate-700 group-hover:text-emerald-500 transition-all duration-700 animate-[bounce_3s_infinite]" />
+
+                                    {/* Scanning Line */}
+                                    <div className="absolute inset-x-0 h-4 bg-emerald-500/20 blur-xl animate-[scan_3s_linear_infinite]" />
                                 </div>
                             </div>
-                            <div>
-                                <h2 className="text-4xl font-black text-slate-200 tracking-tight uppercase italic mb-3">Aguardando Transmissão</h2>
-                                <p className="text-slate-500 text-lg font-medium max-w-sm mx-auto leading-relaxed uppercase tracking-widest text-[10px]">Varredura em tempo real por novas solicitações...</p>
+                            <div className="relative space-y-4">
+                                <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase italic leading-none">
+                                    Aguardando <br />
+                                    <span className="text-emerald-500">Transmissão</span>
+                                </h2>
+                                <div className="flex items-center justify-center gap-3 bg-white/5 px-6 py-2 rounded-full border border-white/5 w-fit mx-auto backdrop-blur-md">
+                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+                                    <p className="text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Live Sweep Active</p>
+                                </div>
+                                <p className="text-slate-400 text-base font-medium max-w-md mx-auto leading-relaxed border-t border-white/10 pt-6 mt-6 opacity-60">
+                                    Varredura em tempo real por novas solicitações de retirada via geofencing e portaria central.
+                                </p>
                             </div>
                         </div>
                     )}

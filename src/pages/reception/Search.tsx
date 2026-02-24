@@ -16,7 +16,10 @@ import {
     Hash,
     X,
     Bell,
-    User as UserIcon
+    User as UserIcon,
+    Activity,
+    ChevronRight,
+    Users
 } from 'lucide-react';
 
 
@@ -319,87 +322,152 @@ export default function ReceptionSearch() {
     const selectedGuardian = guardians.find(g => g.id === selectedGuardianId);
 
     return (
-        <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col font-sans selection:bg-emerald-500/30">
+        <div className="min-h-screen bg-[#020617] text-slate-200 flex flex-col font-sans selection:bg-emerald-500/30 overflow-hidden relative">
+            {/* Ultra-Premium Ambient Background */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-emerald-500/5 blur-[120px] rounded-full animate-pulse-slow" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full animate-pulse-slow" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
+
+                {/* HUD Grid Overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+            </div>
+
             {/* Header */}
-            <header className="bg-white/5 border-b border-white/5 px-8 py-6 flex items-center justify-between sticky top-0 z-50 backdrop-blur-xl">
-                <div className="flex items-center gap-8">
+            <header className="px-6 md:px-10 py-5 border-b border-white/10 flex flex-col md:flex-row items-center justify-between sticky top-0 bg-[#020617]/80 backdrop-blur-3xl z-[60] no-print gap-6 shadow-2xl">
+                <div className="flex items-center gap-6">
                     <NavigationControls />
+                    <div className="h-10 w-px bg-white/10 hidden md:block" />
                     <div className="flex flex-col">
-                        <h1 className="text-2xl font-black tracking-tighter text-white">RECEPÇÃO SISRA</h1>
-                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Painel de Identificação e Controle</p>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white italic">RECEPÇÃO <span className="text-emerald-500">SISRA</span></h1>
+                            <div className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[8px] font-black text-emerald-500 tracking-tighter uppercase">V4.0.2</div>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                            Mission Identification Hub
+                        </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* CÓDIGO button */}
+                {/* Advanced Monitoring HUD */}
+                <div className="hidden lg:flex items-center gap-8 bg-white/[0.03] border border-white/10 px-8 py-3 rounded-2xl backdrop-blur-md">
+                    <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">Queue Load</span>
+                        <div className="flex items-center gap-2">
+                            <div className="flex gap-0.5">
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} className={`w-1.5 h-3 rounded-full ${i <= 2 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/10'}`}></div>
+                                ))}
+                            </div>
+                            <span className="text-xs font-black text-white italic">NORMAL</span>
+                        </div>
+                    </div>
+                    <div className="w-px h-8 bg-white/10" />
+                    <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black text-blue-500/60 uppercase tracking-widest mb-1">System Health</span>
+                        <div className="flex items-center gap-2">
+                            <Activity className="w-3 h-3 text-blue-400" />
+                            <span className="text-xs font-black text-white italic">NOMINAL</span>
+                        </div>
+                    </div>
+                    <div className="w-px h-8 bg-white/10" />
+                    <div className="flex flex-col items-center text-right">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Active User</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-white uppercase italic">{userProfile?.nome_completo?.split(' ')[0] || 'Operator'}</span>
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                <UserIcon className="w-3 h-3 text-emerald-500" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
                     <button
                         onClick={() => setIsCodeModalOpen(true)}
-                        className="bg-violet-600 hover:bg-violet-500 text-white h-12 px-6 rounded-2xl flex items-center gap-3 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-lg shadow-violet-500/20"
+                        className="flex-1 md:flex-none bg-violet-600 hover:bg-violet-500 text-white h-12 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-[0_10px_30px_rgba(124,58,237,0.3)] group"
                     >
-                        <Hash className="w-5 h-5" /> CÓDIGO
+                        <Hash className="w-5 h-5 group-hover:rotate-12 transition-transform" /> CÓDIGO
                     </button>
-                    {/* QR Scan button */}
                     <button
                         onClick={() => setIsScannerOpen(true)}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-[#0f172a] h-12 px-6 rounded-2xl flex items-center gap-3 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20"
+                        className="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-400 text-[#020617] h-12 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-[0_10px_30px_rgba(16,185,129,0.3)] group"
                     >
-                        <QrCode className="w-5 h-5" /> ESCANEAR QR
+                        <QrCode className="w-5 h-5 group-hover:scale-110 transition-transform" /> ESCANEAR QR
                     </button>
-                    <div className="w-px h-8 bg-white/10 mx-1" />
-                    <button onClick={handleLogout} className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all border border-white/5">
-                        <LogOut className="w-5 h-5" />
+                    <div className="w-px h-8 bg-white/10 mx-1 hidden md:block" />
+                    <button onClick={handleLogout} className="p-3 bg-white/5 hover:bg-rose-500/20 text-white hover:text-rose-500 rounded-2xl transition-all border border-white/5 hover:border-rose-500/30 flex-none group">
+                        <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                     </button>
                 </div>
             </header>
 
-            <main className="flex-1 p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <main className="flex-1 p-6 md:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10 overflow-y-auto custom-scrollbar">
                 {/* Search Column */}
-                <div className="lg:col-span-8 space-y-8">
-                    <section className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
-                        <div className="flex flex-col gap-6">
+                <div className="lg:col-span-8 space-y-8 h-full">
+                    <section className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden group/card">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover/card:bg-emerald-500/10 transition-colors"></div>
+
+                        <div className="flex flex-col gap-8 relative z-10">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-lg font-black italic tracking-tighter text-slate-300 uppercase">Pesquisar Estudante</h2>
-                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                <div className="space-y-1">
+                                    <h2 className="text-xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                                        <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                                        Pesquisar Estudante
+                                    </h2>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-5">Busca inteligente por Nome, RA ou Turma</p>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Scan</span>
+                                </div>
                             </div>
 
-                            <div className="relative group">
-                                <SearchIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                            <div className="relative group/input">
+                                <div className="absolute inset-0 bg-emerald-500/5 blur-2xl rounded-3xl opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
+                                <SearchIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-500 group-focus-within/input:text-emerald-500 transition-all scale-100 group-focus-within/input:scale-110" />
                                 <input
                                     type="text"
                                     placeholder="Digite nome, RA ou turma..."
-                                    className="w-full bg-slate-900/50 border-2 border-white/5 rounded-3xl py-6 pl-16 pr-8 text-xl font-bold focus:border-emerald-500/50 focus:ring-0 transition-all placeholder:text-slate-600"
+                                    className="w-full bg-[#020617]/50 border-2 border-white/5 rounded-[1.5rem] py-6 pl-16 pr-8 text-xl font-bold text-white focus:border-emerald-500/50 focus:ring-0 transition-all placeholder:text-slate-600 backdrop-blur-xl"
                                     value={query}
                                     onChange={e => setQuery(e.target.value)}
                                 />
                                 {loading && (
                                     <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                                        <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                                        <div className="animate-spin w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full" />
                                     </div>
                                 )}
                             </div>
 
                             {/* Dropdown Results */}
                             {results.length > 0 && !selectedStudent && (
-                                <div className="bg-slate-900/90 border border-white/10 rounded-3xl overflow-hidden shadow-2xl mt-2">
+                                <div className="bg-[#020617]/90 border border-white/10 rounded-[1.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] mt-2 animate-in fade-in slide-in-from-top-4 duration-300">
                                     {results.map(student => (
                                         <button
                                             key={student.id}
                                             onClick={() => handleSelectStudent(student)}
-                                            className="w-full text-left p-6 hover:bg-emerald-500/10 flex items-center gap-6 border-b border-white/5 last:border-0 transition-colors group"
+                                            className="w-full text-left p-5 hover:bg-emerald-500/10 flex items-center gap-6 border-b border-white/5 last:border-0 transition-all group"
                                         >
-                                            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all">
+                                            <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all shadow-lg">
                                                 {student.foto_url ? (
                                                     <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                                                        <UserIcon className="w-6 h-6 text-slate-600" />
+                                                        <UserIcon className="w-8 h-8 text-slate-600" />
                                                     </div>
                                                 )}
                                             </div>
-                                            <div>
-                                                <p className="text-lg font-black text-white uppercase italic tracking-tight">{student.nome_completo}</p>
-                                                <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">{student.turma} • SALA {student.sala}</p>
+                                            <div className="flex-1">
+                                                <p className="text-lg font-black text-white uppercase italic tracking-tight group-hover:text-emerald-400 transition-colors leading-none mb-1">{student.nome_completo}</p>
+                                                <div className="flex items-center gap-3">
+                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{student.turma}</p>
+                                                    <div className="w-1 h-1 bg-white/20 rounded-full"></div>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">SALA {student.sala}</p>
+                                                </div>
                                             </div>
+                                            <ChevronRight className="w-5 h-5 text-slate-700 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                                         </button>
                                     ))}
                                 </div>
@@ -408,25 +476,32 @@ export default function ReceptionSearch() {
                     </section>
 
                     {/* Student Spotlight / Multi-Student View */}
-                    <div className="bg-white/5 border border-white/10 rounded-[3rem] overflow-hidden">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-2xl relative group/spotlight">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] to-transparent pointer-events-none"></div>
+
                         {(selectedStudent || relatedStudents.length > 0) ? (
-                            <div className="animate-in fade-in zoom-in-95 duration-500">
-                                <div className="p-8 lg:p-10 flex flex-col gap-8">
+                            <div className="animate-in fade-in zoom-in-95 duration-700 relative z-10">
+                                <div className="p-8 md:p-12 flex flex-col gap-10">
                                     {/* Header Info */}
-                                    <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
+                                    <div className="flex flex-col md:flex-row gap-10 items-center md:items-start text-center md:text-left">
                                         <div className="relative group shrink-0">
-                                            <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-4 border-white/10 group-hover:border-emerald-500/50 transition-all shadow-2xl">
+                                            {/* Advanced Photo Ring */}
+                                            <div className="absolute -inset-4 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                                            <div className="relative w-44 h-44 rounded-[2.5rem] overflow-hidden border-4 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 shadow-2xl bg-[#020617]">
                                                 {relatedStudents.length > 0 ? (
-                                                    <div className="w-full h-full bg-indigo-600 flex items-center justify-center">
-                                                        <SearchIcon className="w-12 h-12 text-white/50" />
+                                                    <div className="w-full h-full bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center">
+                                                        <Users className="w-16 h-16 text-white/50" />
                                                     </div>
                                                 ) : selectedStudent?.foto_url ? (
                                                     <img src={selectedStudent.foto_url} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                                                        <UserIcon className="w-16 h-16 text-slate-700" />
+                                                    <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                                                        <UserIcon className="w-20 h-20 text-slate-700" />
                                                     </div>
                                                 )}
+
+                                                {/* Scanning Line Effect */}
+                                                <div className="absolute inset-x-0 h-1 bg-emerald-500/40 blur-sm animate-scan pointer-events-none"></div>
                                             </div>
                                             <button
                                                 onClick={() => {
@@ -435,110 +510,143 @@ export default function ReceptionSearch() {
                                                     setSelectedGuardianId(null);
                                                     setSelectedStudentIds(new Set());
                                                 }}
-                                                className="absolute -top-3 -right-3 w-10 h-10 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-rose-600 transition-all active:scale-90 z-20"
+                                                className="absolute -top-3 -right-3 w-12 h-12 bg-rose-500/90 text-white rounded-2xl flex items-center justify-center shadow-2xl hover:bg-rose-600 transition-all active:scale-90 z-20 backdrop-blur-lg border border-white/10"
                                             >
                                                 <X className="w-6 h-6" />
                                             </button>
                                         </div>
 
-                                        <div className="flex-1 space-y-4">
+                                        <div className="flex-1 space-y-5 pt-2">
                                             {relatedStudents.length > 0 ? (
-                                                <div>
-                                                    <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                                        <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/30">Vínculo Familiar Detectado</span>
-                                                        <span className="px-3 py-1 bg-white/5 text-slate-400 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">{relatedStudents.length} Estudantes</span>
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-center md:justify-start gap-3">
+                                                        <span className="px-4 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-indigo-500/30 backdrop-blur-md">Vínculo Familiar Detectado</span>
+                                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                                                            <div className="w-1 h-1 bg-indigo-500 rounded-full animate-pulse"></div>
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{relatedStudents.length} Estudantes</span>
+                                                        </div>
                                                     </div>
-                                                    <h2 className="text-4xl font-black text-white italic tracking-tighter leading-tight">
-                                                        Solicitação Multi-Estudante
-                                                    </h2>
-                                                    <p className="text-slate-400 text-sm font-medium mt-1">Selecione os alunos que serão retirados agora.</p>
+                                                    <div className="space-y-1">
+                                                        <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter leading-[0.9] uppercase">
+                                                            Grupo <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Familiar</span>
+                                                        </h2>
+                                                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest pl-1">Selecione os membros para liberação imediata.</p>
+                                                    </div>
                                                 </div>
                                             ) : selectedStudent && (
-                                                <div>
-                                                    <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                                        <span className="px-3 py-1 bg-emerald-500/20 text-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30">Aluno Identificado</span>
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-center md:justify-start gap-4">
+                                                        <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-emerald-500/30 backdrop-blur-md">Aluno Identificado</span>
+                                                        <div className="w-px h-4 bg-white/10"></div>
+                                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                                                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">RA: {selectedStudent.matricula || '---'}</span>
+                                                        </div>
                                                     </div>
-                                                    <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none mb-1">{selectedStudent.nome_completo}</h2>
-                                                    <p className="text-emerald-500 text-sm font-black uppercase tracking-widest">{selectedStudent.turma} • SALA {selectedStudent.sala}</p>
+                                                    <div className="space-y-1">
+                                                        <h2 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none uppercase">{selectedStudent.nome_completo}</h2>
+                                                        <div className="flex items-center justify-center md:justify-start gap-3 text-emerald-500 font-black uppercase tracking-[0.3em] text-xs pl-1">
+                                                            <span>{selectedStudent.turma}</span>
+                                                            <div className="w-1.5 h-1.5 bg-white/20 rounded-full"></div>
+                                                            <span>SALA {selectedStudent.sala}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Student List (if related) or Single View (if one) */}
-                                    <div className="space-y-4">
+                                    {/* Interaction Area */}
+                                    <div className="space-y-8">
                                         {relatedStudents.length > 0 ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-3 custom-scrollbar">
                                                 {relatedStudents.map(student => {
                                                     const isSelected = selectedStudentIds.has(student.id);
                                                     return (
                                                         <button
                                                             key={student.id}
                                                             onClick={() => toggleStudentSelection(student.id)}
-                                                            className={`flex items-center gap-4 p-4 rounded-3xl border-2 transition-all text-left group relative overflow-hidden ${isSelected
-                                                                ? 'bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/5'
-                                                                : 'bg-white/5 border-white/5 hover:border-white/10'
+                                                            className={`flex items-center gap-5 p-5 rounded-[1.5rem] border-2 transition-all duration-500 text-left group/btn relative overflow-hidden ${isSelected
+                                                                ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_15px_30px_rgba(16,185,129,0.2)] scale-[1.02] z-10'
+                                                                : 'bg-[#020617]/40 border-white/5 hover:border-white/20 hover:bg-[#020617]/60'
                                                                 }`}
                                                         >
-                                                            <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${isSelected ? 'border-emerald-500' : 'border-white/10'}`}>
+                                                            <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 shrink-0 transition-all duration-500 ${isSelected ? 'border-emerald-400 rotate-3' : 'border-white/10'}`}>
                                                                 {student.foto_url ? (
                                                                     <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-600">
-                                                                        <UserIcon className="w-6 h-6" />
+                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
+                                                                        <UserIcon className="w-7 h-7" />
                                                                     </div>
                                                                 )}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className={`font-black uppercase text-xs truncate leading-none mb-1 ${isSelected ? 'text-emerald-400' : 'text-white/80'}`}>
+                                                                <p className={`font-black uppercase text-sm truncate tracking-tight mb-1 transition-colors ${isSelected ? 'text-white' : 'text-white/70'}`}>
                                                                     {student.nome_completo}
                                                                 </p>
-                                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
-                                                                    {student.turma} • <span className="text-emerald-600 font-black">SALA {student.sala}</span>
-                                                                </p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">
+                                                                        {student.turma}
+                                                                    </p>
+                                                                    <div className="w-1 h-1 bg-white/10 rounded-full"></div>
+                                                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">SALA {student.sala}</p>
+                                                                </div>
                                                             </div>
-                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ${isSelected ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-white/20 text-transparent'}`}>
-                                                                <CheckCircle2 className="w-4 h-4" />
+                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border-2 transition-all duration-500 ${isSelected ? 'bg-emerald-500 border-emerald-400 text-slate-950 scale-110' : 'border-white/10 text-transparent'}`}>
+                                                                <CheckCircle2 className="w-5 h-5 shadow-2xl" />
                                                             </div>
+
+                                                            {/* Selected Gradient Overlay */}
+                                                            {isSelected && <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none animate-shimmer"></div>}
                                                         </button>
                                                     );
                                                 })}
                                             </div>
                                         ) : selectedStudent && (
                                             <div className="space-y-6">
-                                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center gap-2">
-                                                    <UserIcon className="w-3 h-3" /> Responsáveis Autorizados
-                                                </h3>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 flex items-center gap-3">
+                                                        <Activity className="w-3.5 h-3.5 text-emerald-500" /> Responsáveis Autorizados
+                                                    </h3>
+                                                    <div className="h-px flex-1 bg-white/5 ml-4"></div>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     {guardians.map(guardian => {
                                                         const isSelected = guardian.id === selectedGuardianId;
                                                         return (
                                                             <button
                                                                 key={guardian.id}
                                                                 onClick={() => setSelectedGuardianId(isSelected ? null : guardian.id)}
-                                                                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left w-full group ${isSelected
-                                                                    ? 'bg-emerald-500/15 border-emerald-500 shadow-lg shadow-emerald-500/10'
-                                                                    : 'bg-white/5 border-white/10 hover:border-emerald-500/40 hover:bg-emerald-500/5'
+                                                                className={`flex items-center gap-5 p-5 rounded-[1.5rem] border-2 transition-all duration-500 text-left w-full group/guard relative overflow-hidden backdrop-blur-xl ${isSelected
+                                                                    ? 'bg-indigo-500/10 border-indigo-500 shadow-[0_15px_30px_rgba(99,102,241,0.2)] scale-[1.02] z-10'
+                                                                    : 'bg-[#020617]/40 border-white/5 hover:border-white/20 hover:bg-[#020617]/60'
                                                                     }`}
                                                             >
-                                                                <div className={`w-12 h-12 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${isSelected ? 'border-emerald-500' : 'border-white/10'}`}>
+                                                                <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 shrink-0 transition-all duration-500 ${isSelected ? 'border-indigo-400 -rotate-3' : 'border-white/10'}`}>
                                                                     {guardian.foto_url ? (
                                                                         <img src={guardian.foto_url} alt="" className="w-full h-full object-cover" />
                                                                     ) : (
-                                                                        <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                                                                            <UserIcon className="w-6 h-6 text-slate-600" />
+                                                                        <div className="w-full h-full flex items-center justify-center bg-slate-900 border border-white/5">
+                                                                            <UserIcon className="w-7 h-7 text-slate-700" />
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1 overflow-hidden">
-                                                                    <p className={`font-bold uppercase text-xs truncate leading-none mb-1 transition-colors ${isSelected ? 'text-emerald-400' : 'text-white'}`}>
+                                                                    <p className={`font-black uppercase text-sm truncate tracking-tight mb-1 transition-colors ${isSelected ? 'text-white' : 'text-white/70'}`}>
                                                                         {guardian.nome_completo}
                                                                     </p>
-                                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{guardian.parentesco || 'Autorizado'}</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${isSelected ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' : 'bg-white/5 border-white/10 text-slate-500'}`}>
+                                                                            {guardian.parentesco || 'AUTORIZADO'}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-emerald-500 text-white' : 'bg-white/5 text-transparent'}`}>
-                                                                    <CheckCircle2 className="w-4 h-4" />
+                                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border-2 transition-all duration-500 ${isSelected ? 'bg-indigo-500 border-indigo-400 text-white scale-110' : 'border-white/10 text-transparent'}`}>
+                                                                    <CheckCircle2 className="w-5 h-5 shadow-2xl" />
                                                                 </div>
+
+                                                                {/* Selected Shimmer */}
+                                                                {isSelected && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none animate-shimmer"></div>}
                                                             </button>
                                                         );
                                                     })}
@@ -547,67 +655,108 @@ export default function ReceptionSearch() {
                                         )}
                                     </div>
 
-                                    {/* Warnings / Selection Info */}
-                                    <div className="pt-2">
+                                    {/* Status Feedback / Multi-Student Info */}
+                                    <div className="relative">
                                         {relatedStudents.length > 0 ? (
-                                            <div className={`flex items-center gap-2 px-5 py-3 rounded-2xl border transition-all ${selectedStudentIds.size > 0 ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}`}>
+                                            <div className={`flex items-center gap-4 px-6 py-4 rounded-[1.2rem] border-2 transition-all duration-500 backdrop-blur-2xl ${selectedStudentIds.size > 0
+                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_10px_20px_rgba(16,185,129,0.1)]'
+                                                : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-[0_10px_20px_rgba(244,63,94,0.1)]'}`}>
                                                 {selectedStudentIds.size > 0 ? (
                                                     <>
-                                                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                                                        <p className="text-xs font-bold font-mono tracking-tight">Pronto para chamar {selectedStudentIds.size} {selectedStudentIds.size === 1 ? 'estudante' : 'estudantes'}.</p>
+                                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40">
+                                                            <CheckCircle2 className="w-6 h-6 animate-pulse" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-black italic uppercase tracking-tight">Pronto para a chamada</p>
+                                                            <p className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest">{selectedStudentIds.size} {selectedStudentIds.size === 1 ? 'estudante selecionado' : 'estudantes selecionados'}</p>
+                                                        </div>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <AlertCircle className="w-4 h-4 shrink-0" />
-                                                        <p className="text-xs font-bold uppercase tracking-widest">Nenhum aluno selecionado.</p>
+                                                        <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center border border-rose-500/40">
+                                                            <AlertCircle className="w-6 h-6 animate-pulse" />
+                                                        </div>
+                                                        <p className="text-sm font-black italic uppercase tracking-tight">Selecione ao menos um aluno para prosseguir</p>
                                                     </>
                                                 )}
                                             </div>
                                         ) : selectedStudent && (
-                                            <>
+                                            <div className={`flex items-center gap-4 px-6 py-4 rounded-[1.2rem] border-2 transition-all duration-500 backdrop-blur-2xl ${selectedGuardianId
+                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_10px_20px_rgba(16,185,129,0.1)]'
+                                                : 'bg-amber-500/10 border-amber-500/30 text-amber-500 shadow-[0_10px_20px_rgba(245,158,11,0.1)]'}`}>
                                                 {selectedGuardianId ? (
-                                                    <div className="flex items-center gap-2 px-5 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
-                                                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                                                        <p className="text-xs font-bold text-emerald-400">Responsável identificado: <span className="text-white">{selectedGuardian?.nome_completo}</span></p>
-                                                    </div>
+                                                    <>
+                                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40">
+                                                            <CheckCircle2 className="w-6 h-6" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-black italic uppercase tracking-tight">Responsável Validado</p>
+                                                            <p className="text-[10px] font-bold text-white uppercase tracking-widest">{selectedGuardian?.nome_completo}</p>
+                                                        </div>
+                                                    </>
                                                 ) : (
-                                                    <div className="flex items-center gap-2 px-5 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-                                                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                                                        <p className="text-xs font-bold text-amber-400 uppercase tracking-widest">Selecione o responsável que está retirando.</p>
-                                                    </div>
+                                                    <>
+                                                        <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center border border-amber-500/40">
+                                                            <UserIcon className="w-6 h-6 animate-pulse" />
+                                                        </div>
+                                                        <p className="text-sm font-black italic uppercase tracking-tight">Selecione o responsável presente na recepção</p>
+                                                    </>
                                                 )}
-                                            </>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Call Button Area */}
-                                <div className="p-8 bg-slate-900 border-t border-white/5 flex items-center justify-center">
+                                <div className="p-8 md:p-10 bg-[#020617]/60 border-t border-white/10 backdrop-blur-3xl overflow-hidden relative">
+                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
                                     <button
                                         onClick={handleCallStudents}
                                         disabled={sending || (relatedStudents.length > 0 ? selectedStudentIds.size === 0 : !selectedGuardianId)}
-                                        className="w-full group relative py-6 bg-emerald-500 text-slate-950 rounded-full font-black text-sm uppercase tracking-[0.4em] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 overflow-hidden shadow-2xl flex items-center justify-center gap-4"
+                                        className="w-full group relative py-8 bg-emerald-500 text-[#020617] rounded-[1.5rem] font-black text-base uppercase tracking-[0.5em] transition-all duration-500 hover:scale-[1.01] active:scale-95 disabled:opacity-30 overflow-hidden shadow-[0_20px_40px_rgba(16,185,129,0.3)] flex items-center justify-center gap-6"
                                     >
+                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                                         {sending ? (
-                                            <div className="w-6 h-6 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-6 h-6 border-3 border-[#020617] border-t-transparent rounded-full animate-spin" />
+                                                <span className="animate-pulse">PROCESSANDO...</span>
+                                            </div>
                                         ) : (
                                             <>
-                                                <Bell className="w-6 h-6" />
-                                                <span>{relatedStudents.length > 0 ? (selectedStudentIds.size > 1 ? `CHAMAR ${selectedStudentIds.size} ALUNOS` : 'CHAMAR SELECIONADO') : 'CHAMAR AGORA'}</span>
+                                                <Bell className="w-8 h-8 group-hover:rotate-12 transition-transform duration-500" />
+                                                <span className="relative z-10">{relatedStudents.length > 0 ? (selectedStudentIds.size > 1 ? `CHAMAR ${selectedStudentIds.size} ALUNOS` : 'CHAMAR SELECIONADO') : 'CHAMAR AGORA'}</span>
                                             </>
                                         )}
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center p-20 text-center opacity-30 grayscale">
-                                <div className="w-20 h-20 border-2 border-dashed border-slate-600 rounded-3xl flex items-center justify-center mb-6">
-                                    <UserIcon className="w-10 h-10 text-slate-500" />
+                            <div className="flex flex-col items-center justify-center p-24 text-center relative overflow-hidden h-full min-h-[500px]">
+                                {/* Decorative Orbitals (Empty State) */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full animate-[spin_60s_linear_infinite]" />
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/[0.03] rounded-full animate-[spin_40s_linear_infinite_reverse]" />
+
+                                <div className="relative mx-auto w-40 h-40 group mb-10">
+                                    <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>
+                                    <div className="relative w-full h-full bg-[#020617] border-4 border-white/10 rounded-[2.5rem] flex flex-col items-center justify-center backdrop-blur-3xl shadow-2xl overflow-hidden ring-px ring-white/5 group-hover:border-emerald-500/30 transition-all duration-700">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
+                                        <UserIcon className="w-16 h-16 text-slate-700 group-hover:text-emerald-500 transition-all duration-700 group-hover:scale-110" />
+
+                                        {/* Scanning Line */}
+                                        <div className="absolute inset-x-0 h-4 bg-emerald-500/20 blur-xl animate-scan" />
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-black italic tracking-widest text-slate-400 uppercase">IDENTIFICAÇÃO PENDENTE</h3>
-                                <p className="text-xs font-bold mt-4 leading-relaxed max-w-xs">
-                                    Aguardando leitura de QR ou busca para vincular responsável e alunos.
-                                </p>
+
+                                <div className="relative space-y-4 max-w-sm">
+                                    <h3 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">
+                                        Identificação <br />
+                                        <span className="text-emerald-500">Pendente</span>
+                                    </h3>
+                                    <div className="h-px w-20 bg-emerald-500/30 mx-auto"></div>
+                                    <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] leading-relaxed">
+                                        Aguardando leitura de QR ou busca para vincular responsável e alunos. Seus portais estão sincronizados.
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>

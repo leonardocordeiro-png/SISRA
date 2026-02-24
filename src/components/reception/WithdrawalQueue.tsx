@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Clock, User as UserIcon, MessageSquare, AlertCircle, Check, MapPin } from 'lucide-react';
+import { Clock, User as UserIcon, MessageSquare, AlertCircle, Check, MapPin, Activity } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 
 import type { Student } from '../../types';
@@ -156,131 +156,152 @@ export default function WithdrawalQueue() {
     }, [user?.id]);
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col h-full overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-md">
-                <h3 className="font-black text-slate-800 uppercase tracking-widest text-lg flex items-center gap-3">
-                    <Clock className="w-6 h-6 text-emerald-500" /> FILA DE RETIRADA
-                </h3>
-                <span className="bg-emerald-500 text-slate-900 text-xs font-black px-3 py-1 rounded-full shadow-lg shadow-emerald-500/20">{pendingPickups.length}</span>
+        <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] flex flex-col h-full overflow-hidden backdrop-blur-3xl shadow-2xl relative">
+            {/* Header */}
+            <div className="p-6 border-b border-white/10 flex items-center justify-between bg-[#020617]/40 backdrop-blur-2xl">
+                <div className="flex flex-col">
+                    <h3 className="font-black text-white uppercase tracking-widest text-sm flex items-center gap-2 italic">
+                        <Clock className="w-5 h-5 text-emerald-500 animate-pulse" /> Fila de Retirada
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="w-1 h-1 bg-emerald-500 rounded-full animate-ping"></div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pipeline Active</span>
+                    </div>
+                </div>
+                <div className="relative group">
+                    <div className="absolute -inset-2 bg-emerald-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <span className="relative bg-emerald-500 text-[#020617] text-[10px] font-black px-3 py-1 rounded-lg shadow-lg shadow-emerald-500/20">{pendingPickups.length}</span>
+                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50/30">
-                {pendingPickups.map((pickup) => (
-                    <div key={pickup.id} className="group p-5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex gap-4">
-                                <div className="relative">
-                                    <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 group-hover:border-emerald-500/30 transition-colors">
-                                        {pickup.aluno.foto_url ? <img src={pickup.aluno.foto_url} alt="" className="w-full h-full object-cover" /> : <UserIcon className="w-6 h-6 m-4 text-slate-300" />}
-                                    </div>
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-transparent relative z-10">
+                {pendingPickups.map((pickup) => {
+                    const isAtDoor = pickup.status_geofence === 'CHEGOU';
+                    const isNear = pickup.status_geofence === 'PERTO';
 
-                                    {pickup.distancia_estimada_metros && (
-                                        <div className={`mt-2 mb-2 p-2 rounded-lg flex items-center gap-2 ${pickup.status_geofence === 'CHEGOU' ? 'bg-red-100 text-red-700 animate-pulse' :
-                                            pickup.status_geofence === 'PERTO' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                                            }`}>
-                                            <MapPin className="w-4 h-4" />
-                                            <span className="text-xs font-bold uppercase tracking-wider">
-                                                {pickup.status_geofence === 'CHEGOU' ? 'NA PORTA' :
-                                                    pickup.status_geofence === 'PERTO' ? 'CHEGANDO' : 'A CAMINHO'}
-                                                {' '}({pickup.distancia_estimada_metros}m)
-                                            </span>
+                    return (
+                        <div key={pickup.id} className="group relative p-5 bg-[#020617]/40 rounded-3xl border border-white/5 hover:border-emerald-500/40 hover:bg-[#020617]/60 transition-all duration-500 shadow-xl overflow-hidden">
+                            {/* Scanning effect on hover */}
+                            <div className="absolute inset-x-0 h-[1px] bg-emerald-500/20 blur-[1px] top-0 opacity-0 group-hover:opacity-100 animate-scan pointer-events-none"></div>
+
+                            <div className="flex justify-between items-start mb-5">
+                                <div className="flex gap-4">
+                                    <div className="relative shrink-0">
+                                        <div className="w-16 h-16 bg-[#020617] rounded-3xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 shadow-2xl relative">
+                                            {pickup.aluno.foto_url ? (
+                                                <img src={pickup.aluno.foto_url} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-slate-700">
+                                                    <UserIcon className="w-8 h-8" />
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></div>
-                                </div>
-                                <div>
-                                    <p className="font-black text-slate-900 leading-tight group-hover:text-emerald-600 transition-colors uppercase italic tracking-tighter text-sm">{pickup.aluno.nome_completo}</p>
-                                    <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">{pickup.aluno.turma}</p>
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{pickup.aluno.sala}</p>
-
-                                    {pickup.distancia_estimada_metros && (
-                                        <div className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${pickup.status_geofence === 'CHEGOU' ? 'bg-red-100 text-red-700 animate-pulse' :
-                                            pickup.status_geofence === 'PERTO' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                                            }`}>
-                                            <MapPin className="w-3 h-3" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider">
-                                                {pickup.status_geofence === 'CHEGOU' ? 'NA PORTA' :
-                                                    pickup.status_geofence === 'PERTO' ? 'CHEGANDO' : 'A CAMINHO'}
-                                                {' '}({pickup.distancia_estimada_metros}m)
-                                            </span>
+                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-[#020617] rounded-full animate-pulse shadow-lg"></div>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-black text-white leading-tight uppercase italic tracking-tighter text-sm truncate group-hover:text-emerald-400 transition-colors">{pickup.aluno.nome_completo}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest leading-none">{pickup.aluno.turma}</p>
+                                            <div className="w-1 h-1 bg-white/10 rounded-full"></div>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">SALA {pickup.aluno.sala}</p>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                            <StatusBadge status={pickup.status} />
-                        </div>
 
-                        {pickup.mensagem_sala && (
-                            <div className="mt-2 mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-1">
-                                <MessageSquare className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                                <p className="text-[10px] font-bold text-rose-700 italic leading-tight">
-                                    Nota da Sala: "{pickup.mensagem_sala}"
-                                </p>
+                                        {pickup.distancia_estimada_metros && (
+                                            <div className={`mt-3 inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border backdrop-blur-md transition-all duration-500 ${isAtDoor ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 animate-pulse' :
+                                                isNear ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-slate-500'
+                                                }`}>
+                                                <MapPin className={`w-3 h-3 ${isAtDoor ? 'animate-bounce' : ''}`} />
+                                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">
+                                                    {isAtDoor ? 'NA PORTA' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
+                                                    {' '}({pickup.distancia_estimada_metros}m)
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <StatusBadge status={pickup.status} />
                             </div>
-                        )}
 
-                        <div className="flex flex-col gap-2">
-                            {pickup.status === 'LIBERADO' ? (
-                                <div className="flex flex-col gap-2">
-                                    <button
-                                        onClick={() => markAsAtReception(pickup.id)}
-                                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 group-hover:scale-[1.01] active:scale-95"
-                                    >
-                                        <Clock className="w-4 h-4" /> CONFIRMAR CHEGADA
-                                    </button>
-                                    <button
-                                        onClick={() => resetMissingStudent(pickup.id)}
-                                        className="w-full py-2 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl font-bold text-[9px] uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <AlertCircle className="w-3.5 h-3.5" /> Aluno não chegou
-                                    </button>
-                                </div>
-                            ) : pickup.status === 'CONFIRMADO' ? (
-                                <div className="flex flex-col gap-2">
-                                    <button
-                                        onClick={() => finalizePickup(pickup.id)}
-                                        className="w-full py-3 bg-emerald-500 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 group-hover:scale-[1.01] active:scale-95 animate-pulse"
-                                    >
-                                        <Check className="w-4 h-4" /> ENTREGAR AO PAI
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex-1 flex flex-col gap-2 opacity-60">
-                                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                        <div className="bg-amber-500 h-full w-1/4 animate-pulse"></div>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                                        <Clock className="w-3 h-3 text-amber-500" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest">Aguardando Sala</span>
-                                    </div>
+                            {pickup.mensagem_sala && (
+                                <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500 backdrop-blur-md">
+                                    <MessageSquare className="w-4 h-4 text-rose-500 shrink-0 mt-0.5 animate-pulse" />
+                                    <p className="text-[10px] font-black text-rose-400 uppercase italic leading-tight tracking-tight">
+                                        NOTE: "{pickup.mensagem_sala}"
+                                    </p>
                                 </div>
                             )}
+
+                            <div className="space-y-2.5">
+                                {pickup.status === 'LIBERADO' ? (
+                                    <div className="flex flex-col gap-2.5 relative">
+                                        <button
+                                            onClick={() => markAsAtReception(pickup.id)}
+                                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all duration-500 shadow-lg shadow-blue-500/20 group/btn active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
+                                            <Clock className="w-4 h-4 relative z-10" /> <span className="relative z-10">Confirmar Recepção</span>
+                                        </button>
+                                        <button
+                                            onClick={() => resetMissingStudent(pickup.id)}
+                                            className="w-full py-3 bg-white/5 border border-white/10 text-rose-500/70 hover:text-rose-500 hover:bg-rose-500/10 rounded-2xl font-black text-[9px] uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 group/btn_alt"
+                                        >
+                                            <AlertCircle className="w-3.5 h-3.5 group-hover/btn_alt:rotate-12 transition-transform" /> ALUNO AUSENTE
+                                        </button>
+                                    </div>
+                                ) : pickup.status === 'CONFIRMADO' ? (
+                                    <div className="flex flex-col gap-2.5">
+                                        <button
+                                            onClick={() => finalizePickup(pickup.id)}
+                                            className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-[#020617] rounded-2xl font-black text-xs uppercase tracking-[0.4em] transition-all duration-500 shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 relative overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-white/20 translate-y-full hover:translate-y-0 transition-transform duration-500"></div>
+                                            <Check className="w-5 h-5 relative z-10" /> <span className="relative z-10">ENTREGAR AGORA</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3 p-4 bg-white/[0.02] border border-white/5 rounded-2xl opacity-60">
+                                        <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                                            <div className="bg-gradient-to-r from-emerald-500 to-blue-500 h-full w-1/3 animate-[shimmer_2s_infinite_linear]"></div>
+                                        </div>
+                                        <div className="flex items-center justify-center gap-3 text-slate-500">
+                                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] italic">Procedimento em Curso</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {pendingPickups.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-slate-300 space-y-4 text-center px-8">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-                            <AlertCircle className="w-8 h-8 text-slate-200" />
-                        </div>
-                        <div>
-                            <p className="font-black uppercase tracking-widest text-sm text-slate-400">FILA VAZIA</p>
-                            <p className="text-xs font-bold leading-relaxed mt-1">Nenhum aluno na fila de espera no momento.</p>
+                    <div className="flex flex-col items-center justify-center py-20 text-center px-10 relative overflow-hidden h-full">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-white/5 blur-3xl rounded-full"></div>
+                        <div className="relative space-y-6">
+                            <div className="w-20 h-20 bg-[#020617] border-2 border-white/10 rounded-3xl flex items-center justify-center mx-auto shadow-2xl group transition-all duration-700">
+                                <Activity className="w-10 h-10 text-slate-700 group-hover:text-emerald-500 transition-all duration-700" />
+                                <div className="absolute inset-x-0 h-2 bg-emerald-500/5 blur-lg animate-scan"></div>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-500">Pipeline Empty</p>
+                                <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase italic">Zero ativos na fila.</p>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="p-6 bg-slate-900 text-white border-t border-white/5">
-                <div className="flex justify-between items-center text-xs">
-                    <div>
-                        <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest leading-none mb-1">Status da Fila</p>
-                        <p className="text-xl font-black italic">ATUALIZADO</p>
+            {/* Footer Summary */}
+            <div className="p-6 bg-[#020617]/80 border-t border-white/10 backdrop-blur-3xl relative z-10">
+                <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-emerald-500 tracking-[0.3em] leading-none">Integrity Status</p>
+                        <p className="text-xl font-black italic text-white tracking-widest uppercase">Secured</p>
                     </div>
-                    <div className="text-right">
-                        <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest leading-none mb-1">Total Ativos</p>
-                        <p className="text-xl font-black italic">{pendingPickups.length}</p>
+                    <div className="text-right space-y-1">
+                        <p className="text-[9px] font-black uppercase text-blue-500 tracking-[0.3em] leading-none">Total Active</p>
+                        <p className="text-xl font-black italic text-white tracking-widest">{pendingPickups.length}</p>
                     </div>
                 </div>
             </div>
@@ -290,27 +311,27 @@ export default function WithdrawalQueue() {
 
 function StatusBadge({ status }: { status: string }) {
     const styles = {
-        SOLICITADO: 'bg-amber-100 text-amber-700 font-black',
-        NOTIFICADO: 'bg-blue-100 text-blue-600',
-        CONFIRMADO: 'bg-blue-600 text-white font-black animate-pulse',
-        LIBERADO: 'bg-emerald-500 text-slate-900 font-black',
-        AGUARDANDO: 'bg-amber-50 text-amber-600',
+        SOLICITADO: 'bg-amber-500/10 text-amber-500 border-amber-500/30 font-black',
+        NOTIFICADO: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+        CONFIRMADO: 'bg-blue-600 text-white font-black animate-pulse shadow-lg shadow-blue-600/20',
+        LIBERADO: 'bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20',
+        AGUARDANDO: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
         FINALIZADO: 'bg-slate-800 text-white',
-        CANCELADO: 'bg-red-100 text-red-600',
+        CANCELADO: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
     };
 
     const labels = {
         SOLICITADO: 'PENDENTE',
-        NOTIFICADO: 'Recebido',
-        CONFIRMADO: 'NA PORTARIA',
+        NOTIFICADO: 'RECEBIDO',
+        CONFIRMADO: 'PORTARIA',
         LIBERADO: 'LIBERADO',
-        AGUARDANDO: 'Em Espera',
+        AGUARDANDO: 'ESPERA',
         FINALIZADO: 'ENTREGUE',
-        CANCELADO: 'Cancelado'
+        CANCELADO: 'CANCELADO'
     };
 
     return (
-        <span className={`text-[9px] uppercase px-2 py-0.5 rounded-full font-bold ${styles[status as keyof typeof styles] || styles.SOLICITADO}`}>
+        <span className={`text-[9px] uppercase px-3 py-1 rounded-full font-black tracking-widest border transition-all duration-500 ${styles[status as keyof typeof styles] || styles.SOLICITADO}`}>
             {labels[status as keyof typeof styles] || status}
         </span>
     );
