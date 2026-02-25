@@ -280,7 +280,7 @@ export default function PriorityPipeline({
                     <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5 flex items-center gap-2">
                         <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div> SYNC OK
                     </span>
-                    <span className="text-[10px] font-black text-white italic">v2.5.0-ALPHA</span>
+                    <span className="text-[10px] font-black text-white italic">v{__APP_VERSION__}</span>
                 </div>
             </div>
         </div>

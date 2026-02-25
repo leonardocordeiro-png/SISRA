@@ -85,7 +85,7 @@ export default function ParentLogin() {
                 <div className="text-center mb-10 space-y-4">
                     <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-2">
                         <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Portal do Guardião v4.0</span>
+                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Portal do Guardião v{__APP_VERSION__}</span>
                     </div>
                     <div className="space-y-1">
                         <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">Identificação de Acesso</h1>
@@ -207,7 +207,7 @@ export default function ParentLogin() {
                 <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between opacity-50">
                     <div className="space-y-1">
                         <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Sistema de Retirada</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter italic">SISRA // SECURE_ID_04</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter italic">SISRA // v{__APP_VERSION__}</span>
                     </div>
                     <div className="text-right">
                         <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Status do Link</span>

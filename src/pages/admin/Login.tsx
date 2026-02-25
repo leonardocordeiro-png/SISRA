@@ -162,7 +162,7 @@ export default function AdminLogin() {
                 <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between opacity-50">
                     <div className="space-y-1">
                         <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Protocolo de Acesso</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">v4.0.2 // CRIPTOGRAFADO</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">v{__APP_VERSION__} // CRIPTOGRAFADO</span>
                     </div>
                     <div className="flex flex-col items-end space-y-1">
                         <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Nó do Sistema</span>

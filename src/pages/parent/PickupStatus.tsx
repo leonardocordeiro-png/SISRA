@@ -469,7 +469,7 @@ export default function ParentPickupStatus() {
                 {/* Terminal Footer */}
                 <footer className="text-center pt-8 pb-20 space-y-4 opacity-30">
                     <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent w-full" />
-                    <p className="text-[9px] text-slate-600 font-bold uppercase tracking-[0.4em]">SISRA // MISSAO_CRITICAL_V2.4.1</p>
+                    <p className="text-[9px] text-slate-600 font-bold uppercase tracking-[0.4em]">SISRA // v{__APP_VERSION__}</p>
                     <div className="flex justify-center gap-8 capitalize font-black italic text-[10px]">
                         <button className="text-slate-500 hover:text-blue-500 transition-colors">SUPORTE</button>
                         <button className="text-slate-500 hover:text-blue-500 transition-colors">PRIVACIDADE</button>

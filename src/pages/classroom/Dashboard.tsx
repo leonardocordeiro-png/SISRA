@@ -195,7 +195,7 @@ export default function ClassroomDashboard() {
                                 <span className="text-white">CENTER</span>
                             </h1>
                         </div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] ml-5">Global Terminal • v2.5.0</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] ml-5">Global Terminal • v{__APP_VERSION__}</p>
                     </div>
 
                     {(role === 'ADMIN' || role === 'COORDENADOR') && (

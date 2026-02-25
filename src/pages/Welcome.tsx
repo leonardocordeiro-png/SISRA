@@ -106,7 +106,7 @@ export default function Welcome() {
                     <div className="flex items-center gap-6">
                         <div className="flex flex-col items-end">
                             <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Sequência Global</span>
-                            <span className="text-xs font-bold text-slate-400">v4.0.2 // ESTÁVEL</span>
+                            <span className="text-xs font-bold text-slate-400">v{__APP_VERSION__} // ESTÁVEL</span>
                         </div>
                         <div className="w-12 h-12 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center group hover:bg-emerald-500/10 transition-all cursor-crosshair">
                             <Globe className="w-5 h-5 text-slate-600 group-hover:text-emerald-500 transition-colors" />

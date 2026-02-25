@@ -341,7 +341,7 @@ export default function ReceptionSearch() {
                     <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white italic">RECEPÇÃO <span className="text-emerald-500">SISRA</span></h1>
-                            <div className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[8px] font-black text-emerald-500 tracking-tighter uppercase">V4.0.2</div>
+                            <div className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[8px] font-black text-emerald-500 tracking-tighter uppercase">V{__APP_VERSION__}</div>
                         </div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
                             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>

@@ -174,7 +174,7 @@ export default function ReceptionLogin() {
                             Esqueceu sua senha?
                         </a>
                         <p className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
-                            v2.5.0 • La Salle, Cheguei!
+                            v{__APP_VERSION__} • La Salle, Cheguei!
                         </p>
                     </div>
                 </div>
