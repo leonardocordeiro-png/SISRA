@@ -55,6 +55,8 @@ export default function ClassroomDashboard() {
                         setSelectedClass(data.sala_atribuida === 'TODAS' ? 'TODAS' : data.sala_atribuida);
                     } else if (data?.turma_atribuida) {
                         setSelectedClass(data.turma_atribuida);
+                    } else if (role === 'ADMIN' || role === 'COORDENADOR') {
+                        setSelectedClass('TODAS');
                     }
                 });
 

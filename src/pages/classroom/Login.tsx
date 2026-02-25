@@ -34,7 +34,7 @@ export default function ClassroomLogin() {
 
                 if (userError) throw userError;
 
-                if (userData.tipo_usuario !== 'SCT' && userData.tipo_usuario !== 'ADMIN') {
+                if (userData.tipo_usuario !== 'SCT' && userData.tipo_usuario !== 'ADMIN' && userData.tipo_usuario !== 'COORDENADOR') {
                     await supabase.auth.signOut();
                     throw new Error('Acesso restrito para SCTs.');
                 }

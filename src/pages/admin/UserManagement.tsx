@@ -58,7 +58,7 @@ export default function UserManagement() {
                 const updateData: any = {
                     nome: formData.nome,
                     tipo_usuario: formData.tipo_usuario,
-                    sala_atribuida: formData.tipo_usuario === 'SCT' ? formData.sala_atribuida : (formData.tipo_usuario === 'ADMIN' ? 'TODAS' : null)
+                    sala_atribuida: formData.tipo_usuario === 'SCT' ? formData.sala_atribuida : (formData.tipo_usuario === 'ADMIN' || formData.tipo_usuario === 'COORDENADOR' ? 'TODAS' : null)
                 };
 
                 // Track email change for Supabase Auth sync
@@ -124,7 +124,7 @@ export default function UserManagement() {
                         nome: formData.nome,
                         email: formData.email,
                         tipo_usuario: formData.tipo_usuario,
-                        sala_atribuida: formData.tipo_usuario === 'SCT' ? formData.sala_atribuida : (formData.tipo_usuario === 'ADMIN' ? 'TODAS' : null),
+                        sala_atribuida: formData.tipo_usuario === 'SCT' ? formData.sala_atribuida : (formData.tipo_usuario === 'ADMIN' || formData.tipo_usuario === 'COORDENADOR' ? 'TODAS' : null),
                         ativo: true
                     });
 
@@ -261,7 +261,7 @@ export default function UserManagement() {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-slate-900">{user.nome}</span>
-                                                {user.tipo_usuario === 'SCT' && user.sala_atribuida && (
+                                                {(user.tipo_usuario === 'SCT' || user.tipo_usuario === 'COORDENADOR') && user.sala_atribuida && (
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-[10px] text-blue-600 font-bold uppercase">{user.sala_atribuida}</span>
                                                         <span className="text-slate-300 text-[8px]">|</span>
