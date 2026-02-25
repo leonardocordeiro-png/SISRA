@@ -278,11 +278,11 @@ export default function ClassroomDashboard() {
                 />
 
                 {/* Focus Spotlight (Main Content) */}
-                <div className="flex-1 relative flex flex-col justify-center items-center p-6 md:p-16 overflow-y-auto w-full custom-scrollbar">
+                <div className="flex-1 relative flex flex-col justify-center items-center p-4 md:p-8 xl:p-16 overflow-y-auto w-full custom-scrollbar">
                     {activeRequest ? (
                         <div className="w-full max-w-6xl animate-in fade-in zoom-in-95 duration-700">
                             {/* Spotlight Main Engine Card */}
-                            <div className="relative bg-white/[0.03] border border-white/10 rounded-[3rem] md:rounded-[5rem] p-8 md:p-12 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center gap-12 md:gap-16 ring-1 ring-white/5 overflow-hidden">
+                            <div className="relative bg-white/[0.03] border border-white/10 rounded-[2.5rem] md:rounded-[4rem] p-6 md:p-8 xl:p-12 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center gap-8 md:gap-10 xl:gap-16 ring-1 ring-white/5 overflow-hidden">
 
                                 {/* UI HUD Elements (Decorative) */}
                                 <div className="absolute top-12 left-12 opacity-20 hidden lg:block">
@@ -300,7 +300,7 @@ export default function ClassroomDashboard() {
                                 {/* Student Visual Core */}
                                 <div className="relative group shrink-0">
                                     <div className="absolute -inset-12 bg-emerald-500/20 rounded-full blur-[80px] opacity-40 group-hover:opacity-70 transition-all duration-1000 animate-pulse"></div>
-                                    <div className="relative w-64 h-64 md:w-[350px] md:h-[350px] bg-slate-900 rounded-[4rem] md:rounded-[5rem] border-[10px] border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-3 group-hover:border-emerald-500/20 transition-all duration-700">
+                                    <div className="relative w-56 h-56 md:w-[260px] md:h-[260px] xl:w-[320px] xl:h-[320px] bg-slate-900 rounded-[3rem] md:rounded-[4rem] border-[8px] border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-2.5 group-hover:border-emerald-500/20 transition-all duration-700">
                                         <div className="w-full h-full rounded-[3rem] md:rounded-[5rem] overflow-hidden bg-slate-800 relative">
                                             {activeRequest.aluno.foto_url ? (
                                                 <img src={activeRequest.aluno.foto_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
@@ -328,7 +328,7 @@ export default function ClassroomDashboard() {
                                 </div>
 
                                 {/* Student Information Engine */}
-                                <div className="flex-1 text-center lg:text-left space-y-12 relative">
+                                <div className="flex-1 min-w-0 text-center lg:text-left space-y-8 xl:space-y-12 relative">
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-center lg:justify-start gap-4 flex-wrap">
                                             <div className="px-5 py-2 bg-emerald-500 text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_8px_20px_rgba(16,185,129,0.3)]">
@@ -342,7 +342,7 @@ export default function ClassroomDashboard() {
                                             )}
                                         </div>
 
-                                        <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.9] text-white italic uppercase break-words">
+                                        <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-black tracking-tighter leading-[0.9] text-white italic uppercase break-words">
                                             {activeRequest.aluno.nome_completo.split(' ')[0]}<br />
                                             <span className="text-emerald-500 drop-shadow-[0_0_30px_rgba(16,185,129,0.2)]">{activeRequest.aluno.nome_completo.split(' ').slice(1).join(' ')}</span>
                                         </h2>
