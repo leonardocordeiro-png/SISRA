@@ -121,7 +121,7 @@ export default function ParentLogin() {
                                     </div>
                                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center mt-2 flex items-center justify-center gap-2">
                                         <ShieldCheck className="w-3 h-3 text-emerald-500/50" />
-                                        Ambiente Criptografado de Ponta a Ponta
+                                        Protocolo de Segurança SSL/TLS Ativo
                                     </p>
                                 </div>
                             </div>
