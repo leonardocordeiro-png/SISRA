@@ -1,0 +1,333 @@
+{
+  "responsaveis": [
+    {
+      "id": "a0cdebdc-488c-4dad-90a8-50fd69f56de6",
+      "nome_completo": "Carlos Silva",
+      "cpf": "11122233344"
+    },
+    {
+      "id": "800f3257-3dff-484a-a899-faec3e8f0970",
+      "nome_completo": "Julia Oliveira",
+      "cpf": "22233344455"
+    },
+    {
+      "id": "167b7a88-c12b-422b-9e80-73174a612292",
+      "nome_completo": "Leonardo Dyego Santos Cordeiro",
+      "cpf": "00516208390"
+    },
+    {
+      "id": "15a87223-5498-4200-97b8-5bf6bedf0694",
+      "nome_completo": "Andréa Silva de Carvalho Cordeiro",
+      "cpf": "72669446191"
+    },
+    {
+      "id": "a23ca99f-1d16-4db8-825d-85cb4a743031",
+      "nome_completo": "Antônio Gomes de Carvalho",
+      "cpf": "14950120182"
+    }
+  ],
+  "students": [
+    {
+      "id": "9f7b293a-5b49-4b40-b53c-b0712064b6ef",
+      "nome_completo": "Arthur Ludovico Barreto"
+    },
+    {
+      "id": "b9c0d5f1-dd1b-4f32-a71c-a39fa7d15961",
+      "nome_completo": "Arthur Oliveira Dumont"
+    },
+    {
+      "id": "fc3ff675-496e-457b-a9a6-2d66a2802dbc",
+      "nome_completo": "Davi Batista do Lago"
+    },
+    {
+      "id": "9c28e9c7-98f1-4658-aa63-574e31a2ee31",
+      "nome_completo": "Davi Nascimento Ferreira"
+    },
+    {
+      "id": "6e92d811-ed29-4667-a1e4-8df6c3099bcb",
+      "nome_completo": "Elias Passos Fernandes"
+    },
+    {
+      "id": "aaa34ac1-1977-4d2a-89d5-93230738fc35",
+      "nome_completo": "Eloah Lubas Cerqueira"
+    },
+    {
+      "id": "dbf08d32-6574-437e-bf61-eca9c5137684",
+      "nome_completo": "Gael Alves Braga"
+    },
+    {
+      "id": "da5f1359-ab36-4f63-ae45-b0f96dc8049e",
+      "nome_completo": "Isabela Ferraz Magalhães"
+    },
+    {
+      "id": "32c03973-510c-481f-8842-c4960553d50f",
+      "nome_completo": "Jade Maria do Nascimento Silva Katumbila"
+    },
+    {
+      "id": "26ebe659-4d5f-4e86-a947-a08788052eae",
+      "nome_completo": "João Brito Picanço"
+    },
+    {
+      "id": "0644ae6f-4be4-487e-b9bd-3206af7b6e45",
+      "nome_completo": "João Francisco Lopes dos Santos"
+    },
+    {
+      "id": "a5580821-8556-4b21-82a1-afd23705166b",
+      "nome_completo": "Júlia Abrahão Silva Cardoso Fernandes"
+    },
+    {
+      "id": "797eb4fc-8353-4e39-93d5-8ae850c6afe3",
+      "nome_completo": "Louise Rodrigues Costa"
+    },
+    {
+      "id": "a88a6541-8160-4a59-a49d-5bbc87d8c460",
+      "nome_completo": "Lucas Rocha Nunes"
+    },
+    {
+      "id": "26da241c-e2d7-4acb-bfab-628d3f516445",
+      "nome_completo": "Lucca Gomes de Souza"
+    },
+    {
+      "id": "7680f24d-76fe-4acf-baa0-f67e4fc65276",
+      "nome_completo": "Luiz Felipe Costa Santos"
+    },
+    {
+      "id": "2cf16167-300e-4fe6-9174-8776788d07bd",
+      "nome_completo": "Manuella Maboni dos Santos Silva Brito"
+    },
+    {
+      "id": "59168273-bcdf-4124-8bd1-cc48ed8e70f7",
+      "nome_completo": "Mateus Lima Fonseca"
+    },
+    {
+      "id": "78166e19-25b1-4a2d-99ac-fe3fd693ee04",
+      "nome_completo": "Mateus Medeiros Mazocante"
+    },
+    {
+      "id": "82a36f90-93f5-413b-ba90-e75120ab6b51",
+      "nome_completo": "Miguel Ferreira da Cunha Aurora"
+    },
+    {
+      "id": "ed4c511e-0077-4474-935a-c9f3bd7adadd",
+      "nome_completo": "Oscar Pereira de Macêdo"
+    },
+    {
+      "id": "a43e96d0-82eb-475c-b5fd-791b25ef0240",
+      "nome_completo": "Pedro Mendes Rodrigues"
+    },
+    {
+      "id": "c84c93a7-7f19-4a04-af4b-84bef9bb6231",
+      "nome_completo": "Rafael Sobral de Souza Andrade"
+    },
+    {
+      "id": "203be18b-6a94-4515-a53d-9e5ddfa001b0",
+      "nome_completo": "Arthur Ávila Thomé Silveira"
+    },
+    {
+      "id": "11a26fae-8152-4ef8-85cd-57b538bc519a",
+      "nome_completo": "Bárbara Bagno Bocchino de Sousa Lima"
+    },
+    {
+      "id": "2c930057-7045-4abf-a28e-7a01fe188ad1",
+      "nome_completo": "Bernardo Antônio Alves Queiroz"
+    },
+    {
+      "id": "92d20b84-3387-4b4d-81e0-cabd59f8fe96",
+      "nome_completo": "Bernardo Borçari Ramiro Souza"
+    },
+    {
+      "id": "2c243c4a-7d17-41a1-8890-c233a2223fd5",
+      "nome_completo": "Gustavo Pires Aguiar"
+    },
+    {
+      "id": "16141f27-ccde-461e-b0d7-291cd25e6ee8",
+      "nome_completo": "Heitor Pereira Nery de Oliveira"
+    },
+    {
+      "id": "92806785-4692-46e7-afee-29302f941e01",
+      "nome_completo": "Ícaro Marques Diniz"
+    },
+    {
+      "id": "84e51dd6-9a11-4a72-9dfd-bc54cbc77bcd",
+      "nome_completo": "Kethellen Lorrane da Conceição"
+    },
+    {
+      "id": "b7f1af42-af4c-4cb0-a230-217ffc5dad93",
+      "nome_completo": "Letícia Barros Oliveira Durães"
+    },
+    {
+      "id": "71d9328e-578f-4687-aeff-42b7b4386407",
+      "nome_completo": "Liz Martins Barros"
+    },
+    {
+      "id": "2d0285ad-6fbe-4d68-bb0b-cdc665a4099f",
+      "nome_completo": "Luísa Goulart Oliveira Mendes"
+    },
+    {
+      "id": "7fd97689-fcb8-43e3-81ed-a957c9a6b19c",
+      "nome_completo": "Maya Thermuth Rodrigues das Neves"
+    },
+    {
+      "id": "1561e0c2-540e-4b73-afa8-d3ffebacb069",
+      "nome_completo": "Theo César Sousa de Araújo"
+    },
+    {
+      "id": "ff92f4f7-648e-4946-b822-741cac69afa6",
+      "nome_completo": "Thomas Aguiar Pedroso"
+    },
+    {
+      "id": "1e4c1072-b2c4-4d49-bf46-e868f8566604",
+      "nome_completo": "Verena Telacin Teixeira de Sousa"
+    },
+    {
+      "id": "02aa1d1f-7ee5-4eee-a15a-07ec5d528ad8",
+      "nome_completo": "Adrian Morais da Nóbrega"
+    },
+    {
+      "id": "71d29f06-be26-4e22-855a-5ec1f9e3d086",
+      "nome_completo": "Alice Sales Nunes Barbosa"
+    },
+    {
+      "id": "f403a369-e9c3-4bb5-8d4b-b6d4857da30a",
+      "nome_completo": "Arthur Henrique Serafini Cardoso"
+    },
+    {
+      "id": "9339e0db-6c1f-4439-811e-9226e9230768",
+      "nome_completo": "Bernardo Aguiar Pedroso"
+    },
+    {
+      "id": "e3d6b0e4-6ee7-41f7-b369-78f2a373a6e8",
+      "nome_completo": "Clara Sousa Cavalcanti"
+    },
+    {
+      "id": "e94712f7-149a-484d-8a1f-91aebc18201e",
+      "nome_completo": "Eduardo Herrero Pimenta"
+    },
+    {
+      "id": "f71f70e7-6216-4157-bcca-960b4a0f7367",
+      "nome_completo": "Isabela Nascimento Paranhos Costa"
+    },
+    {
+      "id": "734f97c0-028d-4164-973e-9c116a4e1c63",
+      "nome_completo": "Júlia Isabela Bernardes Marques"
+    },
+    {
+      "id": "03095f73-ff05-4641-b15b-069c01c66e7e",
+      "nome_completo": "Kauê Felizardo Lessa"
+    },
+    {
+      "id": "13e9172d-d927-436e-8a5f-f7d2682c4b29",
+      "nome_completo": "Luísa Silva Pedrosa"
+    },
+    {
+      "id": "a96825ec-0c5d-4c99-aba1-4c26953e5651",
+      "nome_completo": "Manuela Mondiani Lins Cordeiro"
+    },
+    {
+      "id": "360b26c1-57f1-4b29-8299-d27640cabd44",
+      "nome_completo": "Olívia Costa e Silva Guimarães"
+    },
+    {
+      "id": "f51cff3b-c043-4466-8173-25297479bf47",
+      "nome_completo": "Rafael Ferreira Feitosa"
+    },
+    {
+      "id": "9797e147-eab7-4ec2-9a8f-c0baae235633",
+      "nome_completo": "Tobias Gavião Leal"
+    },
+    {
+      "id": "4d4bea3d-6a41-428e-89f5-076484660139",
+      "nome_completo": "Ana Cecília Costa Leite"
+    },
+    {
+      "id": "e9f3e8c6-3ae0-442c-94ea-509481202cbf",
+      "nome_completo": "Augusto Ribeiro Campos"
+    },
+    {
+      "id": "d9d406bd-31fb-4c91-bc94-adb5d5bd6bf5",
+      "nome_completo": "Camila de Oliveira Araujo"
+    },
+    {
+      "id": "6274d3b2-e051-4c5f-b2ea-f46fb4cd6d1b",
+      "nome_completo": "Daniel Gomes Martins"
+    },
+    {
+      "id": "44fbd5cf-8e00-4d65-8fe7-7ffefc077858",
+      "nome_completo": "Davi de Souza Lopes"
+    },
+    {
+      "id": "a3fa1f93-b783-4204-9d7c-cf18796f7e3c",
+      "nome_completo": "Diego Malheiros de Sousa Melo"
+    },
+    {
+      "id": "ca6f94f4-9f13-49d0-a7e9-8ae97d82c17e",
+      "nome_completo": "Emanuel Passos Fernandes"
+    },
+    {
+      "id": "deb8117a-3636-4bd8-925a-65954da9ef87",
+      "nome_completo": "Gabriela Domingues Borges"
+    },
+    {
+      "id": "661084a5-774f-4dd4-8160-cf0836765c34",
+      "nome_completo": "Henrique Joaquim de Souza Alves"
+    },
+    {
+      "id": "82951f3f-de56-41e1-818e-84db1accc1be",
+      "nome_completo": "Lara Gomes Brasil Montenegro"
+    },
+    {
+      "id": "f1ec6abe-e3e5-4c72-b773-319921cbce4f",
+      "nome_completo": "Lavínia Aguiar Costa Felinto"
+    },
+    {
+      "id": "ea63afb8-1364-4097-8139-c595d5854e53",
+      "nome_completo": "Letícia Barbosa Lopes"
+    },
+    {
+      "id": "865232b1-8996-46c2-9b1d-a9651bb61853",
+      "nome_completo": "Lucas de Assis Araujo Costa"
+    },
+    {
+      "id": "4a1ec71b-1aa6-4bad-947a-1fef14ccb11c",
+      "nome_completo": "Maitê Ferreira de Sousa"
+    },
+    {
+      "id": "c241b944-131c-43d8-b72d-b97b807d2f15",
+      "nome_completo": "Mateus Zenni Guimarães Soares"
+    },
+    {
+      "id": "7c0b25ad-8c72-40eb-8bf8-3d7559b87fe7",
+      "nome_completo": "Matheus Honório Nonato"
+    },
+    {
+      "id": "4b7ffde0-9a3a-4609-89a6-f004732150c0",
+      "nome_completo": "Meline Rodrigues Santana Leôncio"
+    },
+    {
+      "id": "230c5c49-42c4-494b-961e-5942dcfa4bc1",
+      "nome_completo": "Miguel Chagas Lopes"
+    },
+    {
+      "id": "697e66a7-d133-46a9-9ab6-3b615a349bf6",
+      "nome_completo": "Valentina Maria Souza de Oliveira"
+    },
+    {
+      "id": "99d701eb-f1ea-474f-8834-5ffcccd5634e",
+      "nome_completo": "Vitor Augusto do Nascimento Siqueira"
+    },
+    {
+      "id": "478d0242-1d87-4f6c-8692-44ae1ecd8fce",
+      "nome_completo": "Alice de Carvalho Cordeiro"
+    }
+  ],
+  "authorizations": [],
+  "links": [
+    {
+      "id": "c310115c-1d32-4270-a3fd-a3642015b38d",
+      "aluno_id": "478d0242-1d87-4f6c-8692-44ae1ecd8fce",
+      "responsavel_id": "167b7a88-c12b-422b-9e80-73174a612292",
+      "parentesco": null,
+      "criado_em": "2026-02-24T20:01:36.530987+00:00"
+    }
+  ]
+}
