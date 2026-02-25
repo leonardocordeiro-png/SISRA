@@ -400,7 +400,7 @@ export default function ParentPickupStatus() {
                 <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 blur opacity-50 group-hover:opacity-100 transition duration-1000"></div>
                     <div className="relative">
-                        <GeoTracker pickupId={pickup.id} />
+                        <GeoTracker pickupId={pickup.id} escolaId={student.escola_id} />
                     </div>
                 </div>
 
