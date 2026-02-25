@@ -84,9 +84,9 @@ export default function AdminDashboard() {
                             </span>
                         </h1>
                         <div className="flex items-center gap-4">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">SISRA Operational Hub</p>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>SISRA Operational Hub</p>
                             <span className={`hidden md:block w-1 h-1 rounded-full ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></span>
-                            <p className={`hidden md:block text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Node: SISRA.ADM.MAIN_DECK</p>
+                            <p className={`hidden md:block text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-600' : 'text-slate-500'}`}>Node: SISRA.ADM.MAIN_DECK</p>
                         </div>
                     </div>
                 </div>
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
 
                     <div className={`hidden lg:flex items-center gap-4 px-6 py-2 border rounded-full backdrop-blur-md ${isDarkMode ? 'bg-white/[0.02] border-white/5' : 'bg-slate-100 border-slate-200'}`}>
                         <div className="flex flex-col items-end">
-                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">System Health</span>
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-600' : 'text-slate-500'}`}>System Health</span>
                             <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter">Normal // 98.4%</span>
                         </div>
                         <Activity className="w-4 h-4 text-emerald-500/50 animate-pulse" />
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
             </main>
 
             {/* System Footer Overlay */}
-            <footer className={`relative z-20 px-12 py-8 flex flex-col md:flex-row items-center justify-between border-t opacity-30 transition-all duration-500 ${isDarkMode ? 'border-white/5' : 'border-slate-200'}`}>
+            <footer className={`relative z-20 px-12 py-8 flex flex-col md:flex-row items-center justify-between border-t transition-all duration-500 ${isDarkMode ? 'border-white/5 opacity-30' : 'border-slate-200 opacity-60'}`}>
                 <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">SISRA System Infrastructure © 2026</p>
                 <div className="flex gap-8 mt-4 md:mt-0">
                     <span className="text-[9px] font-bold text-slate-700 tracking-tighter">SECURE_LINK // RSA_4096_ACTIVE</span>
@@ -270,11 +270,11 @@ function TelemetryUnit({ title, value, sub, icon, trend, color, isDarkMode }: { 
                 </div>
 
                 <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>{title}</p>
                     <h3 className={`text-4xl font-black italic tracking-tighter leading-none transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{value}</h3>
                 </div>
 
-                <p className={`text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] border-l-2 pl-3 transition-colors duration-500 ${isDarkMode ? 'border-white/5' : 'border-slate-200'}`}>{sub}</p>
+                <p className={`text-[9px] font-bold uppercase tracking-[0.2em] border-l-2 pl-3 transition-colors duration-500 ${isDarkMode ? 'text-slate-600 border-white/5' : 'text-slate-500 border-slate-300'}`}>{sub}</p>
             </div>
         </div>
     );
@@ -304,7 +304,7 @@ function CommandModule({ title, desc, icon, path, label, color, layout = 'standa
 
                 <div className="space-y-3">
                     <h2 className={`text-2xl font-black italic uppercase tracking-tighter group-hover:translate-x-1 transition-all duration-700 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
-                    <p className="text-sm font-bold text-slate-500 leading-relaxed uppercase tracking-tight max-w-sm opacity-60 group-hover:opacity-100 transition-opacity">
+                    <p className={`text-sm font-bold leading-relaxed uppercase tracking-tight max-w-sm transition-opacity ${isDarkMode ? 'text-slate-500 opacity-60 group-hover:opacity-100' : 'text-slate-600 opacity-80 group-hover:opacity-100'}`}>
                         {desc}
                     </p>
                 </div>
@@ -329,24 +329,37 @@ function CommandModule({ title, desc, icon, path, label, color, layout = 'standa
 
 function NavDeckItem({ icon, label, path, accent = 'slate', ghost = false, isDarkMode }: any) {
     const navigate = useNavigate();
-    const accentMap: any = {
-        slate: `text-slate-400 group-hover:text-${isDarkMode ? 'white' : 'slate-900'} group-hover:bg-${isDarkMode ? 'white/10' : 'slate-100'}`,
-        violet: 'text-violet-400 group-hover:text-violet-500 group-hover:bg-violet-500/10',
-        rose: 'text-rose-400 group-hover:text-rose-500 group-hover:bg-rose-500/10',
-    };
+
+    const iconClass = isDarkMode
+        ? accent === 'violet' ? 'text-violet-400 bg-violet-500/10 group-hover:text-violet-300'
+            : accent === 'rose' ? 'text-rose-400 bg-rose-500/10 group-hover:text-rose-300'
+                : 'text-slate-400 bg-white/5 group-hover:text-white group-hover:bg-white/10'
+        : accent === 'violet' ? 'text-violet-600 bg-violet-100 group-hover:text-violet-700'
+            : accent === 'rose' ? 'text-rose-600 bg-rose-100 group-hover:text-rose-700'
+                : 'text-slate-600 bg-slate-100 group-hover:text-slate-900 group-hover:bg-slate-200';
+
+    const labelClass = isDarkMode
+        ? ghost ? 'text-slate-400 group-hover:text-slate-300'
+            : accent === 'violet' ? 'text-violet-400 group-hover:text-violet-300'
+                : accent === 'rose' ? 'text-rose-400 group-hover:text-rose-300'
+                    : 'text-slate-400 group-hover:text-white'
+        : ghost ? 'text-slate-500 group-hover:text-slate-700'
+            : accent === 'violet' ? 'text-violet-600 group-hover:text-violet-800'
+                : accent === 'rose' ? 'text-rose-600 group-hover:text-rose-800'
+                    : 'text-slate-700 group-hover:text-slate-900';
 
     return (
         <button
             onClick={() => navigate(path)}
-            className={`w-full group flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${ghost ? 'border-transparent hover:bg-slate-100/50' : isDarkMode ? 'bg-[#020617]/50 border-white/5 hover:border-white/20 active:scale-[0.98]' : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 active:scale-[0.98]'}`}
+            className={`w-full group flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${ghost ? 'border-transparent hover:bg-slate-100/50' : isDarkMode ? 'bg-[#020617]/50 border-white/5 hover:border-white/20 active:scale-[0.98]' : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]'}`}
         >
-            <div className={`p-2.5 rounded-xl transition-all duration-500 ${isDarkMode ? accentMap[accent].split(' ')[1] + ' ' + accentMap[accent].split(' ')[2] : accentMap[accent].split(' ')[1] + ' ' + (accent === 'slate' ? 'bg-slate-100 text-slate-500' : 'bg-slate-50 text-' + accentMap[accent].split('-')[1])}`}>
-                {import.meta.env.DEV ? icon : <div className="w-4 h-4">{icon}</div>}
+            <div className={`p-2.5 rounded-xl transition-all duration-500 ${iconClass}`}>
+                <div className="w-4 h-4">{icon}</div>
             </div>
-            <span className={`text-xs font-black uppercase tracking-widest transition-colors ${ghost ? 'text-slate-600 group-hover:text-slate-400' : isDarkMode ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'}`}>
+            <span className={`text-xs font-black uppercase tracking-widest transition-colors ${labelClass}`}>
                 {label}
             </span>
-            <ChevronRight className="w-4 h-4 ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 text-slate-600" />
+            <ChevronRight className={`w-4 h-4 ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
         </button>
     );
 }
