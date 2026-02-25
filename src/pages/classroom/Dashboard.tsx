@@ -195,7 +195,7 @@ export default function ClassroomDashboard() {
                                 <span className="text-white">CENTER</span>
                             </h1>
                         </div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] ml-5">Global Terminal • v{__APP_VERSION__}</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] ml-5">Terminal Global • v{__APP_VERSION__}</p>
                     </div>
 
                     {(role === 'ADMIN' || role === 'COORDENADOR') && (
@@ -227,7 +227,7 @@ export default function ClassroomDashboard() {
                     {/* Advanced Monitoring HUD */}
                     <div className="hidden xl:flex items-center gap-8">
                         <div className="flex flex-col text-right">
-                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1.5 opacity-70">Queue Integrity</p>
+                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1.5 opacity-70">Integridade da Fila</p>
                             <div className="flex items-center justify-end gap-3">
                                 <div className="flex -space-x-2">
                                     {[1, 2, 3].map(i => (
@@ -244,10 +244,10 @@ export default function ClassroomDashboard() {
                         <div className="h-10 w-px bg-white/5" />
 
                         <div className="flex flex-col text-right">
-                            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5 opacity-70">Uptime System</p>
+                            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5 opacity-70">Uptime do Sistema</p>
                             <div className="flex items-center justify-end gap-2 text-blue-100 font-black italic tracking-tighter">
                                 <span className="text-2xl leading-none">99.9%</span>
-                                <span className="text-[10px] text-slate-500 uppercase">HEALTH</span>
+                                <span className="text-[10px] text-slate-500 uppercase tracking-widest">SAÚDE</span>
                             </div>
                         </div>
                     </div>
@@ -332,7 +332,7 @@ export default function ClassroomDashboard() {
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-center lg:justify-start gap-4 flex-wrap">
                                             <div className="px-5 py-2 bg-emerald-500 text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_8px_20px_rgba(16,185,129,0.3)]">
-                                                SCT TRANSMISSION ACTIVE
+                                                TRANSMISSÃO SCT ATIVA
                                             </div>
                                             {activeRequest.aluno.observacoes && (
                                                 <div className="px-5 py-2 bg-rose-500/20 text-rose-500 border-2 border-rose-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
@@ -409,12 +409,12 @@ export default function ClassroomDashboard() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col gap-1">
                                             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3">
-                                                <Send className="w-5 h-5 text-emerald-500" /> Mission Status Update
+                                                <Send className="w-5 h-5 text-emerald-500" /> Atualização de Status da Missão
                                             </h3>
                                             <p className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] ml-8">Transmissão em tempo real para a recepção</p>
                                         </div>
-                                        <div className="bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
-                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">ENCRYPTED CHANNEL</span>
+                                        <div className="bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Canal Criptografado</span>
                                         </div>
                                     </div>
 
@@ -424,7 +424,7 @@ export default function ClassroomDashboard() {
                                                 key={note}
                                                 onClick={() => sendQuickNote(activeRequest.id, note)}
                                                 disabled={sendingNote}
-                                                className="group/note relative py-5 bg-white/5 hover:bg-emerald-500 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 overflow-hidden"
+                                                className="group/note relative py-5 flex items-center justify-center bg-white/5 hover:bg-emerald-500 border border-white/5 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-all disabled:opacity-50 overflow-hidden px-1"
                                             >
                                                 <span className="relative z-10 text-white group-hover/note:text-slate-950 transition-colors">{note}</span>
                                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/note:translate-y-0 transition-transform duration-300"></div>
@@ -437,7 +437,7 @@ export default function ClassroomDashboard() {
                                         <input
                                             value={customNote}
                                             onChange={(e) => setCustomNote(e.target.value)}
-                                            className="w-full bg-[#050a18]/60 border-2 border-white/5 rounded-[2.5rem] py-7 px-10 text-2xl focus:border-emerald-500/50 focus:bg-[#050a18]/80 outline-none transition-all font-black placeholder:text-slate-700 italic pr-24 shadow-2xl"
+                                            className="w-full bg-[#050a18]/60 border-2 border-white/5 rounded-[2.5rem] py-7 px-10 text-xl md:text-2xl focus:border-emerald-500/50 focus:bg-[#050a18]/80 outline-none transition-all font-black placeholder:text-slate-700 placeholder:text-lg italic pr-24 shadow-2xl"
                                             placeholder="Transmitir mensagem personalizada..."
                                             onKeyPress={(e) => e.key === 'Enter' && sendQuickNote(activeRequest.id, customNote)}
                                         />
@@ -474,7 +474,7 @@ export default function ClassroomDashboard() {
                                             <div className="bg-slate-800/80 p-4 rounded-2xl group-hover/wait:bg-emerald-500/20 group-hover/wait:text-emerald-500 transition-all border border-white/10 relative z-10">
                                                 <Clock className="w-7 h-7" />
                                             </div>
-                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/wait:text-white relative z-10">STANDBY</span>
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/wait:text-white relative z-10">AGUARDAR</span>
                                             <div className="absolute inset-0 bg-emerald-500/5 translate-x-full group-hover/wait:translate-x-0 transition-transform duration-500"></div>
                                         </button>
                                         <button
@@ -514,7 +514,7 @@ export default function ClassroomDashboard() {
                                 </h2>
                                 <div className="flex items-center justify-center gap-3 bg-white/5 px-6 py-2 rounded-full border border-white/5 w-fit mx-auto backdrop-blur-md">
                                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-                                    <p className="text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Live Sweep Active</p>
+                                    <p className="text-slate-500 text-xs font-black uppercase tracking-[0.4em]">Varredura Ativa</p>
                                 </div>
                                 <p className="text-slate-400 text-base font-medium max-w-md mx-auto leading-relaxed border-t border-white/10 pt-6 mt-6 opacity-60">
                                     Varredura em tempo real por novas solicitações de retirada via geofencing e portaria central.

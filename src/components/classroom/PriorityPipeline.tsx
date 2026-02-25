@@ -155,7 +155,7 @@ export default function PriorityPipeline({
             <div className="p-6 border-b border-white/10 space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.25em] mb-1">Queue Management</h3>
+                        <h3 className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.25em] mb-1">Gestão de Fila</h3>
                         <p className="text-lg font-black italic text-white tracking-tighter uppercase leading-none">Fila de Prioridade</p>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -278,7 +278,7 @@ export default function PriorityPipeline({
                 </div>
                 <div className="text-right">
                     <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5 flex items-center gap-2">
-                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div> SYNC OK
+                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div> SINCRONISMO OK
                     </span>
                     <span className="text-[10px] font-black text-white italic">v{__APP_VERSION__}</span>
                 </div>
