@@ -36,6 +36,7 @@ export default function ClassroomDashboard() {
     const [selectedClass, setSelectedClass] = useState<string | 'TODAS'>('TODAS');
     const [customNote, setCustomNote] = useState('');
     const [sendingNote, setSendingNote] = useState(false);
+    const [confirmPending, setConfirmPending] = useState<'AGUARDAR' | 'RECUSAR' | null>(null);
     const [escolaId, setEscolaId] = useState<string | undefined>();
 
     // Fetch teacher's assigned class or all classes if admin/coordinator
@@ -456,37 +457,69 @@ export default function ClassroomDashboard() {
                                 <div className="lg:col-span-4 flex flex-col gap-6">
                                     <button
                                         onClick={() => handleResponse(activeRequest.id, 'LIBERAR')}
-                                        className="flex-1 group relative py-10 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-[3.5rem] transition-all flex flex-col items-center justify-center gap-6 overflow-hidden shadow-[0_25px_60px_rgba(16,185,129,0.3)] border-b-4 border-emerald-800"
+                                        className="flex-1 group relative py-10 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-[3.5rem] transition-all flex flex-col items-center justify-center gap-4 overflow-hidden shadow-[0_25px_60px_rgba(16,185,129,0.3)] border-b-4 border-emerald-800 min-h-[180px]"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex flex-col items-center justify-center p-4">
-                                            <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 border-4 border-white/10">
+                                        <div className="relative z-10 flex flex-col items-center justify-center gap-4">
+                                            <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center group-hover:scale-110 transition-transform duration-500 border-4 border-white/10">
                                                 <Check className="w-10 h-10 text-white" />
                                             </div>
-                                            <span className="text-xs font-black uppercase tracking-[0.4em] mb-1">FINALIZAR &</span>
-                                            <span className="text-2xl font-black italic italic tracking-tighter">LIBERAR ALUNO</span>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs font-black uppercase tracking-[0.4em] mb-1">FINALIZAR &amp;</span>
+                                                <span className="text-2xl font-black italic tracking-tighter">LIBERAR ALUNO</span>
+                                            </div>
                                         </div>
                                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                                     </button>
 
                                     <div className="grid grid-cols-2 gap-6 h-56">
                                         <button
-                                            onClick={() => handleResponse(activeRequest.id, 'AGUARDAR')}
-                                            className="bg-white/5 hover:bg-white/10 border-2 border-white/5 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 group/wait overflow-hidden relative shadow-xl"
+                                            onClick={() => {
+                                                if (confirmPending === 'AGUARDAR') {
+                                                    handleResponse(activeRequest.id, 'AGUARDAR');
+                                                    setConfirmPending(null);
+                                                } else {
+                                                    setConfirmPending('AGUARDAR');
+                                                    setTimeout(() => setConfirmPending(prev => prev === 'AGUARDAR' ? null : prev), 3000);
+                                                }
+                                            }}
+                                            className={`border-2 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 overflow-hidden relative shadow-xl ${confirmPending === 'AGUARDAR'
+                                                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                                                    : 'bg-white/5 hover:bg-white/10 border-white/5 group/wait'
+                                                }`}
                                         >
-                                            <div className="bg-slate-800/80 p-4 rounded-2xl group-hover/wait:bg-emerald-500/20 group-hover/wait:text-emerald-500 transition-all border border-white/10 relative z-10">
+                                            <div className={`p-4 rounded-2xl transition-all border border-white/10 relative z-10 ${confirmPending === 'AGUARDAR' ? 'bg-amber-500/30 text-amber-400' : 'bg-slate-800/80 group-hover/wait:bg-emerald-500/20 group-hover/wait:text-emerald-500'
+                                                }`}>
                                                 <Clock className="w-7 h-7" />
                                             </div>
-                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/wait:text-white relative z-10">AGUARDAR</span>
+                                            <span className={`text-[11px] font-black uppercase tracking-widest relative z-10 ${confirmPending === 'AGUARDAR' ? 'text-amber-400' : 'text-slate-400 group-hover/wait:text-white'
+                                                }`}>
+                                                {confirmPending === 'AGUARDAR' ? 'CONFIRMAR?' : 'AGUARDAR'}
+                                            </span>
                                             <div className="absolute inset-0 bg-emerald-500/5 translate-x-full group-hover/wait:translate-x-0 transition-transform duration-500"></div>
                                         </button>
                                         <button
-                                            onClick={() => handleResponse(activeRequest.id, 'RECUSAR')}
-                                            className="bg-white/5 hover:bg-rose-500/10 border-2 border-white/5 hover:border-rose-500/30 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 group/cancel overflow-hidden relative shadow-xl"
+                                            onClick={() => {
+                                                if (confirmPending === 'RECUSAR') {
+                                                    handleResponse(activeRequest.id, 'RECUSAR');
+                                                    setConfirmPending(null);
+                                                } else {
+                                                    setConfirmPending('RECUSAR');
+                                                    setTimeout(() => setConfirmPending(prev => prev === 'RECUSAR' ? null : prev), 3000);
+                                                }
+                                            }}
+                                            className={`border-2 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 overflow-hidden relative shadow-xl ${confirmPending === 'RECUSAR'
+                                                    ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
+                                                    : 'bg-white/5 hover:bg-rose-500/10 border-white/5 hover:border-rose-500/30 group/cancel'
+                                                }`}
                                         >
-                                            <div className="bg-slate-800/80 p-4 rounded-2xl group-hover/cancel:bg-rose-500/20 group-hover/cancel:text-rose-500 transition-all border border-white/10 relative z-10">
+                                            <div className={`p-4 rounded-2xl transition-all border border-white/10 relative z-10 ${confirmPending === 'RECUSAR' ? 'bg-rose-500/30 text-rose-400' : 'bg-slate-800/80 group-hover/cancel:bg-rose-500/20 group-hover/cancel:text-rose-500'
+                                                }`}>
                                                 <X className="w-7 h-7" />
                                             </div>
-                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/cancel:text-rose-500 relative z-10">REJEITAR</span>
+                                            <span className={`text-[11px] font-black uppercase tracking-widest relative z-10 ${confirmPending === 'RECUSAR' ? 'text-rose-400' : 'text-slate-400 group-hover/cancel:text-rose-500'
+                                                }`}>
+                                                {confirmPending === 'RECUSAR' ? 'CONFIRMAR?' : 'REJEITAR'}
+                                            </span>
                                             <div className="absolute inset-0 bg-rose-500/5 -translate-x-full group-hover/cancel:translate-x-0 transition-transform duration-500"></div>
                                         </button>
                                     </div>
