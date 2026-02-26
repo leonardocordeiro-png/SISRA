@@ -156,7 +156,7 @@ export default function WithdrawalQueue() {
     }, [user?.id]);
 
     return (
-        <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] flex flex-col h-full overflow-hidden backdrop-blur-3xl shadow-2xl relative">
+        <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] flex flex-col overflow-hidden backdrop-blur-3xl shadow-2xl relative">
             {/* Header */}
             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-[#020617]/40 backdrop-blur-2xl">
                 <div className="flex flex-col">
@@ -165,7 +165,7 @@ export default function WithdrawalQueue() {
                     </h3>
                     <div className="flex items-center gap-1.5 mt-0.5">
                         <div className="w-1 h-1 bg-emerald-500 rounded-full animate-ping"></div>
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pipeline Active</span>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sistema Ativo</span>
                     </div>
                 </div>
                 <div className="relative group">
@@ -175,7 +175,7 @@ export default function WithdrawalQueue() {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-transparent relative z-10">
+            <div className="overflow-y-auto p-4 space-y-4 custom-scrollbar bg-transparent relative z-10" style={{ maxHeight: 'calc(100vh - 20rem)' }}>
                 {pendingPickups.map((pickup) => {
                     const isAtDoor = pickup.status_geofence === 'CHEGOU';
                     const isNear = pickup.status_geofence === 'PERTO';
@@ -227,7 +227,7 @@ export default function WithdrawalQueue() {
                                 <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500 backdrop-blur-md">
                                     <MessageSquare className="w-4 h-4 text-rose-500 shrink-0 mt-0.5 animate-pulse" />
                                     <p className="text-[10px] font-black text-rose-400 uppercase italic leading-tight tracking-tight">
-                                        NOTE: "{pickup.mensagem_sala}"
+                                        NOTA: "{pickup.mensagem_sala}"
                                     </p>
                                 </div>
                             )}
@@ -284,7 +284,7 @@ export default function WithdrawalQueue() {
                                 <div className="absolute inset-x-0 h-2 bg-emerald-500/5 blur-lg animate-scan"></div>
                             </div>
                             <div className="space-y-2">
-                                <p className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-500">Pipeline Empty</p>
+                                <p className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-500">Fila Vazia</p>
                                 <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase italic">Zero ativos na fila.</p>
                             </div>
                         </div>
@@ -296,11 +296,11 @@ export default function WithdrawalQueue() {
             <div className="p-6 bg-[#020617]/80 border-t border-white/10 backdrop-blur-3xl relative z-10">
                 <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                        <p className="text-[9px] font-black uppercase text-emerald-500 tracking-[0.3em] leading-none">Integrity Status</p>
-                        <p className="text-xl font-black italic text-white tracking-widest uppercase">Secured</p>
+                        <p className="text-[9px] font-black uppercase text-emerald-500 tracking-[0.3em] leading-none">Status do Sistema</p>
+                        <p className="text-xl font-black italic text-white tracking-widest uppercase">Seguro</p>
                     </div>
                     <div className="text-right space-y-1">
-                        <p className="text-[9px] font-black uppercase text-blue-500 tracking-[0.3em] leading-none">Total Active</p>
+                        <p className="text-[9px] font-black uppercase text-blue-500 tracking-[0.3em] leading-none">Total Ativo</p>
                         <p className="text-xl font-black italic text-white tracking-widest">{pendingPickups.length}</p>
                     </div>
                 </div>

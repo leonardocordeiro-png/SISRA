@@ -114,7 +114,7 @@ export default function ReceptionConfirmation() {
                     <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="w-5 h-5 text-emerald-500 animate-pulse" />
-                            <span className="text-emerald-500 font-black tracking-[0.3em] text-[10px] uppercase">Security Protocol</span>
+                            <span className="text-emerald-500 font-black tracking-[0.3em] text-[10px] uppercase">Protocolo de Segurança</span>
                         </div>
                         <h1 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">Confirmação de <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">Entrega</span></h1>
                     </div>
@@ -122,7 +122,7 @@ export default function ReceptionConfirmation() {
                 <div className="hidden md:flex items-center gap-4 bg-rose-500/10 border border-rose-500/20 px-6 py-3 rounded-2xl shadow-2xl shadow-rose-500/10">
                     <AlertTriangle className="w-5 h-5 text-rose-500 animate-bounce" />
                     <div className="space-y-0.5">
-                        <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block leading-none">Identification Level 4</span>
+                        <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block leading-none">Nível de Identificação 4</span>
                         <span className="text-xs font-bold text-white/60 uppercase tracking-widest italic">Verificação Mandatória Ativa</span>
                     </div>
                 </div>
@@ -166,11 +166,11 @@ export default function ReceptionConfirmation() {
                             <div className="p-10 bg-transparent">
                                 <div className="grid grid-cols-2 gap-8">
                                     <div className="p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-1 group/item hover:bg-white/[0.04] transition-all">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">Classroom Status</p>
-                                        <p className="text-2xl font-black text-emerald-500 uppercase italic tracking-tighter">DEVOYED</p>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">Status na Sala</p>
+                                        <p className="text-2xl font-black text-emerald-500 uppercase italic tracking-tighter">LIBERADO</p>
                                     </div>
                                     <div className="p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-1 group/item hover:bg-white/[0.04] transition-all">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">Signal Timestamp</p>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">Horário do Sinal</p>
                                         <p className="text-2xl font-black text-white italic tracking-tighter">{new Date(request.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                     </div>
                                 </div>
@@ -186,7 +186,7 @@ export default function ReceptionConfirmation() {
                                     <AlertCircle className="w-8 h-8 text-blue-400 animate-pulse" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-black uppercase tracking-tighter italic text-blue-400">Daily Log History</h3>
+                                    <h3 className="text-xl font-black uppercase tracking-tighter italic text-blue-400">Histórico do Dia</h3>
                                     <p className="text-slate-300 font-bold text-lg leading-snug">
                                         ALERTA: Retirada anterior detectada às 11:30 para procedimento médico externo. Fluxo normal reestabelecido.
                                     </p>
@@ -203,7 +203,7 @@ export default function ReceptionConfirmation() {
                                     <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                                         <ShieldCheck className="w-4 h-4 text-emerald-500" />
                                     </div>
-                                    Guardian Authorization Manifest
+                                    Manifesto de Autorização do Responsável
                                 </h3>
 
                                 {request.responsavel ? (
@@ -220,11 +220,11 @@ export default function ReceptionConfirmation() {
                                             <p className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none truncate mb-3">{request.responsavel.nome_completo}</p>
                                             <div className="flex items-center gap-2 mb-4">
                                                 <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">Authorized Identity</p>
+                                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">Identidade Autorizada</p>
                                             </div>
                                             <button className="flex items-center gap-3 text-blue-400 font-black text-[9px] uppercase tracking-[0.3em] hover:text-blue-300 transition-colors group/link">
                                                 <FileText className="w-4 h-4 group-hover/link:rotate-6 transition-transform" />
-                                                <span className="border-b border-blue-400/30">View Biometric Data</span>
+                                                <span className="border-b border-blue-400/30">Ver Dados de Identidade</span>
                                             </button>
                                         </div>
                                     </div>
@@ -234,7 +234,7 @@ export default function ReceptionConfirmation() {
                                             <AlertTriangle className="w-10 h-10 text-rose-500" />
                                         </div>
                                         <div className="space-y-2">
-                                            <p className="text-rose-500 font-black uppercase tracking-[0.3em] text-[10px]">CRITICAL ALERT</p>
+                                            <p className="text-rose-500 font-black uppercase tracking-[0.3em] text-[10px]">ALERTA CRÍTICO</p>
                                             <p className="text-white font-black text-lg leading-tight italic uppercase tracking-tighter">Manifesto de Responsável Ausente. Requer Verificação Física Nível 5!</p>
                                         </div>
                                     </div>
@@ -244,15 +244,15 @@ export default function ReceptionConfirmation() {
                             <div className="p-10 bg-transparent space-y-8">
                                 <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] flex items-center justify-center gap-4">
                                     <div className="h-px w-full bg-white/5"></div>
-                                    Identity Checksum
+                                    Verificação de Identidade
                                     <div className="h-px w-full bg-white/5"></div>
                                 </h3>
 
                                 <div className="space-y-4">
                                     {[
-                                        { id: 'doc', label: 'Physical Document Verification', icon: FileText, desc: 'Mismatch check performed' },
-                                        { id: 'face', label: 'Facial recognition match', icon: Camera, desc: 'Visual ID confirmation' },
-                                        { id: 'auth', label: 'Active protocol validation', icon: ShieldCheck, desc: 'System permission check' }
+                                        { id: 'doc', label: 'Verificação de Documento Físico', icon: FileText, desc: 'Conferência de incompatibilidades' },
+                                        { id: 'face', label: 'Correspondência de reconhecimento facial', icon: Camera, desc: 'Confirmação visual de identidade' },
+                                        { id: 'auth', label: 'Validação do protocolo ativo', icon: ShieldCheck, desc: 'Verificação de permissão no sistema' }
                                     ].map(item => (
                                         <label key={item.id} className="flex items-center gap-6 p-6 bg-white/[0.02] rounded-[1.8rem] border border-white/5 hover:border-emerald-500/30 cursor-pointer transition-all duration-500 group/check">
                                             <div className="relative">
@@ -286,7 +286,7 @@ export default function ReceptionConfirmation() {
                                             />
                                         </div>
                                         <div className="relative z-10 space-y-2">
-                                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Legal Consent Statement</span>
+                                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Declaração de Consentimento</span>
                                             <p className="text-xs font-bold text-slate-400 leading-relaxed uppercase italic tracking-tight">
                                                 Eu confirmo sob responsabilidade funcional que todos os protocolos de segurança foram rigorosamente seguidos e a identidade do responsável foi validada no sistema.
                                             </p>
@@ -303,7 +303,7 @@ export default function ReceptionConfirmation() {
                                 >
                                     <div className="absolute inset-0 bg-emerald-500 opacity-0 group-hover/final:opacity-100 transition-opacity duration-700"></div>
                                     <CheckCircle className="w-10 h-10 relative z-10 group-hover/final:scale-125 transition-transform duration-700" />
-                                    <span className="relative z-10">Authorize Release</span>
+                                    <span className="relative z-10">Autorizar Liberação</span>
                                 </button>
                             </div>
                         </div>

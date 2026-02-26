@@ -345,7 +345,7 @@ export default function ReceptionSearch() {
                         </div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
                             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                            Mission Identification Hub
+                            Hub de Identificação
                         </p>
                     </div>
                 </div>
@@ -353,7 +353,7 @@ export default function ReceptionSearch() {
                 {/* Advanced Monitoring HUD */}
                 <div className="hidden lg:flex items-center gap-8 bg-white/[0.03] border border-white/10 px-8 py-3 rounded-2xl backdrop-blur-md">
                     <div className="flex flex-col items-center">
-                        <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">Queue Load</span>
+                        <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">Carga da Fila</span>
                         <div className="flex items-center gap-2">
                             <div className="flex gap-0.5">
                                 {[1, 2, 3, 4].map(i => (
@@ -365,7 +365,7 @@ export default function ReceptionSearch() {
                     </div>
                     <div className="w-px h-8 bg-white/10" />
                     <div className="flex flex-col items-center">
-                        <span className="text-[9px] font-black text-blue-500/60 uppercase tracking-widest mb-1">System Health</span>
+                        <span className="text-[9px] font-black text-blue-500/60 uppercase tracking-widest mb-1">Saúde do Sistema</span>
                         <div className="flex items-center gap-2">
                             <Activity className="w-3 h-3 text-blue-400" />
                             <span className="text-xs font-black text-white italic">NOMINAL</span>
@@ -373,9 +373,9 @@ export default function ReceptionSearch() {
                     </div>
                     <div className="w-px h-8 bg-white/10" />
                     <div className="flex flex-col items-center text-right">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Active User</span>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Usuário Ativo</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-white uppercase italic">{userProfile?.nome_completo?.split(' ')[0] || 'Operator'}</span>
+                            <span className="text-xs font-black text-white uppercase italic">{userProfile?.nome_completo?.split(' ')[0] || 'Operador'}</span>
                             <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
                                 <UserIcon className="w-3 h-3 text-emerald-500" />
                             </div>
@@ -420,7 +420,7 @@ export default function ReceptionSearch() {
                                 </div>
                                 <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
                                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Scan</span>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Busca Ativa</span>
                                 </div>
                             </div>
 
@@ -763,7 +763,7 @@ export default function ReceptionSearch() {
                 </div>
 
                 {/* Right Column: Queue */}
-                <div className="lg:col-span-4 h-[calc(100vh-12rem)] sticky top-32">
+                <div className="lg:col-span-4 sticky top-32">
                     <WithdrawalQueue />
                 </div>
             </main>

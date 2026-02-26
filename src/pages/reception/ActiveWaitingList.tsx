@@ -134,10 +134,10 @@ export default function ActiveWaitingList() {
                                     <Users className="w-6 h-6 text-emerald-500" />
                                 </div>
                                 <div className="space-y-0.5">
-                                    <span className="text-emerald-500 font-black tracking-[0.3em] text-[10px] uppercase block">Operations Center</span>
+                                    <span className="text-emerald-500 font-black tracking-[0.3em] text-[10px] uppercase block">Central de Operações</span>
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-                                        <span className="text-white/40 font-bold text-[10px] tracking-widest uppercase italic">Live Sequence Active</span>
+                                        <span className="text-white/40 font-bold text-[10px] tracking-widest uppercase italic">Transmissão ao Vivo</span>
                                     </div>
                                 </div>
                             </div>
@@ -166,7 +166,7 @@ export default function ActiveWaitingList() {
                                 <span className="text-4xl lg:text-5xl font-black text-emerald-500 italic tracking-tighter leading-none group-hover/stat:scale-110 transition-transform block">{waiting.length}</span>
                                 <div className="absolute -inset-4 bg-emerald-500/10 blur-2xl rounded-full opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
                             </div>
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-center">Current <br className="hidden lg:block" /> Manifest</span>
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-center">Fila <br className="hidden lg:block" /> Atual</span>
                         </div>
                     </div>
                 </header>
@@ -243,7 +243,7 @@ export default function ActiveWaitingList() {
                                                 <User className="w-6 h-6 text-slate-500 group-hover:text-blue-400 transition-colors" />
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Authorized Guardian</p>
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Responsável Autorizado</p>
                                                 <p className="text-base font-black text-white italic tracking-tight">{item.responsavel?.nome_completo}</p>
                                             </div>
                                         </div>
@@ -256,12 +256,12 @@ export default function ActiveWaitingList() {
                                                 <Clock className={`w-6 h-6 ${isCritical ? 'animate-pulse' : ''}`} />
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Deployment Timer</p>
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Tempo de Espera</p>
                                                 <p className={`text-xl font-black italic tracking-tighter ${isCritical ? 'text-rose-400' :
                                                     isWarning ? 'text-amber-400' :
                                                         'text-emerald-400'
                                                     }`}>
-                                                    {item.wait_time_minutes}M <span className="text-[10px] opacity-60">ELAPSED</span>
+                                                    {item.wait_time_minutes}M <span className="text-[10px] opacity-60">DECORRIDO</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -286,22 +286,22 @@ export default function ActiveWaitingList() {
                     <div className="p-6 bg-emerald-500/[0.02] border border-emerald-500/10 rounded-3xl flex items-center gap-5 backdrop-blur-md group hover:bg-emerald-500/[0.05] transition-all">
                         <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.8)] group-hover:scale-125 transition-transform" />
                         <div className="space-y-0.5">
-                            <span className="text-[10px] font-black text-emerald-500/60 uppercase tracking-widest">Optimal Range</span>
-                            <p className="text-xs font-bold text-slate-400 uppercase italic">Response under 08 MIN</p>
+                            <span className="text-[10px] font-black text-emerald-500/60 uppercase tracking-widest">Faixa Ideal</span>
+                            <p className="text-xs font-bold text-slate-400 uppercase italic">Resposta abaixo de 08 MIN</p>
                         </div>
                     </div>
                     <div className="p-6 bg-amber-500/[0.02] border border-amber-500/10 rounded-3xl flex items-center gap-5 backdrop-blur-md group hover:bg-amber-500/[0.05] transition-all">
                         <div className="w-3 h-3 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.8)] group-hover:scale-125 transition-transform" />
                         <div className="space-y-0.5">
-                            <span className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest">Warning Threshold</span>
-                            <p className="text-xs font-bold text-slate-400 uppercase italic">Response 08 - 15 MIN</p>
+                            <span className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest">Limite de Atenção</span>
+                            <p className="text-xs font-bold text-slate-400 uppercase italic">Resposta entre 08 - 15 MIN</p>
                         </div>
                     </div>
                     <div className="p-6 bg-rose-500/[0.02] border border-rose-500/10 rounded-3xl flex items-center gap-5 backdrop-blur-md group hover:bg-rose-500/[0.05] transition-all">
                         <div className="w-3 h-3 bg-rose-500 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.8)] animate-pulse group-hover:scale-125 transition-transform" />
                         <div className="space-y-0.5">
-                            <span className="text-[10px] font-black text-rose-500/60 uppercase tracking-widest">Critical Alert</span>
-                            <p className="text-xs font-bold text-slate-400 uppercase italic">Response over 15 MIN</p>
+                            <span className="text-[10px] font-black text-rose-500/60 uppercase tracking-widest">Alerta Crítico</span>
+                            <p className="text-xs font-bold text-slate-400 uppercase italic">Resposta acima de 15 MIN</p>
                         </div>
                     </div>
                 </footer>
