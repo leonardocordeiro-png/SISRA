@@ -43,6 +43,13 @@ import SelfRegistration from './pages/parent/SelfRegistration';
 
 import SystemStatus from './pages/system/SystemStatus';
 
+import TotemHome from './pages/totem/TotemHome';
+import TotemIdentify from './pages/totem/TotemIdentify';
+import TotemSearch from './pages/totem/TotemSearch';
+import TotemCodeEntry from './pages/totem/TotemCodeEntry';
+import TotemQRScan from './pages/totem/TotemQRScan';
+import TotemConfirmation from './pages/totem/TotemConfirmation';
+
 const ADMIN_ROLES = ['ADMIN'];
 const RECEPTION_ROLES = ['RECEPCIONISTA', 'ADMIN', 'COORDENADOR'];
 const CLASSROOM_ROLES = ['SCT', 'ADMIN', 'COORDENADOR'];
@@ -60,6 +67,14 @@ function App() {
             <Route path="/sala/login" element={<ClassroomLogin />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/system/status" element={<SystemStatus />} />
+
+            {/* Totem Routes (public — self-service kiosk for parents) */}
+            <Route path="/totem" element={<TotemHome />} />
+            <Route path="/totem/identificar" element={<TotemIdentify />} />
+            <Route path="/totem/busca" element={<TotemSearch />} />
+            <Route path="/totem/codigo" element={<TotemCodeEntry />} />
+            <Route path="/totem/qr" element={<TotemQRScan />} />
+            <Route path="/totem/confirmacao" element={<TotemConfirmation />} />
 
             {/* Parent Routes (public — accessed via QR code links) */}
             <Route path="/parent/login" element={<ParentLogin />} />
