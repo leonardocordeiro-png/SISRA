@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { School, User, GraduationCap, Shield, Activity, ChevronRight, Globe, MonitorSmartphone } from 'lucide-react';
+import { School, User, GraduationCap, Shield, Activity, ChevronRight, Globe } from 'lucide-react';
 
 export default function Welcome() {
     return (
@@ -44,7 +44,7 @@ export default function Welcome() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 lg:gap-8 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 w-full">
                     {/* Reception */}
                     <Link to="/recepcao/login" className="relative group/card h-full">
                         <div className="absolute -inset-0.5 bg-gradient-to-b from-emerald-500/20 to-transparent rounded-[2.5rem] opacity-0 group-hover/card:opacity-100 transition duration-700 blur"></div>
@@ -79,22 +79,6 @@ export default function Welcome() {
                         </div>
                     </Link>
 
-                    {/* Totem */}
-                    <Link to="/totem" className="relative group/card h-full">
-                        <div className="absolute -inset-0.5 bg-gradient-to-b from-amber-500/20 to-transparent rounded-[2.5rem] opacity-0 group-hover/card:opacity-100 transition duration-700 blur"></div>
-                        <div className="relative bg-white/[0.02] p-8 md:p-10 rounded-[2.5rem] border border-white/5 backdrop-blur-3xl hover:bg-white/[0.04] hover:border-amber-500/30 transition-all duration-700 h-full flex flex-col items-center text-center shadow-2xl group/btn active:scale-95">
-                            <div className="w-16 h-16 md:w-20 md:h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-8 border border-amber-500/20 group-hover/card:scale-110 group-hover/card:border-amber-500/40 transition-all duration-700 shadow-2xl shadow-amber-500/10 overflow-hidden relative">
-                                <MonitorSmartphone className="w-8 h-8 md:w-10 md:h-10 text-amber-500 relative z-10" />
-                                <div className="absolute inset-0 bg-amber-500/5 group-hover/card:animate-scan"></div>
-                            </div>
-                            <h2 className="text-2xl font-black text-white mb-3 italic tracking-tighter uppercase">Totem Pais</h2>
-                            <p className="text-slate-500 text-sm font-bold leading-relaxed uppercase tracking-tight mb-8">Terminal de auto-atendimento para responsáveis.</p>
-                            <div className="mt-auto w-full pt-6 border-t border-white/5 flex items-center justify-between group-hover/card:border-amber-500/20 transition-colors">
-                                <span className="text-[10px] font-black text-amber-500/60 tracking-[0.2em] uppercase">Abrir Totem</span>
-                                <ChevronRight className="w-5 h-5 text-amber-500 group-hover/card:translate-x-1 transition-transform" />
-                            </div>
-                        </div>
-                    </Link>
 
                     {/* Admin */}
                     <Link to="/admin/login" className="relative group/card h-full md:col-span-1">
