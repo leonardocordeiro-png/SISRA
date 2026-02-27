@@ -12,6 +12,7 @@ export default function TotemCodeEntry() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+    const [identifiedGuardian, setIdentifiedGuardian] = useState<any>(null);
     useInactivityTimer({ timeoutMs: 60000, redirectTo: '/totem' });
 
     // Load initial selection
@@ -76,6 +77,7 @@ export default function TotemCodeEntry() {
             });
 
             setSelectedStudents(merged);
+            setIdentifiedGuardian(resp);
             setCode('');
             setLoading(false);
         } catch {
@@ -87,7 +89,11 @@ export default function TotemCodeEntry() {
     const handleNext = () => {
         if (selectedStudents.length === 0) return;
         navigate('/totem/confirmacao', {
-            state: { students: selectedStudents, mode: 'code' }
+            state: {
+                students: selectedStudents,
+                mode: 'code',
+                guardian: identifiedGuardian
+            }
         });
     };
 
