@@ -215,7 +215,9 @@ export default function ReceptionSearch() {
                     responsavel_id: selectedGuardianId || null,
                     recepcionista_id: user.id,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'ROTINA'
+                    tipo_solicitacao: 'ROTINA',
+                    // Guardian is physically present at reception — mark as arrived immediately
+                    status_geofence: 'CHEGOU'
                 };
             });
 

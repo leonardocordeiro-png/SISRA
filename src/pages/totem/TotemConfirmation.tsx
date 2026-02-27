@@ -88,6 +88,8 @@ export default function TotemConfirmation() {
                     recepcionista_id: null,
                     status: 'SOLICITADO',
                     tipo_solicitacao: 'ROTINA',
+                    // Guardian is physically using the on-site totem — mark as arrived immediately
+                    status_geofence: 'CHEGOU',
                 };
             });
 
