@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle2, Bell, User as UserIcon, ArrowLeft, Loader2, Users, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Bell, User as UserIcon, ArrowLeft, Loader2, Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Student, Guardian } from '../../types';
 
