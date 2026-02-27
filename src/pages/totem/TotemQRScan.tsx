@@ -69,8 +69,18 @@ export default function TotemQRScan() {
         };
     }, [scanning]);
 
+    const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+    useInactivityTimer({ timeoutMs: 60000, redirectTo: '/totem' });
+
+    // Load initial selection
+    useEffect(() => {
+        const state = window.history.state?.usr;
+        if (state?.selectedStudents) {
+            setSelectedStudents(state.selectedStudents);
+        }
+    }, []);
+
     const handleQRData = async (qrData: string) => {
-        setScanning(false);
         try {
             let responsavelId = '';
 
@@ -102,18 +112,36 @@ export default function TotemQRScan() {
 
             if (!guardian) throw new Error('Responsável não encontrado no sistema.');
 
-            const students: Student[] = (auths || [])
+            const newStudents: Student[] = (auths || [])
                 .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos)
                 .filter((s: any): s is Student => s !== null);
 
-            if (students.length === 0) throw new Error('Nenhum aluno vinculado a este QR Code.');
+            if (newStudents.length === 0) throw new Error('Nenhum aluno vinculado a este QR Code.');
 
-            navigate('/totem/confirmacao', {
-                state: { students, guardian, mode: 'qr' }
+            // Merge avoiding duplicates
+            const merged = [...selectedStudents];
+            newStudents.forEach(ns => {
+                if (!merged.some(ms => ms.id === ns.id)) merged.push(ns);
             });
+
+            setSelectedStudents(merged);
+
+            // Resume scanning after a short delay for feedback
+            setTimeout(() => {
+                setScanning(true);
+            }, 2000);
+
         } catch (e: any) {
             setError(e.message || 'Erro ao processar QR Code.');
+            setScanning(false);
         }
+    };
+
+    const handleNext = () => {
+        if (selectedStudents.length === 0) return;
+        navigate('/totem/confirmacao', {
+            state: { students: selectedStudents, mode: 'qr' }
+        });
     };
 
     return (
@@ -139,10 +167,16 @@ export default function TotemQRScan() {
                         Escanear QR Code
                     </h1>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
-                        Aproxime o cartão da câmera do terminal
+                        Aproxime os cartões para adicionar alunos
                     </p>
                 </div>
-                <div className="w-32" />
+                <div className="w-32 flex justify-end">
+                    {selectedStudents.length > 0 && (
+                        <div className="bg-blue-500 text-white px-4 py-2 rounded-xl font-black text-xs animate-bounce">
+                            {selectedStudents.length} ALUNO{selectedStudents.length > 1 ? 'S' : ''}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Main: camera LEFT | instructions RIGHT */}
@@ -206,9 +240,9 @@ export default function TotemQRScan() {
 
                     <div className="space-y-4">
                         {[
-                            { step: '1', text: 'Pegue o cartão QR fornecido pelo aplicativo' },
-                            { step: '2', text: 'Aproxime o código QR da câmera à esquerda' },
-                            { step: '3', text: 'Mantenha firme até a leitura ser concluída' },
+                            { step: '1', text: 'Aproxime o código QR da câmera à esquerda' },
+                            { step: '2', text: 'Aguarde o bipe/confirmação visual' },
+                            { step: '3', text: 'Aproxime outro cartão ou finalize' },
                         ].map(({ step, text }) => (
                             <div key={step} className="flex items-start gap-4">
                                 <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-black text-sm shrink-0">
@@ -218,6 +252,15 @@ export default function TotemQRScan() {
                             </div>
                         ))}
                     </div>
+
+                    {selectedStudents.length > 0 && (
+                        <button
+                            onClick={handleNext}
+                            className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                        >
+                            Finalizar ({selectedStudents.length}) →
+                        </button>
+                    )}
 
                     {error && (
                         <div className="flex items-start gap-3 px-5 py-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-400">
@@ -235,6 +278,29 @@ export default function TotemQRScan() {
                     )}
                 </div>
             </div>
+
+            {/* Selection Tray Overlay at bottom */}
+            {selectedStudents.length > 0 && (
+                <div className="fixed bottom-0 inset-x-0 h-24 bg-slate-950/80 backdrop-blur-xl border-t border-white/5 flex items-center px-12 gap-6 z-20">
+                    <div className="flex-1 flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+                        {selectedStudents.map(s => (
+                            <div key={s.id} className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-full shrink-0">
+                                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
+                                    {s.foto_url ? <img src={s.foto_url} className="w-full h-full object-cover" /> : <UserIcon className="w-4 h-4 text-slate-500 mx-auto mt-2" />}
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-tight text-white/70">{s.nome_completo.split(' ')[0]}</span>
+                                <button onClick={() => setSelectedStudents(prev => prev.filter(st => st.id !== s.id))} className="text-rose-500 hover:text-rose-400 ml-1">×</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+const UserIcon = ({ className }: { className?: string }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+);

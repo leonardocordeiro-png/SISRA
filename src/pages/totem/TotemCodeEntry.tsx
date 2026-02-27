@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Hash, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Hash, AlertCircle, Loader2, User as UserIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useInactivityTimer } from '../../components/totem/InactivityTimer';
 import TotemNumPad from '../../components/totem/TotemNumPad';
@@ -11,7 +11,16 @@ export default function TotemCodeEntry() {
     const [code, setCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    useInactivityTimer({ timeoutMs: 45000, redirectTo: '/totem' });
+    const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+    useInactivityTimer({ timeoutMs: 60000, redirectTo: '/totem' });
+
+    // Load initial selection
+    useEffect(() => {
+        const state = window.history.state?.usr;
+        if (state?.selectedStudents) {
+            setSelectedStudents(state.selectedStudents);
+        }
+    }, []);
 
     const handleSubmit = async () => {
         if (code.length < 4) return;
@@ -19,7 +28,6 @@ export default function TotemCodeEntry() {
         setError(null);
 
         try {
-            // Look up guardian by access code
             const { data: resp, error: err } = await supabase
                 .from('responsaveis')
                 .select('id, nome_completo, foto_url')
@@ -32,34 +40,42 @@ export default function TotemCodeEntry() {
                 return;
             }
 
-            // Get authorized students
             const { data: auths } = await supabase
                 .from('autorizacoes')
                 .select('alunos:aluno_id (*)')
                 .eq('responsavel_id', resp.id)
                 .eq('ativa', true);
 
-            const students: Student[] = (auths || [])
+            const newStudents: Student[] = (auths || [])
                 .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos)
                 .filter((s: any): s is Student => s !== null);
 
-            if (students.length === 0) {
+            if (newStudents.length === 0) {
                 setError('Nenhum aluno vinculado a este código.');
                 setLoading(false);
                 return;
             }
 
-            navigate('/totem/confirmacao', {
-                state: {
-                    students,
-                    guardian: { id: resp.id, nome_completo: resp.nome_completo, foto_url: resp.foto_url },
-                    mode: 'code',
-                }
+            // Merge avoiding duplicates
+            const merged = [...selectedStudents];
+            newStudents.forEach(ns => {
+                if (!merged.some(ms => ms.id === ns.id)) merged.push(ns);
             });
+
+            setSelectedStudents(merged);
+            setCode('');
+            setLoading(false);
         } catch {
             setError('Erro de comunicação. Tente novamente.');
             setLoading(false);
         }
+    };
+
+    const handleNext = () => {
+        if (selectedStudents.length === 0) return;
+        navigate('/totem/confirmacao', {
+            state: { students: selectedStudents, mode: 'code' }
+        });
     };
 
     const codeChars = code.toUpperCase().padEnd(8, '·').split('');
@@ -87,10 +103,16 @@ export default function TotemCodeEntry() {
                         Código de Acesso
                     </h1>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
-                        Código impresso no cartão QR do responsável
+                        Insira os códigos para retirar os alunos
                     </p>
                 </div>
-                <div className="w-32" />
+                <div className="w-32 flex justify-end">
+                    {selectedStudents.length > 0 && (
+                        <div className="bg-violet-500 text-white px-4 py-2 rounded-xl font-black text-xs animate-bounce">
+                            {selectedStudents.length} ALUNO{selectedStudents.length > 1 ? 'S' : ''}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Main: LEFT instructions + display | RIGHT keyboard */}
@@ -144,23 +166,46 @@ export default function TotemCodeEntry() {
                         </div>
                     )}
 
-                    {/* Submit button */}
-                    <button
-                        onClick={handleSubmit}
-                        disabled={code.length < 4 || loading}
-                        className="w-full py-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-2xl font-black text-lg uppercase tracking-widest transition-all active:scale-95 shadow-[0_10px_30px_rgba(124,58,237,0.3)] flex items-center justify-center gap-3"
-                    >
-                        {loading
-                            ? <><Loader2 className="w-6 h-6 animate-spin" /> Verificando...</>
-                            : 'Confirmar Código →'
-                        }
-                    </button>
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={handleSubmit}
+                            disabled={code.length < 4 || loading}
+                            className="w-full py-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                        >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Adicionar Aluno +'}
+                        </button>
+
+                        {selectedStudents.length > 0 && (
+                            <button
+                                onClick={handleNext}
+                                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                            >
+                                Finalizar ({selectedStudents.length}) →
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right: numpad keyboard */}
                 <div className="flex-1 flex flex-col items-center justify-center px-10 py-8">
-                    <p className="text-slate-600 text-xs font-black uppercase tracking-widest mb-6">
-                        Teclado Virtual — Toque nas teclas
+                    {/* Selected List Mini Preview */}
+                    {selectedStudents.length > 0 && (
+                        <div className="mb-6 flex flex-wrap justify-center gap-2 max-w-[600px]">
+                            {selectedStudents.map(s => (
+                                <div key={s.id} className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-full">
+                                    <div className="w-6 h-6 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
+                                        {s.foto_url ? <img src={s.foto_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><UserIcon className="w-3 h-3 text-slate-500" /></div>}
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-tight text-white/50">{s.nome_completo.split(' ')[0]}</span>
+                                    <button onClick={() => setSelectedStudents(prev => prev.filter(st => st.id !== s.id))} className="text-rose-500 hover:text-rose-400 ml-1">×</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.3em] mb-4">
+                        Teclado Alfanumérico
                     </p>
                     <TotemNumPad
                         value={code}
