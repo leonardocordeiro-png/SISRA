@@ -20,6 +20,10 @@ type PickupRequest = {
         foto_url: string | null;
         observacoes: string | null;
     };
+    responsavel?: {
+        nome_completo: string;
+        foto_url: string | null;
+    } | null;
     mensagem_recepcao: string | null;
     status_geofence: string | null;
     distancia_estimada_metros: number | null;
@@ -371,6 +375,27 @@ export default function ClassroomDashboard() {
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-6 lg:gap-10">
+                                        <div className="flex flex-col items-center lg:items-start shrink-0">
+                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Quem está retirando</h3>
+                                            <div className="flex items-center gap-4 bg-white/5 p-2 pr-4 rounded-[1.5rem] border border-white/10">
+                                                <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-blue-500/30 bg-slate-800 flex items-center justify-center shrink-0">
+                                                    {activeRequest.responsavel?.foto_url ? (
+                                                        <img src={activeRequest.responsavel.foto_url} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <UserIcon className="w-6 h-6 text-slate-700" />
+                                                    )}
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black italic tracking-tighter text-blue-400 leading-none mb-1">
+                                                        {activeRequest.responsavel?.nome_completo || 'NÃO ATRIBUÍDO'}
+                                                    </p>
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">RESPONSÁVEL AUTORIZADO</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="h-10 w-px bg-white/10 hidden lg:block" />
+
                                         <div className="flex flex-col items-center lg:items-start shrink-0">
                                             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Localização</h3>
                                             <div className="flex items-center gap-3">

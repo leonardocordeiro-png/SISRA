@@ -9,6 +9,10 @@ import type { Student } from '../../types';
 type PickupRequest = {
     id: string;
     aluno: Student;
+    responsavel: {
+        nome_completo: string;
+        foto_url: string | null;
+    } | null;
     status: string;
     horario_solicitacao: string;
     tempo_espera_segundos?: number;
@@ -39,7 +43,11 @@ export default function WithdrawalQueue() {
                     nome_completo,
                     turma,
                     sala,
-                foto_url
+                    foto_url
+                ),
+                responsavel:responsaveis (
+                    nome_completo,
+                    foto_url
                 ),
                 latitude,
                 longitude,
@@ -56,6 +64,7 @@ export default function WithdrawalQueue() {
                 status: item.status,
                 horario_solicitacao: item.horario_solicitacao,
                 aluno: item.aluno,
+                responsavel: item.responsavel,
                 mensagem_recepcao: item.mensagem_recepcao,
                 mensagem_sala: item.mensagem_sala,
                 distancia_estimada_metros: item.distancia_estimada_metros,
@@ -213,7 +222,7 @@ export default function WithdrawalQueue() {
                                                 }`}>
                                                 <MapPin className={`w-3 h-3 ${isAtDoor ? 'animate-bounce' : ''}`} />
                                                 <span className="text-[9px] font-black uppercase tracking-[0.2em]">
-                                                    {isAtDoor ? 'NA PORTA' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
+                                                    {isAtDoor ? 'NA RECEPÇÃO' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
                                                     {' '}({pickup.distancia_estimada_metros}m)
                                                 </span>
                                             </div>

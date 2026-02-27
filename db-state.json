@@ -69,5 +69,27 @@
       "codigo_acesso": "EA4951"
     }
   ],
-  "all_links": []
+  "all_links": [
+    {
+      "id": "c310115c-1d32-4270-a3fd-a3642015b38d",
+      "aluno_id": "478d0242-1d87-4f6c-8692-44ae1ecd8fce",
+      "responsavel_id": "167b7a88-c12b-422b-9e80-73174a612292",
+      "parentesco": null,
+      "criado_em": "2026-02-24T20:01:36.530987+00:00"
+    },
+    {
+      "id": "ffee6ed9-8bca-4978-92dd-48c53afde495",
+      "aluno_id": "478d0242-1d87-4f6c-8692-44ae1ecd8fce",
+      "responsavel_id": "15a87223-5498-4200-97b8-5bf6bedf0694",
+      "parentesco": null,
+      "criado_em": "2026-02-24T20:10:24.691356+00:00"
+    },
+    {
+      "id": "1020bd81-4c3b-4a9b-877c-bc5ccd76ccfd",
+      "aluno_id": "478d0242-1d87-4f6c-8692-44ae1ecd8fce",
+      "responsavel_id": "a23ca99f-1d16-4db8-825d-85cb4a743031",
+      "parentesco": null,
+      "criado_em": "2026-02-24T20:14:07.139511+00:00"
+    }
+  ]
 }

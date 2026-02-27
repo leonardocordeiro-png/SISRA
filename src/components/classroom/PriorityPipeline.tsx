@@ -18,6 +18,10 @@ interface RequestItem {
     tipo_solicitacao: string;
     horario_solicitacao: string;
     aluno: Aluno;
+    responsavel: {
+        nome_completo: string;
+        foto_url: string | null;
+    } | null;
     mensagem_recepcao: string | null;
     status_geofence: string | null;
     distancia_estimada_metros: number | null;
@@ -60,6 +64,10 @@ export default function PriorityPipeline({
                     sala,
                     foto_url,
                     observacoes
+                ),
+                responsavel:responsaveis (
+                    nome_completo,
+                    foto_url
                 ),
                 mensagem_recepcao,
                 status_geofence,
