@@ -8,6 +8,7 @@ interface TotemKeyboardProps {
 }
 
 const ROWS = [
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
     ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
@@ -37,7 +38,7 @@ export default function TotemKeyboard({ value, onChange, onSubmit, maxLength = 4
                             {key}
                         </button>
                     ))}
-                    {ri === 2 && (
+                    {ri === 3 && (
                         <button
                             onPointerDown={e => { e.preventDefault(); backspace(); }}
                             className={`${keyBase} w-[100px] h-[68px] bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 text-rose-400`}

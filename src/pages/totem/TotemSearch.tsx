@@ -8,6 +8,7 @@ import type { Student } from '../../types';
 
 export default function TotemSearch() {
     const navigate = useNavigate();
+    const [searchMode, setSearchMode] = useState<'name' | 'cpf'>('name');
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Student[]>([]);
     const [loading, setLoading] = useState(false);
@@ -27,16 +28,54 @@ export default function TotemSearch() {
         if (query.trim().length < 2) { setResults([]); return; }
         const t = setTimeout(async () => {
             setLoading(true);
-            const { data } = await supabase
-                .from('alunos')
-                .select('*')
-                .ilike('nome_completo', `%${query.trim()}%`)
-                .limit(8);
-            setResults(data || []);
-            setLoading(false);
+            try {
+                if (searchMode === 'name') {
+                    const { data } = await supabase
+                        .from('alunos')
+                        .select('*')
+                        .ilike('nome_completo', `%${query.trim()}%`)
+                        .limit(8);
+                    setResults(data || []);
+                } else {
+                    // Search by Guardian CPF
+                    const cleanCpf = query.replace(/\D/g, '');
+                    if (cleanCpf.length >= 3) {
+                        const { data: guardians } = await supabase
+                            .from('responsaveis')
+                            .select('id')
+                            .ilike('cpf', `%${cleanCpf}%`);
+
+                        if (guardians && guardians.length > 0) {
+                            const guardianIds = guardians.map(g => g.id);
+                            const { data: auths } = await supabase
+                                .from('autorizacoes')
+                                .select('aluno_id')
+                                .in('responsavel_id', guardianIds)
+                                .eq('ativa', true);
+
+                            if (auths && auths.length > 0) {
+                                const studentIds = auths.map(a => a.aluno_id);
+                                const { data: students } = await supabase
+                                    .from('alunos')
+                                    .select('*')
+                                    .in('id', studentIds);
+                                setResults(students || []);
+                            } else {
+                                setResults([]);
+                            }
+                        } else {
+                            setResults([]);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            } finally {
+                setLoading(false);
+            }
         }, 300);
         return () => clearTimeout(t);
-    }, [query]);
+    }, [query, searchMode]);
 
     const toggleStudent = (student: Student) => {
         if (selectedStudents.find(s => s.id === student.id)) {
@@ -72,7 +111,7 @@ export default function TotemSearch() {
                 </button>
                 <div className="text-center">
                     <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
-                        <div className="w-1.5 h-7 bg-emerald-500 rounded-full shadow-[0_0:10px_rgba(16,185,129,0.6)]" />
+                        <div className="w-1.5 h-7 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
                         Buscar Estudantes
                     </h1>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
@@ -92,12 +131,28 @@ export default function TotemSearch() {
             <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
 
                 {/* Left: search input + keyboard */}
-                <div className="flex flex-col w-[850px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6">
+                <div className="flex flex-col w-[600px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6">
+                    {/* Mode Toggle */}
+                    <div className="flex gap-4 p-1 bg-white/[0.04] border border-white/10 rounded-2xl">
+                        <button
+                            onClick={() => { setSearchMode('name'); setQuery(''); }}
+                            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${searchMode === 'name' ? 'bg-emerald-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            Nome do Aluno
+                        </button>
+                        <button
+                            onClick={() => { setSearchMode('cpf'); setQuery(''); }}
+                            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${searchMode === 'cpf' ? 'bg-emerald-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            CPF do Responsável
+                        </button>
+                    </div>
+
                     {/* Display */}
                     <div className="bg-white/[0.04] border-2 border-white/10 rounded-3xl px-8 py-5 flex items-center gap-4 min-h-[80px]">
                         <SearchIcon className="w-7 h-7 text-emerald-500 shrink-0" />
                         <span className={`text-3xl font-black tracking-tight text-white flex-1 ${!query && 'opacity-30'}`}>
-                            {query || 'Digite o nome...'}
+                            {query || (searchMode === 'name' ? 'Digite o nome...' : 'Digite o CPF...')}
                         </span>
                         {loading && <Loader2 className="w-6 h-6 text-emerald-500 animate-spin shrink-0" />}
                     </div>
@@ -109,7 +164,7 @@ export default function TotemSearch() {
                         maxLength={50}
                     />
 
-                    {/* Selection Summary for mobile/narrow or just to help */}
+                    {/* Selection Summary */}
                     {selectedStudents.length > 0 && (
                         <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
                             <div className="flex -space-x-3 overflow-hidden">

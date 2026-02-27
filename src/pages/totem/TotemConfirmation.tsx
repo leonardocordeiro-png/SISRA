@@ -39,20 +39,31 @@ export default function TotemConfirmation() {
         try {
             // Get all unique guardian IDs authorized for these students
             const studentIds = students.map(s => s.id);
-            const { data: auths } = await supabase
-                .from('autorizacoes')
-                .select('responsavel_id')
-                .in('aluno_id', studentIds)
-                .eq('ativa', true);
+            if (studentIds.length > 0) {
+                const { data: auths } = await supabase
+                    .from('autorizacoes')
+                    .select(`
+                        responsavel_id,
+                        responsaveis (
+                            id,
+                            nome_completo,
+                            foto_url
+                        )
+                    `)
+                    .in('aluno_id', studentIds)
+                    .eq('ativa', true);
 
-            const guardianIds = Array.from(new Set((auths || []).map(a => a.responsavel_id)));
-
-            if (guardianIds.length > 0) {
-                const { data: resps } = await supabase
-                    .from('responsaveis')
-                    .select('id, nome_completo, foto_url')
-                    .in('id', guardianIds);
-                setAvailableGuardians(resps || []);
+                if (auths) {
+                    // Extract unique guardians from authorizations
+                    const guardiansMap = new Map();
+                    auths.forEach((a: any) => {
+                        const r = Array.isArray(a.responsaveis) ? a.responsaveis[0] : a.responsaveis;
+                        if (r && !guardiansMap.has(r.id)) {
+                            guardiansMap.set(r.id, r);
+                        }
+                    });
+                    setAvailableGuardians(Array.from(guardiansMap.values()));
+                }
             }
         } catch (e) {
             console.error('Error loading guardians:', e);
