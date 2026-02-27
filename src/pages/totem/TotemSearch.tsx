@@ -139,7 +139,7 @@ export default function TotemSearch() {
                     {/* Display */}
                     <div className="bg-white/[0.04] border-2 border-white/10 rounded-3xl px-8 py-5 flex items-center gap-4 min-h-[80px]">
                         <SearchIcon className="w-7 h-7 text-emerald-500 shrink-0" />
-                        <span className={`text - xl font - black tracking - tight text - white flex - 1 line - clamp - 2 ${!query && 'opacity-30'} `}>
+                        <span className={`text-xl font-black tracking-tight text-white flex-1 line-clamp-2 ${!query && 'opacity-30'}`}>
                             {query || 'Digite os 11 números do CPF...'}
                         </span>
                         {loading && <Loader2 className="w-6 h-6 text-emerald-500 animate-spin shrink-0" />}
@@ -151,29 +151,10 @@ export default function TotemSearch() {
                         onChange={setQuery}
                         maxLength={11}
                     />
-
-                    {/* Selection Summary */}
-                    {selectedStudents.length > 0 && (
-                        <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                            <div className="flex -space-x-3 overflow-hidden">
-                                {selectedStudents.map(s => (
-                                    <div key={s.id} className="w-12 h-12 rounded-full border-2 border-[#020617] bg-slate-800 flex items-center justify-center overflow-hidden">
-                                        {s.foto_url ? <img src={s.foto_url} className="w-full h-full object-cover" /> : <UserIcon className="w-6 h-6 text-slate-500" />}
-                                    </div>
-                                ))}
-                            </div>
-                            <button
-                                onClick={handleNext}
-                                className="px-10 py-6 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-black text-xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.3)] flex items-center gap-4"
-                            >
-                                <SearchIcon className="w-6 h-6" /> CHAMAR ({selectedStudents.length}) <ChevronRight className="w-6 h-6" />
-                            </button>
-                        </div>
-                    )}
                 </form>
 
                 {/* Right: results */}
-                <div className="flex-1 flex flex-col px-10 py-8 gap-4 overflow-y-auto">
+                <div className="flex-1 flex flex-col px-10 py-8 gap-4 overflow-y-auto pb-60">
                     {results.length === 0 && query.trim().length < 2 && selectedStudents.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
                             <div className="w-24 h-24 bg-white/[0.04] border border-white/10 rounded-[2rem] flex items-center justify-center">
@@ -182,7 +163,7 @@ export default function TotemSearch() {
                             <div>
                                 <p className="text-white/30 text-lg font-black uppercase italic tracking-tight">Digite para buscar</p>
                                 <p className="text-slate-700 text-xs font-bold uppercase tracking-widest mt-2">
-                                    Mínimo 2 letras
+                                    Insira os 11 dígitos do CPF
                                 </p>
                             </div>
                         </div>
@@ -201,27 +182,27 @@ export default function TotemSearch() {
                                 <button
                                     key={student.id}
                                     onClick={() => toggleStudent(student)}
-                                    className={`w - full flex items - center gap - 5 p - 5 rounded - [1.5rem] border - 2 transition - all duration - 200 active: scale - 98 group text - left
+                                    className={`w-full flex items-center gap-5 p-5 rounded-[1.5rem] border-2 transition-all duration-200 active:scale-98 group text-left
                                         ${isSelected
                                             ? 'bg-emerald-500/10 border-emerald-500'
                                             : 'bg-white/[0.04] border-white/5 hover:bg-white/[0.08] hover:border-white/20'
-                                        } `}
+                                        }`}
                                 >
-                                    <div className={`w - 16 h - 16 rounded - 2xl overflow - hidden border - 2 shrink - 0 transition - all ${isSelected ? 'border-emerald-500' : 'border-white/10'} `}>
+                                    <div className={`w-16 h-16 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${isSelected ? 'border-emerald-500' : 'border-white/10'}`}>
                                         {student.foto_url
                                             ? <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
                                             : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><UserIcon className="w-8 h-8 text-slate-600" /></div>
                                         }
                                     </div>
                                     <div className="flex-1">
-                                        <p className={`text - xl font - black uppercase italic tracking - tight transition - colors ${isSelected ? 'text-emerald-400' : 'text-white'} `}>
+                                        <p className={`text-xl font-black uppercase italic tracking-tight transition-colors ${isSelected ? 'text-emerald-400' : 'text-white'}`}>
                                             {student.nome_completo}
                                         </p>
                                         <div className="flex items-center gap-3 mt-1">
                                             <span className="text-xs font-black text-emerald-500/70 uppercase tracking-widest">{student.turma}</span>
                                         </div>
                                     </div>
-                                    <div className={`w - 8 h - 8 rounded - full border - 2 flex items - center justify - center transition - all ${isSelected ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'border-white/10'} `}>
+                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'border-white/10'}`}>
                                         {isSelected && <ChevronRight className="w-5 h-5 text-slate-950" />}
                                     </div>
                                 </button>
@@ -229,6 +210,18 @@ export default function TotemSearch() {
                         })}
                     </div>
                 </div>
+
+                {/* Fixed Action Button for Mobile/Totem */}
+                {selectedStudents.length > 0 && (
+                    <div className="fixed bottom-10 left-10 right-10 z-50 flex items-center justify-center pointer-events-none">
+                        <button
+                            onClick={handleNext}
+                            className="pointer-events-auto px-12 py-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-[2.5rem] font-black text-3xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_30px_60px_rgba(16,185,129,0.4)] flex items-center gap-6 border-4 border-[#020617]"
+                        >
+                            <SearchIcon className="w-10 h-10" /> CHAMAR AGORA ({selectedStudents.length}) <ChevronRight className="w-10 h-10" />
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
