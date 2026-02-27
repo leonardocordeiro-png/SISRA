@@ -87,7 +87,7 @@ export default function TotemConfirmation() {
                     responsavel_id: selectedGuardian.id,
                     recepcionista_id: null,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'TOTEM',
+                    tipo_solicitacao: 'ROTINA',
                 };
             });
 
@@ -185,8 +185,11 @@ export default function TotemConfirmation() {
                     <Bell className="w-14 h-14 text-rose-400" />
                 </div>
                 <div>
-                    <h2 className="text-4xl font-black italic text-white uppercase mb-3 tracking-tighter">Ocorreu um Erro</h2>
-                    <p className="text-slate-400 text-base max-w-md mx-auto">{errorMsg}</p>
+                    <h2 className="text-4xl font-black italic text-white uppercase mb-4 tracking-tighter">Ocorreu um Erro</h2>
+                    <div className="bg-white/5 border border-white/10 p-6 rounded-3xl max-w-lg mx-auto backdrop-blur-md">
+                        <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-2 opacity-50 text-[10px]">Detalhes Técnicos</p>
+                        <p className="text-slate-300 text-base leading-relaxed">{errorMsg}</p>
+                    </div>
                 </div>
                 <div className="flex gap-4">
                     <button onClick={() => setStep('confirm')} className="px-8 py-4 bg-white/[0.06] border border-white/10 rounded-2xl text-white font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">Tentar Novamente</button>

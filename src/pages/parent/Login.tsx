@@ -97,7 +97,7 @@ export default function ParentLogin() {
                     responsavel_id: guardianId,
                     recepcionista_id: null,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'PORTAL'
+                    tipo_solicitacao: 'ROTINA'
                 };
             });
 
