@@ -211,9 +211,9 @@ export default function TotemSearch() {
                     </div>
                 </div>
 
-                {/* Fixed Action Button for Mobile/Totem */}
+                {/* Fixed Action Button - Positioned to the right to avoid keypad overlap */}
                 {selectedStudents.length > 0 && (
-                    <div className="fixed bottom-10 left-10 right-10 z-50 flex items-center justify-center pointer-events-none">
+                    <div className="fixed bottom-12 right-12 z-50 pointer-events-none">
                         <button
                             onClick={handleNext}
                             className="pointer-events-auto px-12 py-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-[2.5rem] font-black text-3xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_30px_60px_rgba(16,185,129,0.4)] flex items-center gap-6 border-4 border-[#020617]"
