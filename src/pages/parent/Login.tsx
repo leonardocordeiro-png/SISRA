@@ -89,13 +89,15 @@ export default function ParentLogin() {
         try {
             const requests = Array.from(selectedIds).map((id: string) => {
                 const student = students.find((s: any) => s.id === id);
+                if (!student) throw new Error('Falha de segurança: Tentativa de retirar aluno não vinculado.');
+
                 return {
-                    escola_id: student?.escola_id || 'e6328325-1845-420a-b333-87a747953259',
+                    escola_id: student.escola_id || 'e6328325-1845-420a-b333-87a747953259',
                     aluno_id: id,
                     responsavel_id: guardianId,
-                    recepcionista_id: null, // Self-service
+                    recepcionista_id: null,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'ROTINA'
+                    tipo_solicitacao: 'PORTAL'
                 };
             });
 

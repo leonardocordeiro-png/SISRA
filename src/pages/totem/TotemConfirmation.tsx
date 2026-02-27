@@ -77,14 +77,19 @@ export default function TotemConfirmation() {
         setStep('sending');
 
         try {
-            const requests = Array.from(selectedIds).map(id => ({
-                escola_id: students[0]?.escola_id || null,
-                aluno_id: id,
-                responsavel_id: selectedGuardian.id,
-                recepcionista_id: null,
-                status: 'SOLICITADO',
-                tipo_solicitacao: 'TOTEM',
-            }));
+            const requests = Array.from(selectedIds).map(id => {
+                const studentExists = students.some(s => s.id === id);
+                if (!studentExists) throw new Error('Falha de segurança: Tentativa de retirar aluno não reconhecido.');
+
+                return {
+                    escola_id: students[0]?.escola_id || null,
+                    aluno_id: id,
+                    responsavel_id: selectedGuardian.id,
+                    recepcionista_id: null,
+                    status: 'SOLICITADO',
+                    tipo_solicitacao: 'TOTEM',
+                };
+            });
 
             const { error } = await supabase.from('solicitacoes_retirada').insert(requests);
             if (error) throw error;

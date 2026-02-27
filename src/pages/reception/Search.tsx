@@ -201,14 +201,21 @@ export default function ReceptionSearch() {
 
         setSending(true);
         try {
-            const requests = studentIds.map(id => ({
-                escola_id: userProfile?.escola_id || 'e6328325-1845-420a-b333-87a747953259',
-                aluno_id: id,
-                responsavel_id: selectedGuardianId || null,
-                recepcionista_id: user.id,
-                status: 'SOLICITADO',
-                tipo_solicitacao: 'ROTINA'
-            }));
+            const requests = studentIds.map(id => {
+                // Security check for related students
+                if (relatedStudents.length > 0 && !relatedStudents.some(s => s.id === id)) {
+                    throw new Error('Falha de segurança: Tentativa de retirar aluno não vinculado ao grupo.');
+                }
+
+                return {
+                    escola_id: userProfile?.escola_id || 'e6328325-1845-420a-b333-87a747953259',
+                    aluno_id: id,
+                    responsavel_id: selectedGuardianId || null,
+                    recepcionista_id: user.id,
+                    status: 'SOLICITADO',
+                    tipo_solicitacao: 'RECEPCAO'
+                };
+            });
 
             const { error } = await supabase
                 .from('solicitacoes_retirada')
