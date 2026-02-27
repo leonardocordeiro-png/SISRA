@@ -113,28 +113,54 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: { pickupI
         today.setHours(0, 0, 0, 0);
 
         if (guardianId) {
-            // Update ALL active requests for this guardian today
-            // This ensures all siblings' statuses are updated simultaneously
+            // Update basic telemetry for all active requests
             await supabase
                 .from('solicitacoes_retirada')
                 .update({
                     latitude: lat,
                     longitude: lng,
-                    distancia_estimada_metros: Math.round(dist),
-                    status_geofence: status
+                    distancia_estimada_metros: Math.round(dist)
                 })
                 .eq('responsavel_id', guardianId)
                 .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
                 .gte('horario_solicitacao', today.toISOString());
+
+            // Update status_geofence only if it's not already 'CHEGOU'
+            // or if the new status IS 'CHEGOU' (upgrade)
+            if (status === 'CHEGOU') {
+                await supabase
+                    .from('solicitacoes_retirada')
+                    .update({ status_geofence: 'CHEGOU' })
+                    .eq('responsavel_id', guardianId)
+                    .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                    .gte('horario_solicitacao', today.toISOString());
+            } else {
+                await supabase
+                    .from('solicitacoes_retirada')
+                    .update({ status_geofence: status })
+                    .eq('responsavel_id', guardianId)
+                    .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                    .neq('status_geofence', 'CHEGOU')
+                    .gte('horario_solicitacao', today.toISOString());
+            }
         } else {
             // Fallback to single request update if guardianId is missing
+            // 1. Fetch current status to avoid overwriting "CHEGOU"
+            const { data: currentReq } = await supabase
+                .from('solicitacoes_retirada')
+                .select('status_geofence')
+                .eq('id', pickupId)
+                .single();
+
+            const finalStatus = currentReq?.status_geofence === 'CHEGOU' ? 'CHEGOU' : status;
+
             await supabase
                 .from('solicitacoes_retirada')
                 .update({
                     latitude: lat,
                     longitude: lng,
                     distancia_estimada_metros: Math.round(dist),
-                    status_geofence: status
+                    status_geofence: finalStatus
                 })
                 .eq('id', pickupId);
         }
