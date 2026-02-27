@@ -120,26 +120,50 @@ export default function ReceptionSearch() {
     // Search students
     useEffect(() => {
         const searchStudents = async () => {
-            if (query.length < 3) { setResults([]); return; }
+            const cleanQuery = query.replace(/\D/g, '');
+            const isCpfLookup = cleanQuery.length === 11;
+
+            if (query.length < 3 && !isCpfLookup) { setResults([]); return; }
             setLoading(true);
 
-            const { data: directStudents } = await supabase
-                .from('alunos').select('*').ilike('nome_completo', `%${query}%`).limit(5);
+            try {
+                // If it looks like a CPF, try identifying guardian first
+                if (isCpfLookup) {
+                    const { data: resp } = await supabase
+                        .from('responsaveis')
+                        .select('id, nome_completo')
+                        .eq('cpf', cleanQuery)
+                        .maybeSingle();
 
-            const { data: auths } = await supabase
-                .from('autorizacoes')
-                .select('alunos:aluno_id (*)')
-                .or(`nome_completo.ilike.%${query}%,cpf.ilike.%${query}%`, { foreignTable: 'responsaveis' })
-                .eq('ativa', true).limit(10);
+                    if (resp) {
+                        await resolveByResponsavelId(resp.id, resp.nome_completo);
+                        setLoading(false);
+                        return;
+                    }
+                }
 
-            let combined: Student[] = directStudents || [];
-            auths?.forEach((a: any) => {
-                const student = Array.isArray(a.alunos) ? a.alunos[0] : a.alunos;
-                if (student && !combined.some(s => s.id === student.id)) combined.push(student);
-            });
+                // Regular search logic
+                const { data: directStudents } = await supabase
+                    .from('alunos').select('*').ilike('nome_completo', `%${query}%`).limit(5);
 
-            setResults(combined.slice(0, 8));
-            setLoading(false);
+                const { data: auths } = await supabase
+                    .from('autorizacoes')
+                    .select('alunos:aluno_id (*)')
+                    .or(`nome_completo.ilike.%${query}%,cpf.ilike.%${query}%`, { foreignTable: 'responsaveis' })
+                    .eq('ativa', true).limit(10);
+
+                let combined: Student[] = directStudents || [];
+                auths?.forEach((a: any) => {
+                    const student = Array.isArray(a.alunos) ? a.alunos[0] : a.alunos;
+                    if (student && !combined.some(s => s.id === student.id)) combined.push(student);
+                });
+
+                setResults(combined.slice(0, 8));
+            } catch (err) {
+                console.error('Search error:', err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         const t = setTimeout(searchStudents, 300);
@@ -429,7 +453,7 @@ export default function ReceptionSearch() {
                                 <SearchIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-500 group-focus-within/input:text-emerald-500 transition-all scale-100 group-focus-within/input:scale-110" />
                                 <input
                                     type="text"
-                                    placeholder="Digite nome, RA ou turma..."
+                                    placeholder="Digite CPF, nome, RA ou turma..."
                                     className="w-full bg-[#020617]/50 border-2 border-white/5 rounded-[1.5rem] py-6 pl-16 pr-8 text-xl font-bold text-white focus:border-emerald-500/50 focus:ring-0 transition-all placeholder:text-slate-600 backdrop-blur-xl"
                                     value={query}
                                     onChange={e => setQuery(e.target.value)}

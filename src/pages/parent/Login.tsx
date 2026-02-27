@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, ChevronRight, Lock } from 'lucide-react';
+import { useToast } from '../../components/ui/Toast';
+import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, Lock, CheckCircle2, Bell } from 'lucide-react';
 
 export default function ParentLogin() {
-    const navigate = useNavigate();
+    const toast = useToast();
     const [cpf, setCpf] = useState('');
     const [loading, setLoading] = useState(false);
+    const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
-    const [step, setStep] = useState<'CPF' | 'SELECT_STUDENT'>('CPF');
+    const [step, setStep] = useState<'CPF' | 'SELECT_STUDENT' | 'SUCCESS'>('CPF');
     const [students, setStudents] = useState<any[]>([]);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [guardianName, setGuardianName] = useState('');
+    const [guardianId, setGuardianId] = useState('');
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,6 +33,7 @@ export default function ParentLogin() {
                 throw new Error('Responsável não encontrado. Verifique o CPF informado.');
             }
 
+            setGuardianId(responsavel.id);
             setGuardianName(responsavel.nome_completo);
 
             const { data: links, error: linkError } = await supabase
@@ -39,7 +43,8 @@ export default function ParentLogin() {
                         id,
                         nome_completo,
                         turma,
-                        foto_url
+                        foto_url,
+                        escola_id
                     )
                 `)
                 .eq('responsavel_id', responsavel.id);
@@ -50,7 +55,9 @@ export default function ParentLogin() {
                 throw new Error('Identificamos seu CPF, mas não há estudantes vinculados a ele. Por favor, entre em contato com a secretaria da escola para regularizar seu cadastro.');
             }
 
-            setStudents(links.map((l: any) => l.aluno));
+            const foundStudents = links.map((l: any) => l.aluno);
+            setStudents(foundStudents);
+            setSelectedIds(new Set(foundStudents.map((s: any) => s.id)));
             setStep('SELECT_STUDENT');
 
             localStorage.setItem('sisra_parent_session', JSON.stringify({
@@ -66,8 +73,48 @@ export default function ParentLogin() {
         }
     };
 
-    const handleSelectStudent = (studentId: string) => {
-        navigate(`/parent/status/${studentId}`);
+    const toggleStudent = (id: string) => {
+        setSelectedIds((prev: Set<string>) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleCallStudents = async () => {
+        if (selectedIds.size === 0 || sending) return;
+        setSending(true);
+
+        try {
+            const requests = Array.from(selectedIds).map((id: string) => {
+                const student = students.find((s: any) => s.id === id);
+                return {
+                    escola_id: student?.escola_id || 'e6328325-1845-420a-b333-87a747953259',
+                    aluno_id: id,
+                    responsavel_id: guardianId,
+                    recepcionista_id: null, // Self-service
+                    status: 'SOLICITADO',
+                    tipo_solicitacao: 'ROTINA'
+                };
+            });
+
+            const { error } = await supabase
+                .from('solicitacoes_retirada')
+                .insert(requests);
+
+            if (error) throw error;
+
+            toast.success(
+                selectedIds.size === 1 ? 'Solicitação enviada!' : `${selectedIds.size} solicitações enviadas!`,
+                'Aguarde a liberação na saída.'
+            );
+            setStep('SUCCESS');
+        } catch (err: any) {
+            toast.error('Erro ao solicitar', err.message || 'Tente novamente.');
+        } finally {
+            setSending(false);
+        }
     };
 
     return (
@@ -156,48 +203,102 @@ export default function ParentLogin() {
                                 </div>
                             </button>
                         </form>
-                    ) : (
+                    ) : step === 'SELECT_STUDENT' ? (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                             <div className="text-center space-y-2">
                                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Identidade Confirmada</p>
                                 <h3 className="text-xl font-black text-white italic uppercase tracking-tight">{guardianName.split(' ')[0]}, quem você vai buscar?</h3>
                             </div>
 
-                            <div className="space-y-4">
-                                {students.map((student) => (
-                                    <button
-                                        id={`student-${student.id}`}
-                                        key={student.id}
-                                        onClick={() => handleSelectStudent(student.id)}
-                                        className="w-full flex items-center gap-5 p-5 bg-white/[0.03] border border-white/5 rounded-3xl hover:bg-white/[0.06] hover:border-blue-500/30 transition-all duration-300 group relative overflow-hidden active:scale-[0.98]"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                                {students.map((student) => {
+                                    const isSelected = selectedIds.has(student.id);
+                                    return (
+                                        <button
+                                            id={`student-${student.id}`}
+                                            key={student.id}
+                                            onClick={() => toggleStudent(student.id)}
+                                            className={`w-full flex items-center gap-5 p-5 border-2 rounded-3xl transition-all duration-300 group relative overflow-hidden active:scale-[0.98] ${isSelected
+                                                ? 'bg-blue-500/10 border-blue-500 shadow-lg shadow-blue-500/10'
+                                                : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-blue-500/30'
+                                                }`}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                                        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-blue-500/50 transition-colors shadow-2xl">
-                                            {student.foto_url ? (
-                                                <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                                                    <User className="w-6 h-6 text-slate-500" />
-                                                </div>
-                                            )}
-                                        </div>
+                                            <div className={`relative w-14 h-14 rounded-2xl overflow-hidden border-2 transition-colors shadow-2xl ${isSelected ? 'border-blue-500' : 'border-white/10'}`}>
+                                                {student.foto_url ? (
+                                                    <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                                                        <User className="w-6 h-6 text-slate-500" />
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                        <div className="flex-1 text-left relative z-10">
-                                            <p className="font-black text-white group-hover:text-blue-400 transition-colors uppercase italic tracking-tighter text-lg">{student.nome_completo}</p>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Unidade: {student.turma}</p>
-                                        </div>
+                                            <div className="flex-1 text-left relative z-10">
+                                                <p className={`font-black transition-colors uppercase italic tracking-tighter text-lg ${isSelected ? 'text-blue-400' : 'text-white'}`}>{student.nome_completo}</p>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Unidade: {student.turma}</p>
+                                            </div>
 
-                                        <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-                                    </button>
-                                ))}
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${isSelected ? 'bg-blue-500 border-blue-400 text-white animate-in zoom-in' : 'border-white/10 text-transparent'}`}>
+                                                <CheckCircle2 className="w-5 h-5 shadow-2xl" />
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
 
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <button
+                                    onClick={handleCallStudents}
+                                    disabled={selectedIds.size === 0 || sending}
+                                    className="w-full relative group/btn overflow-hidden rounded-[2rem] py-6 px-8 bg-blue-600 border border-blue-400/30 hover:bg-blue-500 transition-all duration-500 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shadow-2xl shadow-blue-500/20"
+                                >
+                                    <div className="relative z-10 flex items-center justify-center gap-4">
+                                        {sending ? (
+                                            <>
+                                                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                                <span className="text-base font-black text-white uppercase italic tracking-[0.2em]">Processando...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Bell className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
+                                                <span className="text-base font-black text-white uppercase italic tracking-[0.2em]">
+                                                    {selectedIds.size > 1 ? `Chamar ${selectedIds.size} Alunos` : 'Chamar Agora'}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setStep('CPF')}
+                                    className="w-full py-4 text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] hover:text-blue-400 transition-colors"
+                                >
+                                    Alterar Protocolo / Não sou eu
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 animate-in fade-in zoom-in-95 duration-700 py-6 text-center">
+                            <div className="relative mx-auto w-24 h-24 mb-6">
+                                <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse"></div>
+                                <div className="relative w-full h-full bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40">
+                                    <CheckCircle2 className="w-12 h-12 text-white" />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">Solicitação Concluída!</h3>
+                                <p className="text-slate-400 text-sm font-bold uppercase tracking-widest leading-relaxed">
+                                    Suas notificações foram enviadas.<br />
+                                    Por favor, aguarde na área de saída.
+                                </p>
+                            </div>
                             <button
                                 onClick={() => setStep('CPF')}
-                                className="w-full py-4 text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] hover:text-blue-400 transition-colors"
+                                className="mt-8 px-10 py-4 bg-white/5 border border-white/10 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all active:scale-95"
                             >
-                                Alterar Protocolo / Não sou eu
+                                Iniciar Nova Retirada
                             </button>
                         </div>
                     )}
