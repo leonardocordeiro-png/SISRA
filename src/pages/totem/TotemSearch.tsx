@@ -138,11 +138,11 @@ export default function TotemSearch() {
             <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
 
                 {/* Left: search input + keyboard */}
-                <div className="flex flex-col w-[600px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6">
+                <div className="flex flex-col w-[45%] min-w-[500px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6">
                     {/* Display */}
                     <div className="bg-white/[0.04] border-2 border-white/10 rounded-3xl px-8 py-5 flex items-center gap-4 min-h-[80px]">
                         <SearchIcon className="w-7 h-7 text-emerald-500 shrink-0" />
-                        <span className={`text-2xl font-black tracking-tight text-white flex-1 ${!query && 'opacity-30'}`}>
+                        <span className={`text-xl font-black tracking-tight text-white flex-1 line-clamp-2 ${!query && 'opacity-30'}`}>
                             {query || 'Nome do aluno ou CPF do responsável...'}
                         </span>
                         {loading && <Loader2 className="w-6 h-6 text-emerald-500 animate-spin shrink-0" />}
