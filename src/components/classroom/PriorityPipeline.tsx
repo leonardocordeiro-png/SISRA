@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User as UserIcon, Check, Search, ArrowDownNarrowWide } from 'lucide-react';
+import { User as UserIcon, Check, Search, ArrowDownNarrowWide, Clock } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 
 interface Aluno {
@@ -237,7 +237,13 @@ export default function PriorityPipeline({
                                         {req.status_geofence === 'CHEGOU' && (
                                             <div className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-md animate-pulse">
                                                 <div className="w-1 h-1 bg-white rounded-full"></div>
-                                                <span className={`text-[8px] font-black uppercase tracking-widest ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}>NA PORTA</span>
+                                                <span className={`text-[8px] font-black uppercase tracking-widest ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}>NA RECEPÇÃO</span>
+                                            </div>
+                                        )}
+                                        {req.status === 'AGUARDANDO' && (
+                                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md ${activeRequestId === req.id ? 'bg-slate-950/20' : 'bg-amber-500/20 border border-amber-500/30'}`}>
+                                                <Clock className={`w-3 h-3 ${activeRequestId === req.id ? 'text-slate-950' : 'text-amber-500'}`} />
+                                                <span className={`text-[8px] font-black uppercase tracking-widest ${activeRequestId === req.id ? 'text-slate-950' : 'text-amber-500'}`}>EM ESPERA</span>
                                             </div>
                                         )}
                                     </div>

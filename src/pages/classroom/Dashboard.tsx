@@ -132,10 +132,20 @@ export default function ClassroomDashboard() {
 
     const handleResponse = async (requestId: string, action: 'LIBERAR' | 'AGUARDAR' | 'RECUSAR') => {
         let newStatus = '';
+        let successMsg = '';
 
-        if (action === 'LIBERAR') newStatus = 'LIBERADO';
-        if (action === 'AGUARDAR') newStatus = 'AGUARDANDO';
-        if (action === 'RECUSAR') newStatus = 'CANCELADO';
+        if (action === 'LIBERAR') {
+            newStatus = 'LIBERADO';
+            successMsg = 'Aluno liberado com sucesso!';
+        }
+        if (action === 'AGUARDAR') {
+            newStatus = 'AGUARDANDO';
+            successMsg = 'Solicitação colocada em espera.';
+        }
+        if (action === 'RECUSAR') {
+            newStatus = 'CANCELADO';
+            successMsg = 'Solicitação rejeitada e removida.';
+        }
 
         const { error } = await supabase
             .from('solicitacoes_retirada')
@@ -148,6 +158,15 @@ export default function ClassroomDashboard() {
 
         if (error) {
             toast.error('Erro ao atualizar status', error.message);
+        } else {
+            toast.success('Sucesso', successMsg);
+
+            // If rejected or wait, clear focus if it was the active one
+            if (action === 'RECUSAR' || action === 'AGUARDAR') {
+                if (activeRequest?.id === requestId) {
+                    setActiveRequest(null);
+                }
+            }
         }
     };
 
@@ -372,7 +391,7 @@ export default function ClassroomDashboard() {
                                             {activeRequest.status_geofence === 'CHEGOU' ? (
                                                 <div className="bg-emerald-500/20 px-5 py-2.5 rounded-2xl border-2 border-emerald-500/30 flex items-center gap-3">
                                                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping shadow-[0_0_10px_rgba(16,185,129,1)]"></div>
-                                                    <span className="text-xs font-black italic text-emerald-400 uppercase tracking-tight">RESPONSÁVEL NO LOCAL</span>
+                                                    <span className="text-xs font-black italic text-emerald-400 uppercase tracking-tight">RESPONSÁVEL NA RECEPÇÃO</span>
                                                 </div>
                                             ) : (
                                                 <div className="bg-white/5 px-5 py-2.5 rounded-2xl border-2 border-white/5 flex items-center gap-3">
@@ -483,8 +502,8 @@ export default function ClassroomDashboard() {
                                                 }
                                             }}
                                             className={`border-2 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 overflow-hidden relative shadow-xl ${confirmPending === 'AGUARDAR'
-                                                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                                                    : 'bg-white/5 hover:bg-white/10 border-white/5 group/wait'
+                                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                                                : 'bg-white/5 hover:bg-white/10 border-white/5 group/wait'
                                                 }`}
                                         >
                                             <div className={`p-4 rounded-2xl transition-all border border-white/10 relative z-10 ${confirmPending === 'AGUARDAR' ? 'bg-amber-500/30 text-amber-400' : 'bg-slate-800/80 group-hover/wait:bg-emerald-500/20 group-hover/wait:text-emerald-500'
@@ -508,8 +527,8 @@ export default function ClassroomDashboard() {
                                                 }
                                             }}
                                             className={`border-2 rounded-[3rem] transition-all flex flex-col items-center justify-center gap-4 overflow-hidden relative shadow-xl ${confirmPending === 'RECUSAR'
-                                                    ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
-                                                    : 'bg-white/5 hover:bg-rose-500/10 border-white/5 hover:border-rose-500/30 group/cancel'
+                                                ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
+                                                : 'bg-white/5 hover:bg-rose-500/10 border-white/5 hover:border-rose-500/30 group/cancel'
                                                 }`}
                                         >
                                             <div className={`p-4 rounded-2xl transition-all border border-white/10 relative z-10 ${confirmPending === 'RECUSAR' ? 'bg-rose-500/30 text-rose-400' : 'bg-slate-800/80 group-hover/cancel:bg-rose-500/20 group-hover/cancel:text-rose-500'
