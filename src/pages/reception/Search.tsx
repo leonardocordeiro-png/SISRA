@@ -19,7 +19,8 @@ import {
     User as UserIcon,
     Activity,
     ChevronRight,
-    Users
+    Users,
+    Maximize2
 } from 'lucide-react';
 
 
@@ -108,6 +109,7 @@ export default function ReceptionSearch() {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+    const [isPhotoZoomed, setIsPhotoZoomed] = useState(false);
 
     // Fetch user profile
     useEffect(() => {
@@ -131,7 +133,7 @@ export default function ReceptionSearch() {
                 if (isCpfLookup) {
                     const { data: resp } = await supabase
                         .from('responsaveis')
-                        .select('id, nome_completo')
+                        .select('id, nome_completo, foto_url')
                         .eq('cpf', cleanQuery)
                         .maybeSingle();
 
@@ -520,11 +522,31 @@ export default function ReceptionSearch() {
                                             <div className="absolute -inset-4 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                                             <div className="relative w-44 h-44 rounded-[2.5rem] overflow-hidden border-4 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 shadow-2xl bg-[#020617]">
                                                 {relatedStudents.length > 0 ? (
-                                                    <div className="w-full h-full bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center">
-                                                        <Users className="w-16 h-16 text-white/50" />
-                                                    </div>
+                                                    selectedGuardian?.foto_url ? (
+                                                        <div className="relative w-full h-full group/photo">
+                                                            <img src={selectedGuardian.foto_url} alt="" className="w-full h-full object-cover" />
+                                                            <button
+                                                                onClick={() => setIsPhotoZoomed(true)}
+                                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity"
+                                                            >
+                                                                <Maximize2 className="w-8 h-8 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center">
+                                                            <Users className="w-16 h-16 text-white/50" />
+                                                        </div>
+                                                    )
                                                 ) : selectedStudent?.foto_url ? (
-                                                    <img src={selectedStudent.foto_url} alt="" className="w-full h-full object-cover" />
+                                                    <div className="relative w-full h-full group/photo">
+                                                        <img src={selectedStudent.foto_url} alt="" className="w-full h-full object-cover" />
+                                                        <button
+                                                            onClick={() => setIsPhotoZoomed(true)}
+                                                            className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity"
+                                                        >
+                                                            <Maximize2 className="w-8 h-8 text-white" />
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center bg-slate-900">
                                                         <UserIcon className="w-20 h-20 text-slate-700" />
@@ -559,9 +581,19 @@ export default function ReceptionSearch() {
                                                     </div>
                                                     <div className="space-y-1">
                                                         <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter leading-[0.9] uppercase">
-                                                            Grupo <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Familiar</span>
+                                                            {selectedGuardian ? (
+                                                                <>
+                                                                    {selectedGuardian.nome_completo.split(' ')[0]} <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">{selectedGuardian.nome_completo.split(' ').slice(1).join(' ')}</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    Grupo <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Familiar</span>
+                                                                </>
+                                                            )}
                                                         </h2>
-                                                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest pl-1">Selecione os membros para liberação imediata.</p>
+                                                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest pl-1">
+                                                            {selectedGuardian ? 'Responsável Autorizado identificado' : 'Selecione os membros para liberação imediata.'}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             ) : selectedStudent && (
@@ -801,6 +833,36 @@ export default function ReceptionSearch() {
 
             <QRScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
             {isCodeModalOpen && <CodeModal onConfirm={handleCodeLookup} onClose={() => setIsCodeModalOpen(false)} />}
+
+            {/* Photo Zoom Modal */}
+            {isPhotoZoomed && (selectedStudent?.foto_url || selectedGuardian?.foto_url) && (
+                <div
+                    className="fixed inset-0 z-[100] bg-[#020617]/95 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in duration-300"
+                    onClick={() => setIsPhotoZoomed(false)}
+                >
+                    <div className="relative max-w-4xl w-full aspect-square rounded-[3rem] overflow-hidden border-8 border-white/10 shadow-[0_0_100px_rgba(16,185,129,0.2)]">
+                        <img
+                            src={(relatedStudents.length > 0 ? selectedGuardian?.foto_url : selectedStudent?.foto_url) || undefined}
+                            alt=""
+                            className="w-full h-full object-cover"
+                        />
+                        <button
+                            onClick={() => setIsPhotoZoomed(false)}
+                            className="absolute top-8 right-8 w-16 h-16 bg-white/10 hover:bg-rose-500 text-white rounded-3xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all active:scale-90"
+                        >
+                            <X className="w-8 h-8" />
+                        </button>
+                        <div className="absolute bottom-10 left-10 right-10 flex items-center justify-between">
+                            <div className="bg-black/40 backdrop-blur-xl px-8 py-4 rounded-2xl border border-white/10">
+                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-1">Identificação SISRA</p>
+                                <p className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                                    {relatedStudents.length > 0 ? selectedGuardian?.nome_completo : selectedStudent?.nome_completo}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
