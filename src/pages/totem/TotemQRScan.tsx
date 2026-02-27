@@ -13,6 +13,8 @@ export default function TotemQRScan() {
     const [error, setError] = useState<string | null>(null);
     const [scanning, setScanning] = useState(true);
     const [cameraReady, setCameraReady] = useState(false);
+    const [identifiedGuardian, setIdentifiedGuardian] = useState<any>(null);
+    const [scanSuccess, setScanSuccess] = useState(false);
     useInactivityTimer({ timeoutMs: 60000, redirectTo: '/totem' });
 
     useEffect(() => {
@@ -46,13 +48,22 @@ export default function TotemQRScan() {
                 animId = requestAnimationFrame(scan);
                 return;
             }
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) return;
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+
+            // "Calibration": Focus on the central square area matching the UI
+            const scanSize = Math.min(canvas.width, canvas.height) * 0.7;
+            const sx = (canvas.width - scanSize) / 2;
+            const sy = (canvas.height - scanSize) / 2;
+
+            const imageData = ctx.getImageData(sx, sy, scanSize, scanSize);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: 'attemptBoth'
+            });
+
             if (code) {
                 resolved = true;
                 handleQRData(code.data);
@@ -125,22 +136,35 @@ export default function TotemQRScan() {
             });
 
             setSelectedStudents(merged);
+            setIdentifiedGuardian(guardian);
+            setScanSuccess(true);
 
-            // Resume scanning after a short delay for feedback
+            // Navigate automatically after a brief success feedback
             setTimeout(() => {
-                setScanning(true);
-            }, 2000);
+                navigate('/totem/confirmacao', {
+                    state: {
+                        students: merged,
+                        mode: 'qr',
+                        guardian: guardian
+                    }
+                });
+            }, 800);
 
         } catch (e: any) {
             setError(e.message || 'Erro ao processar QR Code.');
             setScanning(false);
+            setScanSuccess(false);
         }
     };
 
     const handleNext = () => {
         if (selectedStudents.length === 0) return;
         navigate('/totem/confirmacao', {
-            state: { students: selectedStudents, mode: 'qr' }
+            state: {
+                students: selectedStudents,
+                mode: 'qr',
+                guardian: identifiedGuardian
+            }
         });
     };
 
@@ -185,7 +209,13 @@ export default function TotemQRScan() {
                 {/* Camera view */}
                 <div className="flex-1 relative bg-black/60 p-10 flex items-center justify-center">
                     <div className="relative w-full max-w-[560px] aspect-video rounded-3xl overflow-hidden border-2 border-white/10 shadow-2xl bg-black">
-                        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                        <video
+                            ref={videoRef}
+                            className="w-full h-full object-cover"
+                            style={{ transform: 'scaleX(-1)' }}
+                            playsInline
+                            muted
+                        />
                         <canvas ref={canvasRef} className="hidden" />
 
                         {/* Scanner UI overlay */}
@@ -193,21 +223,21 @@ export default function TotemQRScan() {
                             {/* Darkened corners */}
                             <div className="absolute inset-0 border-[60px] border-black/30" />
                             {/* Target box */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border-2 border-blue-500/50 rounded-3xl">
-                                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
-                                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
-                                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
-                                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl" />
+                            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border-2 rounded-3xl transition-all duration-300 ${scanSuccess ? 'border-emerald-500 bg-emerald-500/10 scale-110' : 'border-blue-500/50'}`}>
+                                <div className={`absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 rounded-tl-xl transition-colors ${scanSuccess ? 'border-emerald-500' : 'border-blue-500'}`} />
+                                <div className={`absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 rounded-tr-xl transition-colors ${scanSuccess ? 'border-emerald-500' : 'border-blue-500'}`} />
+                                <div className={`absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 rounded-bl-xl transition-colors ${scanSuccess ? 'border-emerald-500' : 'border-blue-500'}`} />
+                                <div className={`absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 rounded-br-xl transition-colors ${scanSuccess ? 'border-emerald-500' : 'border-blue-500'}`} />
                                 {/* Scan line */}
-                                {cameraReady && <div className="absolute inset-x-4 top-0 h-0.5 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)] animate-[scan-line_2s_ease-in-out_infinite]" />}
+                                {cameraReady && !scanSuccess && <div className="absolute inset-x-4 top-0 h-0.5 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)] animate-[scan-line_2s_ease-in-out_infinite]" />}
                             </div>
 
                             {/* Status pill */}
                             <div className="absolute bottom-4 inset-x-0 flex justify-center">
-                                <div className="px-5 py-2.5 bg-slate-900/80 backdrop-blur-md border border-blue-500/30 rounded-full flex items-center gap-2.5">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                                    <span className="text-xs font-black uppercase tracking-widest text-blue-400">
-                                        {cameraReady ? 'Buscando QR Code...' : 'Iniciando câmera...'}
+                                <div className={`px-5 py-2.5 backdrop-blur-md border rounded-full flex items-center gap-2.5 transition-all ${scanSuccess ? 'bg-emerald-500/20 border-emerald-500' : 'bg-slate-900/80 border-blue-500/30'}`}>
+                                    <div className={`w-2 h-2 rounded-full animate-pulse ${scanSuccess ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                    <span className={`text-xs font-black uppercase tracking-widest ${scanSuccess ? 'text-emerald-400' : 'text-blue-400'}`}>
+                                        {scanSuccess ? 'Identificado!' : (cameraReady ? 'Buscando QR Code...' : 'Iniciando câmera...')}
                                     </span>
                                 </div>
                             </div>
