@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, Lock, CheckCircle2, Bell } from 'lucide-react';
 
 export default function ParentLogin() {
     const toast = useToast();
+    const navigate = useNavigate();
     const [cpf, setCpf] = useState('');
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
@@ -109,9 +111,11 @@ export default function ParentLogin() {
 
             toast.success(
                 selectedIds.size === 1 ? 'Solicitação enviada!' : `${selectedIds.size} solicitações enviadas!`,
-                'Aguarde a liberação na saída.'
+                'Acompanhando sua chegada em tempo real.'
             );
-            setStep('SUCCESS');
+
+            const firstId = Array.from(selectedIds)[0];
+            navigate(`/parent/status/${firstId}`);
         } catch (err: any) {
             toast.error('Erro ao solicitar', err.message || 'Tente novamente.');
         } finally {

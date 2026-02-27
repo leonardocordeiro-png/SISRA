@@ -43,6 +43,7 @@ export default function ParentPickupStatus() {
     const [pickup, setPickup] = useState<PickupData | null>(null);
     const [loading, setLoading] = useState(true);
     const [guardianName, setGuardianName] = useState('Responsável');
+    const [guardianIdSession, setGuardianIdSession] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         const session = localStorage.getItem('sisra_parent_session');
@@ -54,6 +55,7 @@ export default function ParentPickupStatus() {
         const data = JSON.parse(session);
         const firstName = data.nome.split(' ')[0];
         setGuardianName(`${firstName} (Responsável)`);
+        setGuardianIdSession(data.id);
 
         if (studentId) {
             loadInitialData();
@@ -400,7 +402,7 @@ export default function ParentPickupStatus() {
                 <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 blur opacity-50 group-hover:opacity-100 transition duration-1000"></div>
                     <div className="relative">
-                        <GeoTracker pickupId={pickup.id} escolaId={student.escola_id} />
+                        <GeoTracker pickupId={pickup.id} escolaId={student.escola_id} guardianId={guardianIdSession} />
                     </div>
                 </div>
 

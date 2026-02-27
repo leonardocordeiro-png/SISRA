@@ -33,7 +33,7 @@ interface SchoolCoords {
     nome: string;
 }
 
-export default function GeoTracker({ pickupId, escolaId }: { pickupId: string; escolaId?: string }) {
+export default function GeoTracker({ pickupId, escolaId, guardianId }: { pickupId: string; escolaId?: string; guardianId?: string }) {
     const [tracking, setTracking] = useState(false);
     const [distance, setDistance] = useState<number | null>(null);
     const [geofence, setGeofence] = useState<string | null>(null);
@@ -109,16 +109,36 @@ export default function GeoTracker({ pickupId, escolaId }: { pickupId: string; e
         if (now - lastWriteRef.current < DEBOUNCE_MS) return;
         lastWriteRef.current = now;
 
-        await supabase
-            .from('solicitacoes_retirada')
-            .update({
-                latitude: lat,
-                longitude: lng,
-                distancia_estimada_metros: Math.round(dist),
-                status_geofence: status
-            })
-            .eq('id', pickupId);
-    }, [pickupId]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (guardianId) {
+            // Update ALL active requests for this guardian today
+            // This ensures all siblings' statuses are updated simultaneously
+            await supabase
+                .from('solicitacoes_retirada')
+                .update({
+                    latitude: lat,
+                    longitude: lng,
+                    distancia_estimada_metros: Math.round(dist),
+                    status_geofence: status
+                })
+                .eq('responsavel_id', guardianId)
+                .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                .gte('horario_solicitacao', today.toISOString());
+        } else {
+            // Fallback to single request update if guardianId is missing
+            await supabase
+                .from('solicitacoes_retirada')
+                .update({
+                    latitude: lat,
+                    longitude: lng,
+                    distancia_estimada_metros: Math.round(dist),
+                    status_geofence: status
+                })
+                .eq('id', pickupId);
+        }
+    }, [pickupId, guardianId]);
 
     // ──────────────────────────────────────────────
     // GPS watchPosition
@@ -195,8 +215,8 @@ export default function GeoTracker({ pickupId, escolaId }: { pickupId: string; e
                     onClick={() => setTracking(t => !t)}
                     disabled={loadingSchool}
                     className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 ${tracking
-                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
-                            : 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400'
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
+                        : 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400'
                         }`}
                 >
                     {loadingSchool ? <Loader2 className="w-3 h-3 animate-spin" /> : tracking ? 'Parar' : 'Ativar'}
