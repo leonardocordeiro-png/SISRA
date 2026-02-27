@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User as UserIcon, Search as SearchIcon, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useInactivityTimer } from '../../components/totem/InactivityTimer';
-import TotemKeyboard from '../../components/totem/TotemKeyboard';
+import TotemNumericPad from '../../components/totem/TotemNumericPad';
 import type { Student } from '../../types';
 
 export default function TotemSearch() {
@@ -25,51 +25,44 @@ export default function TotemSearch() {
     // Search with debounce
     useEffect(() => {
         const trimmedQuery = query.trim();
-        if (trimmedQuery.length < 2) { setResults([]); return; }
+        const cleanCpf = trimmedQuery.replace(/\D/g, '');
+
+        // Security: only search by full CPF (11 digits)
+        if (cleanCpf.length !== 11) { setResults([]); return; }
 
         const t = setTimeout(async () => {
             setLoading(true);
             try {
-                // 1. Search by Student Name
-                const { data: nameResults } = await supabase
-                    .from('alunos')
-                    .select('*')
-                    .ilike('nome_completo', `%${trimmedQuery}%`)
-                    .limit(8);
+                let allResults: Student[] = [];
 
-                let allResults = [...(nameResults || [])];
+                // Search by Guardian CPF
+                const { data: guardians } = await supabase
+                    .from('responsaveis')
+                    .select('id')
+                    .eq('cpf', cleanCpf);
 
-                // 2. Search by Guardian CPF (if input contains digits)
-                const cleanCpf = trimmedQuery.replace(/\D/g, '');
-                if (cleanCpf.length >= 3) {
-                    const { data: guardians } = await supabase
-                        .from('responsaveis')
-                        .select('id')
-                        .or(`cpf.ilike.%${cleanCpf}%,cpf.eq.${cleanCpf}`);
+                if (guardians && guardians.length > 0) {
+                    const guardianIds = guardians.map(g => g.id);
 
-                    if (guardians && guardians.length > 0) {
-                        const guardianIds = guardians.map(g => g.id);
-                        const { data: auths } = await supabase
-                            .from('autorizacoes')
-                            .select('aluno_id')
-                            .in('responsavel_id', guardianIds)
-                            .eq('ativa', true);
+                    // Query both link tables for redundancy
+                    const [authsRes, junctionRes] = await Promise.all([
+                        supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', guardianIds).eq('ativa', true),
+                        supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', guardianIds)
+                    ]);
 
-                        if (auths && auths.length > 0) {
-                            const studentIds = auths.map(a => a.aluno_id);
-                            const { data: cpfStudents } = await supabase
-                                .from('alunos')
-                                .select('*')
-                                .in('id', studentIds);
+                    const studentIds = new Set([
+                        ...(authsRes.data?.map(a => a.aluno_id) || []),
+                        ...(junctionRes.data?.map(j => j.aluno_id) || [])
+                    ]);
 
-                            if (cpfStudents) {
-                                // Add to results if not already present
-                                cpfStudents.forEach(s => {
-                                    if (!allResults.some(r => r.id === s.id)) {
-                                        allResults.push(s);
-                                    }
-                                });
-                            }
+                    if (studentIds.size > 0) {
+                        const { data: cpfStudents } = await supabase
+                            .from('alunos')
+                            .select('*')
+                            .in('id', Array.from(studentIds));
+
+                        if (cpfStudents) {
+                            allResults = cpfStudents;
                         }
                     }
                 }
@@ -122,7 +115,7 @@ export default function TotemSearch() {
                         Buscar Estudantes
                     </h1>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
-                        Selecione um ou mais alunos para retirar
+                        Digite o CPF do responsável para localizar os alunos
                     </p>
                 </div>
                 <div className="w-32 flex justify-end">
@@ -138,21 +131,25 @@ export default function TotemSearch() {
             <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
 
                 {/* Left: search input + keyboard */}
-                <div className="flex flex-col w-[45%] min-w-[500px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6">
+                <form
+                    className="flex flex-col w-[45%] min-w-[500px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6"
+                    autoComplete="off"
+                    onSubmit={e => e.preventDefault()}
+                >
                     {/* Display */}
                     <div className="bg-white/[0.04] border-2 border-white/10 rounded-3xl px-8 py-5 flex items-center gap-4 min-h-[80px]">
                         <SearchIcon className="w-7 h-7 text-emerald-500 shrink-0" />
-                        <span className={`text-xl font-black tracking-tight text-white flex-1 line-clamp-2 ${!query && 'opacity-30'}`}>
-                            {query || 'Nome do aluno ou CPF do responsável...'}
+                        <span className={`text - xl font - black tracking - tight text - white flex - 1 line - clamp - 2 ${!query && 'opacity-30'} `}>
+                            {query || 'Digite os 11 números do CPF...'}
                         </span>
                         {loading && <Loader2 className="w-6 h-6 text-emerald-500 animate-spin shrink-0" />}
                     </div>
 
                     {/* Keyboard */}
-                    <TotemKeyboard
+                    <TotemNumericPad
                         value={query}
                         onChange={setQuery}
-                        maxLength={50}
+                        maxLength={11}
                     />
 
                     {/* Selection Summary */}
@@ -167,13 +164,13 @@ export default function TotemSearch() {
                             </div>
                             <button
                                 onClick={handleNext}
-                                className="px-10 py-5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-black text-lg uppercase tracking-widest transition-all active:scale-95 shadow-xl flex items-center gap-3"
+                                className="px-10 py-6 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-black text-xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.3)] flex items-center gap-4"
                             >
-                                Avançar ({selectedStudents.length}) <ChevronRight className="w-6 h-6" />
+                                <SearchIcon className="w-6 h-6" /> CHAMAR ({selectedStudents.length}) <ChevronRight className="w-6 h-6" />
                             </button>
                         </div>
                     )}
-                </div>
+                </form>
 
                 {/* Right: results */}
                 <div className="flex-1 flex flex-col px-10 py-8 gap-4 overflow-y-auto">
@@ -204,26 +201,27 @@ export default function TotemSearch() {
                                 <button
                                     key={student.id}
                                     onClick={() => toggleStudent(student)}
-                                    className={`w-full flex items-center gap-5 p-5 rounded-[1.5rem] border-2 transition-all duration-200 active:scale-98 group text-left
+                                    className={`w - full flex items - center gap - 5 p - 5 rounded - [1.5rem] border - 2 transition - all duration - 200 active: scale - 98 group text - left
                                         ${isSelected
                                             ? 'bg-emerald-500/10 border-emerald-500'
-                                            : 'bg-white/[0.04] border-white/5 hover:bg-white/[0.08] hover:border-white/20'}`}
+                                            : 'bg-white/[0.04] border-white/5 hover:bg-white/[0.08] hover:border-white/20'
+                                        } `}
                                 >
-                                    <div className={`w-16 h-16 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${isSelected ? 'border-emerald-500' : 'border-white/10'}`}>
+                                    <div className={`w - 16 h - 16 rounded - 2xl overflow - hidden border - 2 shrink - 0 transition - all ${isSelected ? 'border-emerald-500' : 'border-white/10'} `}>
                                         {student.foto_url
                                             ? <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
                                             : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><UserIcon className="w-8 h-8 text-slate-600" /></div>
                                         }
                                     </div>
                                     <div className="flex-1">
-                                        <p className={`text-xl font-black uppercase italic tracking-tight transition-colors ${isSelected ? 'text-emerald-400' : 'text-white'}`}>
+                                        <p className={`text - xl font - black uppercase italic tracking - tight transition - colors ${isSelected ? 'text-emerald-400' : 'text-white'} `}>
                                             {student.nome_completo}
                                         </p>
                                         <div className="flex items-center gap-3 mt-1">
                                             <span className="text-xs font-black text-emerald-500/70 uppercase tracking-widest">{student.turma}</span>
                                         </div>
                                     </div>
-                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'border-white/10'}`}>
+                                    <div className={`w - 8 h - 8 rounded - full border - 2 flex items - center justify - center transition - all ${isSelected ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'border-white/10'} `}>
                                         {isSelected && <ChevronRight className="w-5 h-5 text-slate-950" />}
                                     </div>
                                 </button>

@@ -1,0 +1,20 @@
+{
+  "autorizacoes_leonardo": [],
+  "alunos_responsaveis_leonardo": [
+    {
+      "id": "c310115c-1d32-4270-a3fd-a3642015b38d",
+      "aluno_id": "478d0242-1d87-4f6c-8692-44ae1ecd8fce",
+      "responsavel_id": "167b7a88-c12b-422b-9e80-73174a612292",
+      "parentesco": null,
+      "criado_em": "2026-02-24T20:01:36.530987+00:00"
+    }
+  ],
+  "responsible_with_code": [
+    {
+      "id": "167b7a88-c12b-422b-9e80-73174a612292",
+      "nome_completo": "Leonardo Dyego Santos Cordeiro",
+      "codigo_acesso": "0B4910"
+    }
+  ],
+  "active_auths_for_code": []
+}

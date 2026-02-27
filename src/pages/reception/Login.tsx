@@ -101,7 +101,7 @@ export default function ReceptionLogin() {
                         <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[11px] opacity-60">Autenticação de Operador</p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-8">
+                    <form onSubmit={handleLogin} className="space-y-8" autoComplete="off">
                         <div className="space-y-3">
                             <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2 flex items-center gap-2">
                                 <Mail className="w-3 h-3" />
@@ -115,6 +115,7 @@ export default function ReceptionLogin() {
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium shadow-2xl"
                                     placeholder="recepcao@lasalle.org.br"
+                                    autoComplete="off"
                                 />
                                 <div className="absolute bottom-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
                             </div>
@@ -133,6 +134,7 @@ export default function ReceptionLogin() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium tracking-widest shadow-2xl"
                                     placeholder="••••••••"
+                                    autoComplete="off"
                                 />
                                 <button
                                     type="button"

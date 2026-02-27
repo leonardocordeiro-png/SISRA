@@ -40,15 +40,28 @@ export default function TotemCodeEntry() {
                 return;
             }
 
-            const { data: auths } = await supabase
-                .from('autorizacoes')
-                .select('alunos:aluno_id (*)')
-                .eq('responsavel_id', resp.id)
-                .eq('ativa', true);
+            // Query both tables for links to ensure robustness
+            const [authsRes, junctionRes] = await Promise.all([
+                supabase.from('autorizacoes').select('alunos:aluno_id (*)').eq('responsavel_id', resp.id).eq('ativa', true),
+                supabase.from('alunos_responsaveis').select('alunos:aluno_id (*)').eq('responsavel_id', resp.id)
+            ]);
 
-            const newStudents: Student[] = (auths || [])
-                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos)
-                .filter((s: any): s is Student => s !== null);
+            const authStudents = (authsRes.data || [])
+                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
+
+            const junctionStudents = (junctionRes.data || [])
+                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
+
+            const combinedStudents = [...authStudents, ...junctionStudents];
+            const newStudents: Student[] = [];
+            const seenIds = new Set();
+
+            combinedStudents.forEach((s: any) => {
+                if (s && !seenIds.has(s.id)) {
+                    seenIds.add(s.id);
+                    newStudents.push(s);
+                }
+            });
 
             if (newStudents.length === 0) {
                 setError('Nenhum aluno vinculado a este código.');
@@ -120,7 +133,11 @@ export default function TotemCodeEntry() {
 
                 {/* Left: instructions + code display */}
                 {/* Left: instructions + code display */}
-                <div className="flex flex-col w-[350px] flex-shrink-0 px-6 py-10 border-r border-white/5 gap-8 justify-center">
+                <form
+                    className="flex flex-col w-[350px] flex-shrink-0 px-6 py-10 border-r border-white/5 gap-8 justify-center"
+                    autoComplete="off"
+                    onSubmit={e => e.preventDefault()}
+                >
                     {/* Icon */}
                     <div className="flex justify-center">
                         <div className="relative">
@@ -185,7 +202,7 @@ export default function TotemCodeEntry() {
                             </button>
                         )}
                     </div>
-                </div>
+                </form>
 
                 {/* Right: numpad keyboard */}
                 <div className="flex-1 flex flex-col items-center justify-center px-10 py-8">

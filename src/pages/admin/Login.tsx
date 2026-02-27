@@ -81,7 +81,7 @@ export default function AdminLogin() {
                 <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group/card shadow-slate-900/50">
                     <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-slate-500/20 to-transparent top-0 animate-scan opacity-30" />
 
-                    <form onSubmit={handleLogin} className="space-y-8 relative z-10">
+                    <form onSubmit={handleLogin} className="space-y-8 relative z-10" autoComplete="off">
                         <div className="space-y-6">
                             {/* Email Field */}
                             <div className="space-y-2 group/input">
@@ -97,6 +97,7 @@ export default function AdminLogin() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="w-full bg-[#020617]/50 border border-white/5 rounded-2xl px-6 py-4 text-white font-mono placeholder:text-slate-700 focus:outline-none focus:border-slate-500/50 focus:ring-4 focus:ring-slate-500/10 transition-all duration-500"
                                         placeholder="admin@lasalle.org.br"
+                                        autoComplete="off"
                                     />
                                 </div>
                             </div>
@@ -115,6 +116,7 @@ export default function AdminLogin() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="w-full bg-[#020617]/50 border border-white/5 rounded-2xl px-6 py-4 text-white font-mono placeholder:text-slate-700 focus:outline-none focus:border-slate-500/50 focus:ring-4 focus:ring-slate-500/10 transition-all duration-500"
                                         placeholder="••••••••••••"
+                                        autoComplete="off"
                                     />
                                     <button
                                         type="button"
