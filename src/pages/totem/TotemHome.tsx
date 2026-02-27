@@ -25,7 +25,6 @@ export default function TotemHome() {
     return (
         <div
             className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col select-none cursor-pointer"
-            style={{ width: '1280px', minHeight: '1024px' }}
             onClick={() => navigate('/totem/identificar')}
         >
             {/* Ambient Background */}

@@ -31,7 +31,7 @@ export default function TotemNumPad({ value, onChange, onSubmit, maxLength = 8 }
                         <button
                             key={key}
                             onPointerDown={e => { e.preventDefault(); press(key); }}
-                            className={`${keyBase} w-[80px] h-[68px] ${ri === 3
+                            className={`${keyBase} w-[72px] h-[64px] ${ri === 3
                                 ? 'bg-violet-500/20 border border-violet-500/30 hover:bg-violet-500/30 text-violet-300'
                                 : 'bg-white/[0.08] border border-white/10 hover:bg-white/[0.15]'
                                 } shadow-md`}
@@ -43,7 +43,7 @@ export default function TotemNumPad({ value, onChange, onSubmit, maxLength = 8 }
                         <>
                             <button
                                 onPointerDown={e => { e.preventDefault(); backspace(); }}
-                                className={`${keyBase} w-[80px] h-[68px] bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 text-rose-400`}
+                                className={`${keyBase} w-[72px] h-[64px] bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 text-rose-400`}
                             >
                                 <Delete className="w-6 h-6" />
                             </button>
@@ -51,7 +51,7 @@ export default function TotemNumPad({ value, onChange, onSubmit, maxLength = 8 }
                                 <button
                                     onPointerDown={e => { e.preventDefault(); onSubmit(); }}
                                     disabled={value.length < 4}
-                                    className={`${keyBase} w-[80px] h-[68px] bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950`}
+                                    className={`${keyBase} w-[72px] h-[64px] bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950`}
                                 >
                                     <CornerDownLeft className="w-6 h-6" />
                                 </button>

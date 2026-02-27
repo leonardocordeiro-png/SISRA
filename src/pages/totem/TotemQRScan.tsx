@@ -117,10 +117,7 @@ export default function TotemQRScan() {
     };
 
     return (
-        <div
-            className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col"
-            style={{ width: '1280px', minHeight: '1024px' }}
-        >
+        <div className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col">
             {/* Ambient */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-15%] right-[-5%] w-[55%] h-[70%] bg-blue-500/[0.05] blur-[140px] rounded-full" />
@@ -195,7 +192,7 @@ export default function TotemQRScan() {
                 </div>
 
                 {/* Right: instructions */}
-                <div className="w-[380px] flex-shrink-0 flex flex-col px-10 py-10 border-l border-white/5 gap-8 justify-center">
+                <div className="w-[340px] flex-shrink-0 flex flex-col px-8 py-10 border-l border-white/5 gap-8 justify-center">
                     <div className="relative">
                         <div className="absolute -inset-6 bg-blue-500/10 blur-2xl rounded-full animate-pulse" />
                         <div className="relative w-20 h-20 bg-blue-500/10 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center shadow-2xl mx-auto">

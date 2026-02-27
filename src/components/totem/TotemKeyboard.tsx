@@ -32,7 +32,7 @@ export default function TotemKeyboard({ value, onChange, onSubmit, maxLength = 4
                         <button
                             key={key}
                             onPointerDown={e => { e.preventDefault(); press(key); }}
-                            className={`${keyBase} w-[84px] h-[72px] bg-white/[0.08] border border-white/10 hover:bg-white/[0.15] shadow-md`}
+                            className={`${keyBase} w-[72px] h-[68px] bg-white/[0.08] border border-white/10 hover:bg-white/[0.15] shadow-md`}
                         >
                             {key}
                         </button>
@@ -40,7 +40,7 @@ export default function TotemKeyboard({ value, onChange, onSubmit, maxLength = 4
                     {ri === 2 && (
                         <button
                             onPointerDown={e => { e.preventDefault(); backspace(); }}
-                            className={`${keyBase} w-[120px] h-[72px] bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 text-rose-400`}
+                            className={`${keyBase} w-[100px] h-[68px] bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 text-rose-400`}
                         >
                             <Delete className="w-7 h-7" />
                         </button>
@@ -52,7 +52,7 @@ export default function TotemKeyboard({ value, onChange, onSubmit, maxLength = 4
             <div className="flex gap-2 justify-center">
                 <button
                     onPointerDown={e => { e.preventDefault(); space(); }}
-                    className={`${keyBase} flex-1 max-w-[480px] h-[72px] bg-white/[0.08] border border-white/10 hover:bg-white/[0.15]`}
+                    className={`${keyBase} flex-1 max-w-[400px] h-[68px] bg-white/[0.08] border border-white/10 hover:bg-white/[0.15]`}
                 >
                     <Space className="w-6 h-6 mr-2 opacity-60" />
                     <span className="text-base font-bold text-white/50 uppercase tracking-widest">Espaço</span>
@@ -61,7 +61,7 @@ export default function TotemKeyboard({ value, onChange, onSubmit, maxLength = 4
                     <button
                         onPointerDown={e => { e.preventDefault(); onSubmit(); }}
                         disabled={value.trim().length < 3}
-                        className={`${keyBase} w-[160px] h-[72px] bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950`}
+                        className={`${keyBase} w-[120px] h-[68px] bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950`}
                     >
                         <CornerDownLeft className="w-7 h-7" />
                     </button>

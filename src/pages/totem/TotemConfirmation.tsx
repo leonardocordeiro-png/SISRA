@@ -75,7 +75,7 @@ export default function TotemConfirmation() {
 
     if (!state?.students?.length) {
         return (
-            <div className="w-screen h-screen bg-[#020617] flex items-center justify-center" style={{ width: '1280px', minHeight: '1024px' }}>
+            <div className="w-screen h-screen bg-[#020617] flex items-center justify-center">
                 <div className="text-center space-y-4">
                     <p className="text-white/40 text-xl font-black uppercase">Nenhum dado recebido.</p>
                     <button onClick={() => navigate('/totem')} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl font-black text-sm uppercase">
@@ -91,7 +91,6 @@ export default function TotemConfirmation() {
         return (
             <div
                 className="w-screen h-screen bg-[#020617] flex flex-col items-center justify-center gap-8 relative overflow-hidden"
-                style={{ width: '1280px', minHeight: '1024px' }}
             >
                 <div className="fixed inset-0 z-0 pointer-events-none">
                     <div className="absolute inset-0 bg-emerald-500/[0.04] animate-pulse" />
@@ -163,7 +162,6 @@ export default function TotemConfirmation() {
         return (
             <div
                 className="w-screen h-screen bg-[#020617] flex flex-col items-center justify-center gap-8 text-center"
-                style={{ width: '1280px', minHeight: '1024px' }}
             >
                 <div className="w-28 h-28 bg-rose-500/10 border-2 border-rose-500/30 rounded-[2.5rem] flex items-center justify-center">
                     <Bell className="w-14 h-14 text-rose-400" />
@@ -186,10 +184,7 @@ export default function TotemConfirmation() {
 
     // ── CONFIRM SCREEN ────────────────────────────────────────────────
     return (
-        <div
-            className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col"
-            style={{ width: '1280px', minHeight: '1024px' }}
-        >
+        <div className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col">
             {/* Ambient */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-15%] left-[-5%] w-[55%] h-[70%] bg-emerald-500/[0.04] blur-[140px] rounded-full" />

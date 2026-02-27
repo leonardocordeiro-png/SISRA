@@ -36,10 +36,7 @@ export default function TotemSearch() {
     };
 
     return (
-        <div
-            className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col"
-            style={{ width: '1280px', minHeight: '1024px' }}
-        >
+        <div className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col">
             {/* Ambient */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-15%] left-[-5%] w-[55%] h-[70%] bg-emerald-500/[0.05] blur-[140px] rounded-full" />
@@ -71,7 +68,7 @@ export default function TotemSearch() {
             <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
 
                 {/* Left: search input + keyboard */}
-                <div className="flex flex-col w-[640px] flex-shrink-0 px-10 py-8 border-r border-white/5 gap-6">
+                <div className="flex flex-col w-[850px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6 overflow-y-auto">
                     {/* Display */}
                     <div className="bg-white/[0.04] border-2 border-white/10 rounded-3xl px-8 py-5 flex items-center gap-4 min-h-[80px]">
                         <SearchIcon className="w-7 h-7 text-emerald-500 shrink-0" />

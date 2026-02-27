@@ -61,10 +61,7 @@ export default function TotemIdentify() {
     };
 
     return (
-        <div
-            className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col"
-            style={{ width: '1280px', minHeight: '1024px' }}
-        >
+        <div className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col">
             {/* Ambient Background */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[70%] bg-emerald-500/[0.04] blur-[130px] rounded-full" />

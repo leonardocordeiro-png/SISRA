@@ -65,10 +65,7 @@ export default function TotemCodeEntry() {
     const codeChars = code.toUpperCase().padEnd(8, '·').split('');
 
     return (
-        <div
-            className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col"
-            style={{ width: '1280px', minHeight: '1024px' }}
-        >
+        <div className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col">
             {/* Ambient */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-15%] left-[-5%] w-[55%] h-[70%] bg-violet-500/[0.05] blur-[140px] rounded-full" />
@@ -100,7 +97,8 @@ export default function TotemCodeEntry() {
             <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
 
                 {/* Left: instructions + code display */}
-                <div className="flex flex-col w-[480px] flex-shrink-0 px-12 py-10 border-r border-white/5 gap-8 justify-center">
+                {/* Left: instructions + code display */}
+                <div className="flex flex-col w-[350px] flex-shrink-0 px-6 py-10 border-r border-white/5 gap-8 justify-center">
                     {/* Icon */}
                     <div className="flex justify-center">
                         <div className="relative">
