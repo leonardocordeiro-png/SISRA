@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle2, Bell, User as UserIcon, ArrowLeft, Loader2, Users } from 'lucide-react';
+import { CheckCircle2, Bell, User as UserIcon, ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Student, Guardian } from '../../types';
 
@@ -31,8 +31,14 @@ export default function TotemConfirmation() {
     useEffect(() => {
         if (!students.length) return;
         setSelectedIds(new Set(students.map(s => s.id)));
+
+        // Auto-select guardian if passed from previous page
+        if (state?.guardian) {
+            setSelectedGuardian(state.guardian);
+        }
+
         loadGuardians();
-    }, [students]);
+    }, [students, state?.guardian]);
 
     const loadGuardians = async () => {
         setLoadingGuardians(true);
@@ -119,10 +125,6 @@ export default function TotemConfirmation() {
         });
     };
 
-    const handleAddMore = () => {
-        const mode = state?.mode || 'search';
-        navigate(`/totem/${mode}`, { state: { selectedStudents: students } });
-    };
 
     if (!state?.students?.length) {
         return (
@@ -232,13 +234,6 @@ export default function TotemConfirmation() {
                         Finalizar Chamada
                     </h1>
                 </div>
-                <button
-                    onClick={handleAddMore}
-                    className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95 shadow-lg"
-                >
-                    <Users className="w-5 h-5" />
-                    <span className="text-xs font-black uppercase tracking-widest">+ Adicionar Alunos</span>
-                </button>
             </div>
 
             <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">

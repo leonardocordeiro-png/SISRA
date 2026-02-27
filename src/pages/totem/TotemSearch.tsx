@@ -12,6 +12,7 @@ export default function TotemSearch() {
     const [results, setResults] = useState<Student[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+    const [identifiedGuardian, setIdentifiedGuardian] = useState<any>(null);
     useInactivityTimer({ timeoutMs: 60000, redirectTo: '/totem' });
 
     // Load initial selection if returning from confirmation
@@ -38,7 +39,7 @@ export default function TotemSearch() {
                 // Search by Guardian CPF
                 const { data: guardians } = await supabase
                     .from('responsaveis')
-                    .select('id')
+                    .select('*')
                     .eq('cpf', cleanCpf);
 
                 if (guardians && guardians.length > 0) {
@@ -63,8 +64,15 @@ export default function TotemSearch() {
 
                         if (cpfStudents) {
                             allResults = cpfStudents;
+                            // Auto-select all students found by CPF as requested
+                            setSelectedStudents(cpfStudents);
+                            if (guardians && guardians.length > 0) {
+                                setIdentifiedGuardian(guardians[0]);
+                            }
                         }
                     }
+                } else {
+                    setIdentifiedGuardian(null);
                 }
 
                 setResults(allResults);
@@ -88,7 +96,11 @@ export default function TotemSearch() {
     const handleNext = () => {
         if (selectedStudents.length === 0) return;
         navigate('/totem/confirmacao', {
-            state: { students: selectedStudents, mode: 'search' }
+            state: {
+                students: selectedStudents,
+                mode: 'search',
+                guardian: identifiedGuardian
+            }
         });
     };
 
