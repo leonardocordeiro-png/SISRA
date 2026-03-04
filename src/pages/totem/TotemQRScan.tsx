@@ -116,16 +116,30 @@ export default function TotemQRScan() {
 
             if (!responsavelId) throw new Error('QR Code não reconhecido ou inválido.');
 
-            const [{ data: guardian }, { data: auths }] = await Promise.all([
+            const [{ data: guardian }, { data: auths }, { data: junction }] = await Promise.all([
                 supabase.from('responsaveis').select('id, nome_completo, foto_url').eq('id', responsavelId).single(),
                 supabase.from('autorizacoes').select('alunos:aluno_id (*)').eq('responsavel_id', responsavelId).eq('ativa', true),
+                supabase.from('alunos_responsaveis').select('alunos:aluno_id (*)').eq('responsavel_id', responsavelId)
             ]);
 
             if (!guardian) throw new Error('Responsável não encontrado no sistema.');
 
-            const newStudents: Student[] = (auths || [])
-                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos)
-                .filter((s: any): s is Student => s !== null);
+            const authStudents = (auths || [])
+                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
+
+            const junctionStudents = (junction || [])
+                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
+
+            const combinedStudents = [...authStudents, ...junctionStudents];
+            const newStudents: Student[] = [];
+            const seenIds = new Set();
+
+            combinedStudents.forEach((s: any) => {
+                if (s && !seenIds.has(s.id)) {
+                    seenIds.add(s.id);
+                    newStudents.push(s);
+                }
+            });
 
             if (newStudents.length === 0) throw new Error('Nenhum aluno vinculado a este QR Code.');
 
