@@ -24,6 +24,10 @@ export default function SelfRegistration() {
     const qrRef = useRef<HTMLDivElement>(null);
     const qrCode = useRef<QRCodeStyling | null>(null);
 
+    // CPF lookup state
+    const [cpfLookupGuardian, setCpfLookupGuardian] = useState<any>(null);
+    const [cpfChecking, setCpfChecking] = useState(false);
+
     const [formData, setFormData] = useState({
         nome: '',
         cpf: '',
@@ -91,6 +95,39 @@ export default function SelfRegistration() {
         }
     };
 
+    const handleCpfBlur = async () => {
+        const cpf = formData.cpf.trim();
+        if (!cpf) return;
+
+        setCpfChecking(true);
+        try {
+            const { data: found } = await supabase
+                .from('responsaveis')
+                .select('*')
+                .eq('cpf', cpf)
+                .limit(1)
+                .maybeSingle();
+
+            if (found) {
+                setCpfLookupGuardian(found);
+                // Pre-fill name and phone from existing guardian
+                setFormData(prev => ({
+                    ...prev,
+                    nome: found.nome_completo || prev.nome,
+                    telefone: found.telefone || prev.telefone,
+                }));
+                // Pre-fill photo if available
+                if (found.foto_url) setPhoto(found.foto_url);
+            } else {
+                setCpfLookupGuardian(null);
+            }
+        } catch {
+            setCpfLookupGuardian(null);
+        } finally {
+            setCpfChecking(false);
+        }
+    };
+
     const handleCameraCapture = (image: string) => {
         console.log('[SelfReg] Camera capture received, length:', image?.length, 'prefix:', image?.substring(0, 30));
         setPhoto(image);
@@ -126,49 +163,67 @@ export default function SelfRegistration() {
 
         setLoading(true);
         try {
-            // 1. Check if guardian already exists by CPF
-            const { data: existingGuardian } = await supabase
-                .from('responsaveis')
-                .select('*')
-                .eq('cpf', formData.cpf)
-                .limit(1)
-                .maybeSingle();
+            // 1. Resolve guardian — use existing if CPF already found, otherwise create new
+            let guardian = cpfLookupGuardian;
 
-            let guardian;
-
-            if (existingGuardian) {
-                // Update existing guardian info
-                const { data: updatedGuardian, error: uError } = await supabase
+            if (!guardian) {
+                // Double-check in case lookup wasn't triggered
+                const { data: found } = await supabase
                     .from('responsaveis')
-                    .update({
-                        nome_completo: formData.nome,
-                        telefone: formData.telefone,
-                        foto_url: photo,
-                    })
-                    .eq('id', existingGuardian.id)
-                    .select()
+                    .select('*')
+                    .eq('cpf', formData.cpf.trim())
+                    .limit(1)
                     .maybeSingle();
+                guardian = found ?? null;
+            }
 
-                if (uError) throw uError;
-                guardian = updatedGuardian;
+            if (guardian) {
+                // Update photo if a new one was taken (keeps the rest of the data)
+                if (photo !== guardian.foto_url) {
+                    const { data: updated, error: uError } = await supabase
+                        .from('responsaveis')
+                        .update({ foto_url: photo })
+                        .eq('id', guardian.id)
+                        .select()
+                        .maybeSingle();
+                    if (uError) throw uError;
+                    guardian = updated ?? guardian;
+                }
             } else {
-                // Create new guardian
+                // Create brand new guardian
                 const { data: newGuardian, error: gError } = await supabase
                     .from('responsaveis')
                     .insert({
                         nome_completo: formData.nome,
-                        cpf: formData.cpf,
+                        cpf: formData.cpf.trim(),
                         telefone: formData.telefone,
                         foto_url: photo,
                     })
                     .select()
                     .maybeSingle();
-
                 if (gError) throw gError;
                 guardian = newGuardian;
             }
 
-            // 2. Create Authorization
+            // 2. Check if authorization already exists for this student + guardian pair
+            const { data: existingAuth } = await supabase
+                .from('autorizacoes')
+                .select('id')
+                .eq('aluno_id', student.id)
+                .eq('responsavel_id', guardian.id)
+                .limit(1)
+                .maybeSingle();
+
+            if (existingAuth) {
+                toast.warning(
+                    'Já autorizado',
+                    `${guardian.nome_completo} já é responsável autorizado para ${student.nome_completo}.`
+                );
+                setLoading(false);
+                return;
+            }
+
+            // 3. Create Authorization
             const finalParentesco = formData.parentesco === 'Outro' ? formData.parentescoOutro : formData.parentesco;
 
             const { error: aError } = await supabase
@@ -183,21 +238,36 @@ export default function SelfRegistration() {
 
             if (aError) throw aError;
 
-            // 3. Create/Get QR Card
-            const qrValue = `LaSalleCheguei-${guardian.id}-${Date.now()}`;
-            const expiresAt = new Date();
-            expiresAt.setMonth(expiresAt.getMonth() + 12); // Valid for 1 year for self-reg
-
-            const { error: qrError } = await supabase
+            // 4. Reuse existing active QR card or create a new one
+            const { data: existingQr } = await supabase
                 .from('parent_qr_cards')
-                .insert({
-                    responsavel_id: guardian.id,
-                    qr_code: qrValue,
-                    expires_at: expiresAt.toISOString(),
-                    active: true
-                });
+                .select('qr_code, expires_at')
+                .eq('responsavel_id', guardian.id)
+                .eq('active', true)
+                .limit(1)
+                .maybeSingle();
 
-            if (qrError) throw qrError;
+            let qrValue: string;
+            let expiresAt: Date;
+
+            if (existingQr) {
+                qrValue = existingQr.qr_code;
+                expiresAt = new Date(existingQr.expires_at);
+            } else {
+                qrValue = `LaSalleCheguei-${guardian.id}-${Date.now()}`;
+                expiresAt = new Date();
+                expiresAt.setMonth(expiresAt.getMonth() + 12);
+
+                const { error: qrError } = await supabase
+                    .from('parent_qr_cards')
+                    .insert({
+                        responsavel_id: guardian.id,
+                        qr_code: qrValue,
+                        expires_at: expiresAt.toISOString(),
+                        active: true
+                    });
+                if (qrError) throw qrError;
+            }
 
             setLastRegisteredGuardian({
                 ...guardian,
@@ -205,7 +275,7 @@ export default function SelfRegistration() {
                 expires_at: expiresAt.toISOString()
             });
             setSuccess(true);
-            toast.success('Cadastro concluído', 'Responsável cadastrado e autorizado com sucesso.');
+            toast.success('Cadastro concluído', 'Responsável autorizado com sucesso.');
         } catch (err: any) {
             toast.error('Erro no cadastro', err.message);
         } finally {
@@ -224,6 +294,7 @@ export default function SelfRegistration() {
         setPhoto(null);
         setSuccess(false);
         setLastRegisteredGuardian(null);
+        setCpfLookupGuardian(null);
     };
 
     const handleDownload = async () => {
@@ -490,14 +561,36 @@ export default function SelfRegistration() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">CPF (Obrigatório)</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        placeholder="000.000.000-00"
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-800"
-                                        value={formData.cpf}
-                                        onChange={e => setFormData({ ...formData, cpf: e.target.value })}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            required
+                                            type="text"
+                                            placeholder="000.000.000-00"
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-800"
+                                            value={formData.cpf}
+                                            onChange={e => { setFormData({ ...formData, cpf: e.target.value }); setCpfLookupGuardian(null); }}
+                                            onBlur={handleCpfBlur}
+                                        />
+                                        {cpfChecking && (
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                                <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {cpfLookupGuardian && (
+                                        <div className="mt-3 flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-2xl">
+                                            <div className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-500">
+                                                <CheckCircle2 className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-0.5">Responsável Já Cadastrado</p>
+                                                <p className="text-xs text-blue-600 font-medium leading-relaxed">
+                                                    Os dados de <strong>{cpfLookupGuardian.nome_completo}</strong> foram preenchidos automaticamente.
+                                                    Apenas a autorização para o aluno <strong>{student?.nome_completo}</strong> será criada.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">WhatsApp / Telefone</label>

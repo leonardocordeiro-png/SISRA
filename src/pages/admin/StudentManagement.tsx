@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
-import { generateToken } from '../../lib/utils';
+import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown, ArrowLeftRight, AlertTriangle, GraduationCap, LayoutGrid } from 'lucide-react';
+import { generateToken, getSalaBySerie } from '../../lib/utils';
 import NavigationControls from '../../components/NavigationControls';
 import BulkImportModal from '../../components/admin/BulkImportModal';
 import { useAuth } from '../../context/AuthContext';
@@ -27,9 +27,21 @@ export default function StudentManagement() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
 
+    // Purge state
+    const [showPurgeModal, setShowPurgeModal] = useState(false);
+    const [purgeConfirmText, setPurgeConfirmText] = useState('');
+    const [isPurging, setIsPurging] = useState(false);
+
+    // Transfer (remanejamento) state
+    const [transferStudent, setTransferStudent] = useState<Student | null>(null);
+    const [turmasDisponiveis, setTurmasDisponiveis] = useState<{ serie: string; secao: string }[]>([]);
+    const [transferForm, setTransferForm] = useState({ serie: '', turma: '' });
+    const [isTransferring, setIsTransferring] = useState(false);
+
     useEffect(() => {
         fetchStudents();
         fetchTurmas();
+        fetchTurmasCompletas();
     }, []);
 
     const fetchTurmas = async () => {
@@ -58,6 +70,31 @@ export default function StudentManagement() {
         setLoading(false);
     };
 
+    const fetchTurmasCompletas = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('turmas')
+                .select('nome')
+                .eq('ativa', true)
+                .order('nome');
+
+            if (error) throw error;
+
+            if (data) {
+                const parsed = data.map(t => {
+                    const match = t.nome.match(/^(.*?) - (.*?) \((.*?)\)$/);
+                    if (match) {
+                        return { serie: `${match[1]} - ${match[2]}`, secao: match[3] };
+                    }
+                    return null;
+                }).filter(Boolean) as { serie: string; secao: string }[];
+
+                setTurmasDisponiveis(parsed);
+            }
+        } catch (err) {
+            console.error('Erro ao buscar turmas:', err);
+        }
+    };
 
     const handleDelete = async (id: string) => {
         if (!confirm('Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita e removerá todo o histórico.')) return;
@@ -99,8 +136,6 @@ export default function StudentManagement() {
             setIsDeleting(true);
             const idsToDelete = Array.from(selectedIds);
 
-            // Delete in chunks or sequence to ensure stability
-            // In a small-scale app, we can do these in order
             await supabase.from('tokens_acesso').delete().in('aluno_id', idsToDelete);
             await supabase.from('autorizacoes').delete().in('aluno_id', idsToDelete);
             await supabase.from('alunos_responsaveis').delete().in('aluno_id', idsToDelete);
@@ -117,6 +152,86 @@ export default function StudentManagement() {
             toast.error('Erro na exclusão em massa', error.message);
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    // ─── PURGE ALL ────────────────────────────────────────────────────────────
+    const handlePurgeAll = async () => {
+        if (purgeConfirmText !== 'LIMPAR') return;
+
+        try {
+            setIsPurging(true);
+
+            // 1. Collect all student ids
+            const { data: allStudents } = await supabase.from('alunos').select('id');
+            const allStudentIds = (allStudents || []).map(s => s.id);
+
+            // 2. Collect all responsavel ids
+            const { data: allResponsaveis } = await supabase.from('responsaveis').select('id');
+            const allResponsavelIds = (allResponsaveis || []).map(r => r.id);
+
+            // 3. Delete in FK-safe order
+            if (allResponsavelIds.length > 0) {
+                await supabase.from('parent_qr_cards').delete().in('responsavel_id', allResponsavelIds);
+            }
+            if (allStudentIds.length > 0) {
+                await supabase.from('tokens_acesso').delete().in('aluno_id', allStudentIds);
+                await supabase.from('autorizacoes').delete().in('aluno_id', allStudentIds);
+                await supabase.from('alunos_responsaveis').delete().in('aluno_id', allStudentIds);
+                await supabase.from('solicitacoes_retirada').delete().in('aluno_id', allStudentIds);
+            }
+
+            // 4. Delete main records
+            const { error: eAlunos } = await supabase.from('alunos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (eAlunos) throw eAlunos;
+
+            const { error: eResp } = await supabase.from('responsaveis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (eResp) throw eResp;
+
+            setStudents([]);
+            setSelectedIds(new Set());
+            setShowPurgeModal(false);
+            setPurgeConfirmText('');
+            toast.success('Cadastro limpo', 'Todos os alunos e responsáveis foram removidos permanentemente. O sistema está pronto para nova importação.');
+        } catch (err: any) {
+            console.error('Purge error:', err);
+            toast.error('Erro ao limpar', err.message);
+        } finally {
+            setIsPurging(false);
+        }
+    };
+
+    // ─── TRANSFER (REMANEJAMENTO) ─────────────────────────────────────────────
+    const handleOpenTransfer = (student: Student) => {
+        setTransferStudent(student);
+        setTransferForm({ serie: '', turma: '' });
+    };
+
+    const handleTransfer = async () => {
+        if (!transferStudent || !transferForm.serie || !transferForm.turma) return;
+
+        setIsTransferring(true);
+        try {
+            // Build full turma string matching what StudentRegistration produces
+            const novaTurma = `${transferForm.serie} (${transferForm.turma})`;
+            const novaSala = getSalaBySerie(transferForm.serie);
+
+            const { error } = await supabase
+                .from('alunos')
+                .update({ turma: novaTurma, sala: novaSala })
+                .eq('id', transferStudent.id);
+
+            if (error) throw error;
+
+            setStudents(prev =>
+                prev.map(s => s.id === transferStudent.id ? { ...s, turma: novaTurma, sala: novaSala } : s)
+            );
+            toast.success('Aluno remanejado', `${transferStudent.nome_completo} foi movido para ${novaTurma}.`);
+            setTransferStudent(null);
+        } catch (err: any) {
+            toast.error('Erro no remanejamento', err.message);
+        } finally {
+            setIsTransferring(false);
         }
     };
 
@@ -195,17 +310,13 @@ export default function StudentManagement() {
 
             if (studentError) throw studentError;
 
-            // 3. Store the raw turma string — StudentRegistration will match it against turmasDisponiveis
-            // e.g. "1º Ano - Ensino Fundamental I (111M)"
             const fullTurma = fullStudent.turma || '';
 
-            // 4. Prepare sessionStorage
             const tempStudentData = {
                 nome_completo: fullStudent.nome_completo,
                 data_nascimento: fullStudent.data_nascimento || '',
                 matricula: fullStudent.matricula,
                 fullTurma: fullTurma,
-                // Keep these as empty strings — they'll be resolved in StudentRegistration
                 serie: '',
                 turma: '',
                 sala: fullStudent.sala,
@@ -217,7 +328,6 @@ export default function StudentManagement() {
             sessionStorage.setItem('temp_guardians_data', JSON.stringify(mappedGuardians));
             sessionStorage.setItem('edit_mode_student_id', student.id);
 
-            // 5. Navigate to the first step of the wizard
             navigate('/admin/alunos/novo');
         } catch (err) {
             console.error('Error loading student details:', err);
@@ -237,6 +347,12 @@ export default function StudentManagement() {
         return matchesSearch && matchesTurma && matchesSala;
     });
 
+    // Transfer modal derived values
+    const seriesUnicas = Array.from(new Set(turmasDisponiveis.map(t => t.serie)));
+    const secoesParaTransfer = transferForm.serie
+        ? turmasDisponiveis.filter(t => t.serie === transferForm.serie).map(t => t.secao)
+        : [];
+
     return (
         <div className="p-4 md:p-8">
             <NavigationControls />
@@ -245,7 +361,15 @@ export default function StudentManagement() {
                     <h1 className="text-xl md:text-2xl font-bold text-slate-900">Gerenciar Alunos</h1>
                     <p className="text-sm md:text-base text-slate-500">Cadastre e edite informações dos alunos</p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
+                <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+                    {/* Purge Button */}
+                    <button
+                        onClick={() => { setShowPurgeModal(true); setPurgeConfirmText(''); }}
+                        className="flex-1 sm:flex-none bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
+                        title="Excluir todos os alunos e responsáveis permanentemente"
+                    >
+                        <AlertTriangle className="w-4 h-4" /> Limpar Cadastro
+                    </button>
                     <button
                         onClick={() => setShowBulkModal(true)}
                         className="flex-1 sm:flex-none bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
@@ -384,11 +508,11 @@ export default function StudentManagement() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400 font-medium">Carregando alunos...</td>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium">Carregando alunos...</td>
                                 </tr>
                             ) : filteredStudents.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400 font-medium">Nenhum aluno encontrado.</td>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium">Nenhum aluno encontrado.</td>
                                 </tr>
                             ) : (
                                 filteredStudents.map((student) => {
@@ -437,6 +561,14 @@ export default function StudentManagement() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                                                    {/* Transfer button */}
+                                                    <button
+                                                        onClick={() => handleOpenTransfer(student)}
+                                                        className="p-2.5 hover:bg-indigo-50 rounded-xl text-slate-400 hover:text-indigo-600 transition-all active:scale-90"
+                                                        title="Remanejamento de Turma"
+                                                    >
+                                                        <ArrowLeftRight className="w-4 h-4" />
+                                                    </button>
                                                     <button
                                                         onClick={() => handleGenerateLink(student.id, student.nome_completo)}
                                                         className="p-2.5 hover:bg-blue-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all active:scale-90"
@@ -515,6 +647,13 @@ export default function StudentManagement() {
                                     </div>
                                     <div className="flex items-center justify-end pt-3 gap-2 border-t border-slate-100">
                                         <button
+                                            onClick={() => handleOpenTransfer(student)}
+                                            className="p-3 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
+                                            title="Remanejamento de Turma"
+                                        >
+                                            <ArrowLeftRight className="w-5 h-5" />
+                                        </button>
+                                        <button
                                             onClick={() => handleGenerateLink(student.id, student.nome_completo)}
                                             className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                                         >
@@ -569,6 +708,153 @@ export default function StudentManagement() {
                                     <Trash2 className="w-4 h-4" />
                                 )}
                                 <span>Excluir Tudo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── PURGE MODAL ─────────────────────────────────────────── */}
+            {showPurgeModal && (
+                <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-14 h-14 bg-rose-100 rounded-2xl flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-7 h-7 text-rose-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900">Limpar Todo o Cadastro</h2>
+                                <p className="text-sm text-rose-600 font-bold">Ação irreversível</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-6 space-y-2 text-sm text-rose-700">
+                            <p className="font-bold">Serão excluídos permanentemente:</p>
+                            <ul className="list-disc list-inside space-y-1 font-medium opacity-80">
+                                <li>Todos os alunos cadastrados</li>
+                                <li>Todos os responsáveis e seus dados</li>
+                                <li>Todas as autorizações e vínculos</li>
+                                <li>Todos os tokens de acesso e QR cards</li>
+                                <li>Todo o histórico de retiradas</li>
+                            </ul>
+                            <p className="font-bold mt-2">O sistema ficará limpo para nova importação em massa.</p>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                                Digite <span className="text-rose-600">LIMPAR</span> para confirmar
+                            </label>
+                            <input
+                                type="text"
+                                value={purgeConfirmText}
+                                onChange={e => setPurgeConfirmText(e.target.value)}
+                                placeholder="LIMPAR"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-500/10 transition-all tracking-widest uppercase"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowPurgeModal(false); setPurgeConfirmText(''); }}
+                                className="flex-1 py-3 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                                disabled={isPurging}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handlePurgeAll}
+                                disabled={purgeConfirmText !== 'LIMPAR' || isPurging}
+                                className="flex-1 py-3 rounded-2xl font-black text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
+                            >
+                                {isPurging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                Limpar Tudo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── TRANSFER MODAL ──────────────────────────────────────── */}
+            {transferStudent && (
+                <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center shrink-0">
+                                <ArrowLeftRight className="w-7 h-7 text-indigo-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900">Remanejamento de Turma</h2>
+                                <p className="text-sm text-indigo-600 font-bold truncate max-w-[220px]">{transferStudent.nome_completo}</p>
+                            </div>
+                            <button
+                                onClick={() => setTransferStudent(null)}
+                                className="ml-auto p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="mb-3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-500">
+                            Turma atual: <span className="text-emerald-600">{transferStudent.turma || '—'}</span>
+                            {transferStudent.sala && <> · Sala: <span className="text-blue-600">{transferStudent.sala}</span></>}
+                        </div>
+
+                        <div className="space-y-4 mb-6 mt-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                                    Nova Série / Grau
+                                </label>
+                                <div className="relative">
+                                    <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                                    <select
+                                        value={transferForm.serie}
+                                        onChange={e => setTransferForm({ serie: e.target.value, turma: '' })}
+                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none"
+                                    >
+                                        <option value="">Selecione a série...</option>
+                                        {seriesUnicas.map(s => <option key={s} value={s}>{s}</option>)}
+                                        {seriesUnicas.length === 0 && <option disabled>Nenhuma série cadastrada</option>}
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                                    Nova Turma / Seção
+                                </label>
+                                <div className="relative">
+                                    <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                                    <select
+                                        value={transferForm.turma}
+                                        onChange={e => setTransferForm(prev => ({ ...prev, turma: e.target.value }))}
+                                        disabled={!transferForm.serie}
+                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none disabled:opacity-50"
+                                    >
+                                        <option value="">Selecione a turma...</option>
+                                        {secoesParaTransfer.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setTransferStudent(null)}
+                                className="flex-1 py-3 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                                disabled={isTransferring}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleTransfer}
+                                disabled={!transferForm.serie || !transferForm.turma || isTransferring}
+                                className="flex-1 py-3 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                            >
+                                {isTransferring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+                                Confirmar
                             </button>
                         </div>
                     </div>
