@@ -188,11 +188,17 @@ export default function AdminQRGenerator() {
                 captureStyle.id = 'qr-capture-override';
                 captureStyle.innerHTML = `
                     #qr-card-printable {
+                        width: 450px !important;
+                        min-width: 450px !important;
                         border: none !important;
                         box-shadow: none !important;
                         outline: none !important;
                         border-radius: 2.5rem !important;
                         background-color: #ffffff !important;
+                    }
+                    /* Ensure grid items don't wrap too early during capture */
+                    #qr-card-printable .grid-cols-3 {
+                        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
                     }
                     /* Force everything to have transparent borders and no shadows during capture */
                     #qr-card-printable *, 
@@ -553,29 +559,29 @@ export default function AdminQRGenerator() {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <div className="p-4 bg-slate-50 rounded-2xl" style={{ backgroundColor: '#f8fafc' }}>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>CPF</p>
-                                                    <p className="text-[11px] font-black text-slate-700" style={{ color: '#334155' }}>{selectedGuardian.cpf}</p>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="p-3 bg-slate-50 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f8fafc' }}>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>CPF</p>
+                                                    <p className="text-[10px] font-black text-slate-700 whitespace-nowrap" style={{ color: '#334155' }}>{selectedGuardian.cpf}</p>
                                                 </div>
-                                                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl" style={{ backgroundColor: '#f5f3ff' }}>
-                                                    <p className="text-[10px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
-                                                    <p className="text-base font-black text-indigo-700 tracking-widest" style={{ color: '#4338ca' }}>{selectedGuardian.codigo_acesso || '---'}</p>
+                                                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f5f3ff' }}>
+                                                    <p className="text-[9px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
+                                                    <p className="text-sm font-black text-indigo-700 tracking-widest leading-none" style={{ color: '#4338ca' }}>{selectedGuardian.codigo_acesso || '---'}</p>
                                                 </div>
-                                                <div className="p-4 bg-slate-50 rounded-2xl relative group/validity val-box" style={{ backgroundColor: '#f8fafc' }}>
-                                                    <p className="text-[10px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Validade</p>
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <div className="flex items-center gap-2 text-left">
-                                                            <Calendar className="w-3 h-3 text-emerald-500" style={{ color: '#10B981' }} />
+                                                <div className="p-3 bg-slate-50 rounded-2xl relative group/validity val-box flex flex-col justify-center" style={{ backgroundColor: '#f8fafc' }}>
+                                                    <p className="text-[9px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Validade</p>
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <div className="flex items-center gap-1 text-left">
+                                                            <Calendar className="w-3 h-3 text-emerald-500 shrink-0" style={{ color: '#10B981' }} />
                                                             {editingValidity ? (
                                                                 <input
                                                                     type="date"
-                                                                    className="text-xs font-black text-emerald-600 bg-transparent outline-none border-b border-emerald-500/30"
+                                                                    className="text-xs font-black text-emerald-600 bg-transparent outline-none border-b border-emerald-500/30 w-full"
                                                                     value={newValidityDate || (selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : '')}
                                                                     onChange={(e) => setNewValidityDate(e.target.value)}
                                                                 />
                                                             ) : (
-                                                                <p className="text-sm font-black text-emerald-600">
+                                                                <p className="text-[10px] font-black text-emerald-600 whitespace-nowrap">
                                                                     {selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toLocaleDateString('pt-BR') : '--/--/----'}
                                                                 </p>
                                                             )}

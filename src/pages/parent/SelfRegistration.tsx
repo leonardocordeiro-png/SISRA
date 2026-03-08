@@ -417,11 +417,17 @@ export default function SelfRegistration() {
                 captureStyle.id = 'qr-capture-override';
                 captureStyle.innerHTML = `
                     #qr-card-printable {
+                        width: 450px !important;
+                        min-width: 450px !important;
                         border: none !important;
                         box-shadow: none !important;
                         outline: none !important;
                         border-radius: 2.5rem !important;
                         background-color: #ffffff !important;
+                    }
+                    /* Ensure grid items don't wrap too early during capture */
+                    #qr-card-printable .grid-cols-1 {
+                        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
                     }
                     /* Force everything to have transparent borders and no shadows during capture */
                     #qr-card-printable *, 
@@ -605,22 +611,20 @@ export default function SelfRegistration() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="p-4 bg-slate-50 rounded-2xl" style={{ backgroundColor: '#f8fafc' }}>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>CPF</p>
-                                        <p className="text-[11px] font-black text-slate-700" style={{ color: '#334155' }}>{lastRegisteredGuardian?.cpf}</p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="p-3 bg-slate-50 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f8fafc' }}>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>CPF</p>
+                                        <p className="text-[10px] font-black text-slate-700 whitespace-nowrap" style={{ color: '#334155' }}>{lastRegisteredGuardian?.cpf}</p>
                                     </div>
-                                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl" style={{ backgroundColor: '#f5f3ff' }}>
-                                        <p className="text-[10px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
-                                        <p className="text-base font-black text-indigo-700 tracking-widest" style={{ color: '#4338ca' }}>{lastRegisteredGuardian?.codigo_acesso || '---'}</p>
+                                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f5f3ff' }}>
+                                        <p className="text-[9px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
+                                        <p className="text-sm font-black text-indigo-700 tracking-widest leading-none" style={{ color: '#4338ca' }}>{lastRegisteredGuardian?.codigo_acesso || '---'}</p>
                                     </div>
-                                    <div className="p-4 bg-slate-50 rounded-2xl" style={{ backgroundColor: '#f8fafc' }}>
-                                        <p className="text-[10px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Aluno</p>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-xs font-black text-emerald-600 truncate leading-tight">
-                                                {student?.nome_completo}
-                                            </p>
-                                        </div>
+                                    <div className="p-3 bg-slate-50 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f8fafc' }}>
+                                        <p className="text-[9px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Aluno</p>
+                                        <p className="text-[10px] font-black text-emerald-600 truncate leading-tight">
+                                            {student?.nome_completo}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
