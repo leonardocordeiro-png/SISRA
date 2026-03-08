@@ -50,11 +50,34 @@ export default function AdminQRGenerator() {
         }
     };
 
+    const generateAccessCode = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    };
+
     const selectGuardian = async (guardian: Guardian) => {
         setGenerating(true);
         setSelectedGuardian(null);
 
         try {
+            // Ensure guardian has an access code if missing
+            let currentAccessCode = guardian.codigo_acesso;
+            if (!currentAccessCode) {
+                const newCode = generateAccessCode();
+                const { error: updateError } = await supabase
+                    .from('responsaveis')
+                    .update({ codigo_acesso: newCode })
+                    .eq('id', guardian.id);
+
+                if (!updateError) {
+                    currentAccessCode = newCode;
+                }
+            }
+
             // Check for existing QR card
             const { data: qrCard, error: fetchError } = await supabase
                 .from('parent_qr_cards')
@@ -112,7 +135,7 @@ export default function AdminQRGenerator() {
                 ...guardian,
                 qr_code: finalCard?.qr_code,
                 expires_at: finalCard?.expires_at,
-                codigo_acesso: guardian.codigo_acesso
+                codigo_acesso: currentAccessCode
             });
         } catch (err: any) {
             console.error('Error selecting guardian:', err);

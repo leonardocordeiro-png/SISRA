@@ -195,7 +195,26 @@ export default function SelfRegistration() {
             let guardianData: any;
 
             if (!guardianId) {
-                const newAccessCode = generateAccessCode();
+                // Generate a unique access code for new guardian
+                let newAccessCode = '';
+                let isUnique = false;
+                let attempts = 0;
+                while (!isUnique && attempts < 5) {
+                    const candidate = generateAccessCode();
+                    const { data: check } = await supabase
+                        .from('responsaveis')
+                        .select('id')
+                        .eq('codigo_acesso', candidate)
+                        .maybeSingle();
+
+                    if (!check) {
+                        newAccessCode = candidate;
+                        isUnique = true;
+                    }
+                    attempts++;
+                }
+                if (!newAccessCode) newAccessCode = generateAccessCode();
+
                 const { data: newGuardian, error: guardianError } = await supabase
                     .from('responsaveis')
                     .insert({
@@ -213,7 +232,28 @@ export default function SelfRegistration() {
                 guardianData = newGuardian;
             } else {
                 // Ensure existing guardian has an access code
-                const accessCodeToUse = existingGuardian.codigo_acesso || generateAccessCode();
+                let accessCodeToUse = existingGuardian.codigo_acesso;
+                if (!accessCodeToUse) {
+                    // Try to generate a unique code
+                    let isUnique = false;
+                    let attempts = 0;
+                    while (!isUnique && attempts < 5) {
+                        const newCode = generateAccessCode();
+                        const { data: check } = await supabase
+                            .from('responsaveis')
+                            .select('id')
+                            .eq('codigo_acesso', newCode)
+                            .maybeSingle();
+
+                        if (!check) {
+                            accessCodeToUse = newCode;
+                            isUnique = true;
+                        }
+                        attempts++;
+                    }
+                    // Fallback to random if somehow collisions persist
+                    if (!accessCodeToUse) accessCodeToUse = generateAccessCode();
+                }
 
                 // Update existing guardian (name, phone, AND photo if changed)
                 const { data: updatedGuardian, error: updateError } = await supabase
