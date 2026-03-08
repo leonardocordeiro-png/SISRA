@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle, User, ShieldCheck, Clock, FileText, Camera, Check, AlertTriangle, AlertCircle, Activity } from 'lucide-react';
@@ -85,6 +86,12 @@ export default function ReceptionConfirmation() {
             toast.error('Erro ao confirmar', 'Não foi possível confirmar a entrega.');
             return;
         }
+
+        await logAudit('CONFIRMACAO_ENTREGA', 'solicitacoes_retirada', request.id, {
+            aluno_nome: request.aluno.nome_completo,
+            responsavel_nome: request.responsavel?.nome_completo,
+            horario: new Date().toISOString()
+        }, undefined, request.aluno.escola_id);
 
         navigate('/recepcao/busca');
     }

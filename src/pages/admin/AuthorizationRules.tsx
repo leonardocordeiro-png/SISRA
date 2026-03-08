@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Save, Clock, AlertTriangle, Activity, ArrowLeft, Check, Info, Bell, Loader2, Copy, AlertCircle, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 
@@ -133,6 +134,12 @@ export default function AuthorizationRules() {
                 if (updateError) throw updateError;
                 studentId = editModeId;
 
+                await logAudit('EDICAO_ESTUDANTE', 'alunos', studentId, {
+                    nome: studentData.nome_completo,
+                    turma: studentData.fullTurma || `${studentData.serie} (${studentData.turma})`,
+                    responsaveis: guardiansData.length
+                });
+
                 await supabase.from('autorizacoes').delete().eq('aluno_id', studentId);
             } else {
                 const { data: student, error: studentError } = await supabase
@@ -143,6 +150,12 @@ export default function AuthorizationRules() {
 
                 if (studentError) throw studentError;
                 studentId = student.id;
+
+                await logAudit('CADASTRO_ESTUDANTE', 'alunos', studentId, {
+                    nome: studentData.nome_completo,
+                    turma: studentData.fullTurma || `${studentData.serie} (${studentData.turma})`,
+                    responsaveis: guardiansData.length
+                });
             }
 
             if (!studentId) throw new Error('Falha ao identificar ID do aluno');

@@ -77,9 +77,13 @@ export default function SecurityAuditLog() {
 
     const getEventStyle = (tipo: string) => {
         switch (tipo) {
-            case 'LOGIN_SUCESSO': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+            case 'LOGIN_SUCESSO': case 'SISTEMA_LOGIN': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
             case 'LOGIN_FALHA': return 'bg-rose-50 text-rose-700 border-rose-100';
-            case 'LIMPEZA_REGISTROS': return 'bg-rose-50 text-rose-700 border-rose-100';
+            case 'LIMPEZA_REGISTROS': case 'EXCLUSAO_ESTUDANTE': case 'EXCLUSAO_ESTUDANTE_MASSA': return 'bg-rose-50 text-rose-700 border-rose-100';
+            case 'CADASTRO_ESTUDANTE': case 'CADASTRO_RESPONSAVEL': return 'bg-blue-50 text-blue-700 border-blue-100';
+            case 'EDICAO_ESTUDANTE': case 'REMANEJAMENTO_TURMA': return 'bg-amber-50 text-amber-700 border-amber-100';
+            case 'SOLICITACAO_RETIRADA': case 'CONFIRMACAO_ENTREGA': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+            case 'SISTEMA_LOGOUT': return 'bg-slate-50 text-slate-700 border-slate-100';
             case 'ANALISE': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
             case 'ACESSO_NEGADO': return 'bg-amber-50 text-amber-700 border-amber-100';
             default: return 'bg-indigo-50 text-indigo-700 border-indigo-100';
@@ -88,9 +92,13 @@ export default function SecurityAuditLog() {
 
     const getEventIcon = (tipo: string) => {
         switch (tipo) {
-            case 'LOGIN_SUCESSO': return <CheckCircle className="w-3 h-3" />;
+            case 'LOGIN_SUCESSO': case 'SISTEMA_LOGIN': return <CheckCircle className="w-3 h-3" />;
             case 'LOGIN_FALHA': return <Lock className="w-3 h-3" />;
-            case 'LIMPEZA_REGISTROS': return <Trash2 className="w-3 h-3" />;
+            case 'LIMPEZA_REGISTROS': case 'EXCLUSAO_ESTUDANTE': case 'EXCLUSAO_ESTUDANTE_MASSA': return <Trash2 className="w-3 h-3" />;
+            case 'CADASTRO_ESTUDANTE': case 'CADASTRO_RESPONSAVEL': return <Activity className="w-3 h-3" />;
+            case 'EDICAO_ESTUDANTE': case 'REMANEJAMENTO_TURMA': return <Filter className="w-3 h-3" />;
+            case 'SOLICITACAO_RETIRADA': case 'CONFIRMACAO_ENTREGA': return <Activity className="w-3 h-3" />;
+            case 'SISTEMA_LOGOUT': return <Clock className="w-3 h-3" />;
             case 'ANALISE': return <Search className="w-3 h-3" />;
             case 'ACESSO_NEGADO': return <AlertTriangle className="w-3 h-3" />;
             default: return <Activity className="w-3 h-3" />;
@@ -172,14 +180,14 @@ export default function SecurityAuditLog() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="flex gap-2 items-center bg-slate-50 dark:bg-slate-800 p-1 rounded-xl">
-                            {['all', 'LOGIN_SUCESSO', 'LOGIN_FALHA', 'LIMPEZA_REGISTROS', 'EXCLUSAO_ESTUDANTE', 'ANALISE'].map(s => (
+                        <div className="flex gap-2 items-center bg-slate-50 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                            {['all', 'LOGIN_SUCESSO', 'LOGIN_FALHA', 'CADASTRO_ESTUDANTE', 'EXCLUSAO_ESTUDANTE', 'SOLICITACAO_RETIRADA', 'CONFIRMACAO_ENTREGA'].map(s => (
                                 <button
                                     key={s}
                                     onClick={() => { setFilterType(s); setCurrentPage(1); }}
-                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${filterType === s ? 'bg-white dark:bg-slate-700 shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${filterType === s ? 'bg-white dark:bg-slate-700 shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`}
                                 >
-                                    {s === 'all' ? 'Tudo' : s.replace('_', ' ')}
+                                    {s === 'all' ? 'Tudo' : s.replace(/_/g, ' ')}
                                 </button>
                             ))}
                         </div>
@@ -205,7 +213,7 @@ export default function SecurityAuditLog() {
                                         <td className="px-6 py-5">
                                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${getEventStyle(log.acao || 'default')}`}>
                                                 {getEventIcon(log.acao || 'default')}
-                                                {(log.acao || 'SISTEMA').replace('_', ' ')}
+                                                {(log.acao || 'SISTEMA').replace(/_/g, ' ')}
                                             </span>
                                         </td>
                                         <td className="px-6 py-5">
@@ -220,7 +228,28 @@ export default function SecurityAuditLog() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium max-w-xs">{log.descricao || (log.detalhes as any)?.message || 'Ação registrada via sistema.'}</p>
+                                            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium max-w-sm">
+                                                {log.descricao || (() => {
+                                                    const d = log.detalhes;
+                                                    if (!d) return 'Ação registrada via sistema.';
+
+                                                    switch (log.acao) {
+                                                        case 'CADASTRO_ESTUDANTE': return `Cadastrou aluno: ${d.nome} (${d.turma})`;
+                                                        case 'EDICAO_ESTUDANTE': return `Editou aluno: ${d.nome} (${d.turma})`;
+                                                        case 'EXCLUSAO_ESTUDANTE': return `Removeu aluno: ${d.nome} (${d.matricula})`;
+                                                        case 'EXCLUSAO_ESTUDANTE_MASSA': return `Removeu ${d.quantidade} alunos em massa.`;
+                                                        case 'LIMPEZA_REGISTROS': return `Limpou banco de dados: ${d.alunos_removidos} alunos removidos.`;
+                                                        case 'REMANEJAMENTO_TURMA': return `Moveu ${d.nome} de ${d.turma_anterior} para ${d.turma_nova}.`;
+                                                        case 'GERACAO_LINK_ACESSO': return `Gerou Link Mágico para ${d.aluno_nome}.`;
+                                                        case 'SOLICITACAO_RETIRADA': return `Solicitação de retirada para ${d.aluno_nome} por ${d.responsavel_nome} via ${d.tipo}.`;
+                                                        case 'CONFIRMACAO_ENTREGA': return `Entrega confirmada: ${d.aluno_nome} retirado por ${d.responsavel_nome}.`;
+                                                        case 'LOGIN_SUCESSO': return `Login administrativo realizado (${d.email})`;
+                                                        case 'LOGIN_FALHA': return `Falha de login: ${d.motivo} (${d.email})`;
+                                                        case 'SISTEMA_LOGOUT': return `Logout do sistema (${d.email})`;
+                                                        default: return d.message || d.motivo || 'Ação registrada.';
+                                                    }
+                                                })()}
+                                            </p>
                                         </td>
                                         <td className="px-6 py-5 font-mono text-[10px] text-slate-400 tracking-tighter">
                                             {log.ip_address}

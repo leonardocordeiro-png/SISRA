@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown, ArrowLeftRight, AlertTriangle, GraduationCap, LayoutGrid } from 'lucide-react';
 import { generateToken, getSalaBySerie } from '../../lib/utils';
+import { logAudit } from '../../lib/audit';
 import NavigationControls from '../../components/NavigationControls';
 import BulkImportModal from '../../components/admin/BulkImportModal';
 import { useAuth } from '../../context/AuthContext';
@@ -46,12 +47,13 @@ export default function StudentManagement() {
 
     const fetchTurmas = async () => {
         const { data, error } = await supabase
-            .from('alunos')
-            .select('turma')
-            .order('turma');
+            .from('turmas')
+            .select('nome')
+            .eq('ativa', true)
+            .order('nome');
 
         if (!error && data) {
-            const unique = Array.from(new Set(data.map(d => d.turma))).filter(Boolean);
+            const unique = Array.from(new Set(data.map(d => d.nome))).filter(Boolean);
             setAvailableTurmas(unique);
         }
     };
@@ -106,9 +108,16 @@ export default function StudentManagement() {
             await supabase.from('autorizacoes').delete().eq('aluno_id', id);
             await supabase.from('alunos_responsaveis').delete().eq('aluno_id', id);
             await supabase.from('solicitacoes_retirada').delete().eq('aluno_id', id);
+            const student = students.find(s => s.id === id);
             const { error } = await supabase.from('alunos').delete().eq('id', id);
 
             if (error) throw error;
+
+            await logAudit('EXCLUSAO_ESTUDANTE', 'alunos', id, {
+                nome: student?.nome_completo,
+                matricula: student?.matricula,
+                turma: student?.turma
+            });
 
             setStudents(prev => prev.filter(s => s.id !== id));
             setSelectedIds(prev => {
@@ -143,6 +152,11 @@ export default function StudentManagement() {
             const { error } = await supabase.from('alunos').delete().in('id', idsToDelete);
 
             if (error) throw error;
+
+            await logAudit('EXCLUSAO_ESTUDANTE_MASSA', 'alunos', undefined, {
+                quantidade: count,
+                ids: idsToDelete
+            });
 
             toast.success(`${count} alunos excluídos`, 'Os registros foram removidos com sucesso.');
             setSelectedIds(new Set());
@@ -188,6 +202,11 @@ export default function StudentManagement() {
             const { error: eResp } = await supabase.from('responsaveis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (eResp) throw eResp;
 
+            await logAudit('LIMPEZA_REGISTROS', undefined, undefined, {
+                alunos_removidos: allStudentIds.length,
+                responsaveis_removidos: allResponsavelIds.length
+            });
+
             setStudents([]);
             setSelectedIds(new Set());
             setShowPurgeModal(false);
@@ -214,7 +233,7 @@ export default function StudentManagement() {
         try {
             // Build full turma string matching what StudentRegistration produces
             const novaTurma = `${transferForm.serie} (${transferForm.turma})`;
-            const novaSala = getSalaBySerie(transferForm.serie);
+            const novaSala = getSalaBySerie(transferForm.serie, transferForm.turma);
 
             const { error } = await supabase
                 .from('alunos')
@@ -222,6 +241,13 @@ export default function StudentManagement() {
                 .eq('id', transferStudent.id);
 
             if (error) throw error;
+
+            await logAudit('REMANEJAMENTO_TURMA', 'alunos', transferStudent.id, {
+                nome: transferStudent.nome_completo,
+                turma_anterior: transferStudent.turma,
+                turma_nova: novaTurma,
+                sala_nova: novaSala
+            });
 
             setStudents(prev =>
                 prev.map(s => s.id === transferStudent.id ? { ...s, turma: novaTurma, sala: novaSala } : s)
@@ -264,6 +290,12 @@ export default function StudentManagement() {
                 });
 
             if (error) throw error;
+
+            await logAudit('GERACAO_LINK_ACESSO', 'tokens_acesso', undefined, {
+                aluno_id: studentId,
+                aluno_nome: studentName,
+                token: token
+            });
 
             const url = `${window.location.origin}/parent/cadastro/${token}`;
             await navigator.clipboard.writeText(url);
@@ -472,6 +504,7 @@ export default function StudentManagement() {
                                         <option value="Sala 102">Sala 102</option>
                                         <option value="Sala 103">Sala 103</option>
                                         <option value="Sala 104">Sala 104</option>
+                                        <option value="Sala 109">Sala 109</option>
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                                 </div>

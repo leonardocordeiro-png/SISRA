@@ -197,6 +197,7 @@ export default function UserManagement() {
             case 'Sala 102': return '4º Ano';
             case 'Sala 103': return '1º e 2º Ano';
             case 'Sala 104': return '5º Ano';
+            case 'Sala 109': return '4º Ano';
             case 'TODAS': return 'Todas';
             default: return 'N/A';
         }
@@ -400,6 +401,7 @@ export default function UserManagement() {
                                             <option value="Sala 102">Sala 102 (4º Ano)</option>
                                             <option value="Sala 103">Sala 103 (1º e 2º Ano)</option>
                                             <option value="Sala 104">Sala 104 (5º Ano)</option>
+                                            <option value="Sala 109">Sala 109 (4º Ano)</option>
                                             <option value="TODAS">TODAS AS SALAS</option>
                                         </select>
                                     </div>

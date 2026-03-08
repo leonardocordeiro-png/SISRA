@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle2, Bell, User as UserIcon, ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import type { Student, Guardian } from '../../types';
 
 interface LocationState {
@@ -109,6 +110,18 @@ export default function TotemConfirmation() {
 
             const { error } = await supabase.from('solicitacoes_retirada').insert(requests);
             if (error) throw error;
+
+            // Log individual audit events for each student requested
+            for (const req of requests) {
+                const student = students.find(s => s.id === req.aluno_id);
+                await logAudit('SOLICITACAO_RETIRADA', 'solicitacoes_retirada', undefined, {
+                    aluno_nome: student?.nome_completo,
+                    aluno_id: req.aluno_id,
+                    responsavel_nome: selectedGuardian.nome_completo,
+                    responsavel_id: selectedGuardian.id,
+                    tipo: 'TOTEM'
+                }, undefined, req.escola_id || undefined);
+            }
 
             setStep('success');
         } catch (e: any) {

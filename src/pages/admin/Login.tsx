@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Loader2, Eye, EyeOff, Lock, Mail, Activity, ChevronRight, AlertCircle } from 'lucide-react';
+import { logAudit } from '../../lib/audit';
 
 export default function AdminLogin() {
     const navigate = useNavigate();
@@ -35,13 +36,17 @@ export default function AdminLogin() {
 
                 if (userData.tipo_usuario !== 'ADMIN') {
                     await supabase.auth.signOut();
+                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Acesso negado: Não é administrador' });
                     throw new Error('Acesso exclusivo para administradores.');
                 }
 
+                await logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: 'ADMIN' }, data.user.id);
                 navigate('/admin/dashboard');
             }
         } catch (err: any) {
-            setError(err.message || 'Erro ao realizar login admin');
+            const message = err.message || 'Erro ao realizar login admin';
+            setError(message);
+            await logAudit('LOGIN_FALHA', undefined, undefined, { email, motivo: message });
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { logAudit } from '../lib/audit';
 
 type AuthContextType = {
     user: User | null;
@@ -79,7 +80,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const signOut = async () => {
+        const currentUserId = user?.id;
+        const currentEmail = user?.email;
+        const currentEscolaId = escolaId;
+
         await supabase.auth.signOut();
+
+        if (currentUserId) {
+            await logAudit('SISTEMA_LOGOUT', 'usuarios', currentUserId, { email: currentEmail }, currentUserId, currentEscolaId || undefined);
+        }
+
         setRole(null);
         setEscolaId(null);
     };

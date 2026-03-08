@@ -1,7 +1,8 @@
 import { useRef, useState, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import { Camera, X, RefreshCcw, Check, ShieldCheck } from 'lucide-react';
+import { Camera, X, RefreshCcw, Check, ShieldCheck, FlipHorizontal } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import { compressAndResizeImage } from '../../lib/imageUtils';
 
 interface CameraCaptureProps {
     onCapture: (image: string) => void;
@@ -12,12 +13,28 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
     const webcamRef = useRef<Webcam>(null);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [permissionError, setPermissionError] = useState(false);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+    const [isOptimizing, setIsOptimizing] = useState(false);
     const toast = useToast();
 
-    const capture = useCallback(() => {
+    const toggleCamera = useCallback(() => {
+        setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    }, []);
+
+    const capture = useCallback(async () => {
         const imageSrc = webcamRef.current?.getScreenshot();
         if (imageSrc) {
-            setCapturedImage(imageSrc);
+            setIsOptimizing(true);
+            try {
+                // Use centralized compression (max 1024px, 0.8 quality)
+                const optimized = await compressAndResizeImage(imageSrc, 1024, 0.8);
+                setCapturedImage(optimized);
+            } catch (err) {
+                console.error('[CameraCapture] Optimization error:', err);
+                setCapturedImage(imageSrc);
+            } finally {
+                setIsOptimizing(false);
+            }
         }
     }, [webcamRef]);
 
@@ -31,7 +48,9 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                     <div>
                         <h3 className="text-xl font-bold text-slate-900">Capturar Foto</h3>
-                        <p className="text-xs text-slate-500">Posicione o rosto dentro do quadro.</p>
+                        <p className="text-xs text-slate-500">
+                            {facingMode === 'user' ? 'Modo Selfie: Imagem espelhada para facilitar.' : 'Câmera Principal: Visão direta.'}
+                        </p>
                     </div>
                     <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
                         <X className="w-6 h-6 text-slate-400" />
@@ -54,26 +73,47 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                             </button>
                         </div>
                     ) : !capturedImage ? (
-                        <Webcam
-                            audio={false}
-                            ref={webcamRef}
-                            screenshotFormat="image/png"
-                            videoConstraints={{
-                                facingMode: "user",
-                                width: { ideal: 720 },
-                                height: { ideal: 1280 }, // Increased height for better mobile portrait
-                                aspectRatio: 0.5625 // 9:16 portrait
-                            }}
-                            onUserMediaError={handleUserMediaError}
-                            className="w-full h-full object-cover"
-                        />
+                        <>
+                            <Webcam
+                                audio={false}
+                                ref={webcamRef}
+                                screenshotFormat="image/jpeg"
+                                mirrored={facingMode === 'user'}
+                                videoConstraints={{
+                                    facingMode: facingMode,
+                                    width: { ideal: 1080 },
+                                    height: { ideal: 1440 }, // High quality source for better processing
+                                    aspectRatio: 3 / 4
+                                }}
+                                onUserMediaError={handleUserMediaError}
+                                className="w-full h-full object-cover"
+                            />
+
+                            <button
+                                onClick={toggleCamera}
+                                className="absolute top-6 right-6 p-4 bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-2xl hover:bg-white/30 transition-all z-10"
+                                title="Inverter Câmera"
+                            >
+                                <RefreshCcw className="w-6 h-6" />
+                            </button>
+                        </>
                     ) : (
-                        <img
-                            src={capturedImage}
-                            alt="Captured"
-                            className="w-full h-full object-cover animate-in fade-in duration-300"
-                            onError={() => setCapturedImage(null)}
-                        />
+                        <div className="relative w-full h-full">
+                            <img
+                                src={capturedImage}
+                                alt="Captured"
+                                className="w-full h-full object-cover animate-in fade-in duration-300"
+                                onError={() => setCapturedImage(null)}
+                            />
+                            {isOptimizing && (
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <RefreshCcw className="w-10 h-10 text-white animate-spin" />
+                                        <p className="text-white font-bold text-sm uppercase tracking-widest">Otimizando Imagem...</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     {!capturedImage && !permissionError && (
@@ -87,7 +127,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                     {!capturedImage ? (
                         <button
                             onClick={capture}
-                            disabled={permissionError}
+                            disabled={permissionError || isOptimizing}
                             className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold flex items-center gap-3 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/30 active:scale-95 disabled:opacity-50"
                         >
                             <Camera className="w-6 h-6" /> Tirar Foto
@@ -98,7 +138,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                                 onClick={() => setCapturedImage(null)}
                                 className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
                             >
-                                <RefreshCcw className="w-5 h-5" /> Repetir
+                                <FlipHorizontal className="w-5 h-5" /> Repetir
                             </button>
                             <button
                                 onClick={() => {

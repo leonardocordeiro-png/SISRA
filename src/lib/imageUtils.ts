@@ -1,11 +1,47 @@
 /**
+ * Comprime e redimensiona uma imagem (Base64) usando Canvas.
+ * Garante que a imagem final seja um JPEG leve.
+ */
+export function compressAndResizeImage(base64Str: string, maxWidth = 1024, quality = 0.8): Promise<string> {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            // Redimensionamento proporcional
+            if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxWidth) {
+                    width *= maxWidth / height;
+                    height = maxWidth;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                // Exporta como JPEG com a qualidade definida
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            } else {
+                resolve(base64Str);
+            }
+        };
+        img.onerror = () => resolve(base64Str);
+        img.src = base64Str;
+    });
+}
+
+/**
  * Converte um arquivo de imagem para uma data URL válida.
- * Suporta HEIC/HEIF (iPhone) com conversão automática para JPEG.
- * 
- * Estratégia de conversão HEIC (3 camadas):
- * 1. createImageBitmap → Canvas (usa decodificador nativo do SO)
- * 2. libheif-js com HEVC decoder (libde265) via WASM
- * 3. Mensagem amigável pedindo JPEG/PNG
+ * Suporta HEIC/HEIF (iPhone) com conversão automática para JPEG e compressão de saída.
  */
 export async function fileToDataUrl(file: File): Promise<string> {
     const name = file.name.toLowerCase();
@@ -13,6 +49,8 @@ export async function fileToDataUrl(file: File): Promise<string> {
         file.type === 'image/heic' || file.type === 'image/heif';
     const hasNoMime = !file.type || file.type === 'application/octet-stream';
     const needsConversion = isHeic || hasNoMime;
+
+    let resultDataUrl: string;
 
     if (needsConversion) {
         console.log('[imageUtils] Arquivo precisa de conversão. Nome:', file.name, 'Tipo:', file.type || '(vazio)', 'Tamanho:', file.size);
@@ -28,9 +66,9 @@ export async function fileToDataUrl(file: File): Promise<string> {
             if (ctx) {
                 ctx.drawImage(bitmap, 0, 0);
                 bitmap.close();
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                console.log('[imageUtils] ✅ Conversão via createImageBitmap OK! Dimensões:', canvas.width, 'x', canvas.height);
-                return dataUrl;
+                resultDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                console.log('[imageUtils] ✅ Conversão via createImageBitmap OK!');
+                return compressAndResizeImage(resultDataUrl);
             }
             bitmap.close();
         } catch (err: any) {
@@ -41,9 +79,9 @@ export async function fileToDataUrl(file: File): Promise<string> {
         try {
             console.log('[imageUtils] Tentando libheif-js (WASM com HEVC decoder)...');
             const buffer = await file.arrayBuffer();
-            const dataUrl = await decodeHeicWithLibheif(new Uint8Array(buffer));
+            resultDataUrl = await decodeHeicWithLibheif(new Uint8Array(buffer));
             console.log('[imageUtils] ✅ Conversão via libheif-js OK!');
-            return dataUrl;
+            return compressAndResizeImage(resultDataUrl);
         } catch (err: any) {
             console.error('[imageUtils] libheif-js falhou:', err?.message || err);
         }
@@ -60,20 +98,18 @@ export async function fileToDataUrl(file: File): Promise<string> {
         console.log('[imageUtils] Arquivo sem MIME type mas não é HEIC, carregando direto...');
     }
 
-    return readFileAsDataUrl(file);
+    // Leitura padrão para arquivos que não são HEIC ou se as tentativas acima falharam
+    const rawDataUrl = await readFileAsDataUrl(file);
+    // Sempre aplicar compressão/redimensionamento para garantir payload leve
+    return compressAndResizeImage(rawDataUrl);
 }
 
 /**
  * Decodifica um arquivo HEIC usando libheif-js com o decoder HEVC (libde265).
- * Usa o wasm-bundle que inclui o decoder HEVC embutido.
  */
 async function decodeHeicWithLibheif(heicData: Uint8Array): Promise<string> {
-    // Import dinâmico do wasm-bundle que inclui o HEVC decoder (libde265)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const libheifModule = await import('libheif-js/wasm-bundle') as any;
     const libheif = libheifModule.default || libheifModule;
-
-    console.log('[imageUtils] libheif carregado. Tipo:', typeof libheif, 'HeifDecoder:', typeof libheif.HeifDecoder);
 
     const decoder = new libheif.HeifDecoder();
     const images = decoder.decode(heicData.buffer);
@@ -86,9 +122,6 @@ async function decodeHeicWithLibheif(heicData: Uint8Array): Promise<string> {
     const width = image.get_width();
     const height = image.get_height();
 
-    console.log('[imageUtils] HEIC decodificado. Dimensões:', width, 'x', height);
-
-    // Criar canvas e ImageData para renderizar
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -100,7 +133,6 @@ async function decodeHeicWithLibheif(heicData: Uint8Array): Promise<string> {
 
     const imageData = ctx.createImageData(width, height);
 
-    // Renderizar a imagem HEIC no ImageData via callback
     await new Promise<void>((resolve, reject) => {
         image.display(imageData, (displayData: ImageData | null) => {
             if (!displayData) {
@@ -111,12 +143,8 @@ async function decodeHeicWithLibheif(heicData: Uint8Array): Promise<string> {
         });
     });
 
-    // Colocar o ImageData no canvas e exportar como JPEG
     ctx.putImageData(imageData, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-    console.log('[imageUtils] JPEG gerado via canvas. DataURL length:', dataUrl.length);
-    return dataUrl;
+    return canvas.toDataURL('image/jpeg', 0.95);
 }
 
 /**
@@ -142,7 +170,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
         reader.onloadend = () => {
             const result = reader.result as string;
             if (result) {
-                console.log('[imageUtils] ✅ Data URL gerada, length:', result.length, 'prefix:', result.substring(0, 40));
                 resolve(result);
             } else {
                 reject(new Error('FileReader não produziu resultado'));

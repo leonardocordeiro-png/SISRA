@@ -42,15 +42,18 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
         const lines = text.split('\n').filter(line => line.trim());
         if (lines.length < 2) throw new Error('O arquivo deve conter um cabeçalho e pelo menos uma linha de dados.');
 
-        const headers = lines[0].split(/[;,\t]/).map(h => h.trim().toLowerCase());
+        const headers = lines[0].split(/[;,\t]/).map(h =>
+            h.trim().toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
+        );
         const data = lines.slice(1).map(line => {
             const values = line.split(/[;,\t]/).map(v => v.trim());
             const obj: any = {};
             headers.forEach((header, i) => {
                 if (header.includes('nome')) obj.nome_completo = values[i];
                 if (header.includes('matr')) obj.matricula = values[i];
-                if (header.includes('série') || header.includes('serie')) obj.serie = values[i];
-                if (header.includes('turma')) obj.turma_secao = values[i];
+                if (header.includes('serie')) obj.serie = values[i];
+                if (header.includes('turma') || header.includes('secao')) obj.turma_secao = values[i];
             });
             return obj;
         });
@@ -95,7 +98,9 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
                 nome_completo: item.nome_completo,
                 matricula: item.matricula || `MAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
                 turma: turmaFormatada,
-                sala: getSalaBySerie(item.serie),
+                serie_display: item.serie,
+                secao_display: item.turma_secao || '',
+                sala: getSalaBySerie(item.serie, item.turma_secao),
                 escola_id: escolaId,
                 ativo: true
             };
@@ -144,9 +149,12 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
         setError(null);
 
         try {
+            // Clean up display-only fields before insertion
+            const dataToInsert = preview.map(({ serie_display, secao_display, ...rest }) => rest);
+
             const { error: insertError } = await supabase
                 .from('alunos')
-                .insert(preview);
+                .insert(dataToInsert);
 
             if (insertError) throw insertError;
 
@@ -160,7 +168,7 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
     };
 
     const downloadTemplate = () => {
-        const csvContent = "\uFEFFNome Completo;Matrícula;Série;Turma\nJoão Silva;2024001;1º Ano;A\nMaria Oliveira;2024002;2º Ano;B";
+        const csvContent = "\uFEFFNome;Matricula;Serie;Turma\nJoão Silva;2024001;1º Ano;111M\nMaria Oliveira;2024002;2º Ano;122T";
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
@@ -260,6 +268,7 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
                                         <tr>
                                             <th className="px-4 py-3 font-bold uppercase">Nome</th>
                                             <th className="px-4 py-3 font-bold uppercase">Série</th>
+                                            <th className="px-4 py-3 font-bold uppercase">Seção</th>
                                             <th className="px-4 py-3 font-bold uppercase">Sala Auto</th>
                                         </tr>
                                     </thead>
@@ -267,7 +276,12 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
                                         {preview.slice(0, 5).map((p, i) => (
                                             <tr key={i}>
                                                 <td className="px-4 py-3 font-medium text-slate-900">{p.nome_completo}</td>
-                                                <td className="px-4 py-3">{p.turma}</td>
+                                                <td className="px-4 py-3">{p.serie_display}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                                                        {p.secao_display || 'N/A'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
                                                         {p.sala || 'N/A'}

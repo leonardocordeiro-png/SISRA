@@ -1,13 +1,13 @@
 import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Camera, Shield, CheckCircle2, AlertCircle, Loader2, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { User, Camera, Shield, CheckCircle2, AlertCircle, Loader2, ArrowRight, Image as ImageIcon, Download, Printer, Plus, Smartphone, QrCode } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
+import QRCodeStyling from 'qr-code-styling';
+import domtoimage from 'dom-to-image-more';
 import CameraCapture from '../../components/admin/CameraCapture';
 import { fileToDataUrl } from '../../lib/imageUtils';
 import { useToast } from '../../components/ui/Toast';
-import QRCodeStyling from 'qr-code-styling';
-import domtoimage from 'dom-to-image-more';
-import { Download, Printer, Plus } from 'lucide-react';
 
 export default function SelfRegistration() {
     const { token } = useParams<{ token: string }>();
@@ -48,6 +48,15 @@ export default function SelfRegistration() {
             generateQRCode();
         }
     }, [success, lastRegisteredGuardian]);
+
+    const generateAccessCode = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars like 0, O, 1, I, I
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    };
 
     const generateQRCode = () => {
         if (!lastRegisteredGuardian?.qr_code) return;
@@ -95,10 +104,7 @@ export default function SelfRegistration() {
         }
     };
 
-    const handleCpfBlur = async () => {
-        const cpf = formData.cpf.trim();
-        if (!cpf) return;
-
+    const checkCpf = async (cpf: string) => {
         setCpfChecking(true);
         try {
             const { data: found } = await supabase
@@ -110,21 +116,33 @@ export default function SelfRegistration() {
 
             if (found) {
                 setCpfLookupGuardian(found);
-                // Pre-fill name and phone from existing guardian
+                // Pre-fill all data from existing guardian
                 setFormData(prev => ({
                     ...prev,
                     nome: found.nome_completo || prev.nome,
                     telefone: found.telefone || prev.telefone,
                 }));
                 // Pre-fill photo if available
-                if (found.foto_url) setPhoto(found.foto_url);
+                if (found.foto_url) {
+                    setPhoto(found.foto_url);
+                }
+                toast.success('Dados localizados', `Bem-vindo(a) de volta, ${found.nome_completo.split(' ')[0]}!`);
             } else {
                 setCpfLookupGuardian(null);
             }
-        } catch {
+        } catch (err) {
+            console.error('Error checking CPF:', err);
             setCpfLookupGuardian(null);
         } finally {
             setCpfChecking(false);
+        }
+    };
+
+    const handleCpfBlur = () => {
+        const cleanCpf = formData.cpf.replace(/\D/g, '');
+        if (cleanCpf && cleanCpf.length === 11) {
+            setFormData(prev => ({ ...prev, cpf: cleanCpf }));
+            checkCpf(cleanCpf);
         }
     };
 
@@ -163,120 +181,167 @@ export default function SelfRegistration() {
 
         setLoading(true);
         try {
-            // 1. Resolve guardian — use existing if CPF already found, otherwise create new
-            let guardian = cpfLookupGuardian;
+            const cleanCpf = formData.cpf.replace(/\D/g, '');
+            const studentId = student.id;
 
-            if (!guardian) {
-                // Double-check in case lookup wasn't triggered
-                const { data: found } = await supabase
-                    .from('responsaveis')
-                    .select('*')
-                    .eq('cpf', formData.cpf.trim())
-                    .limit(1)
-                    .maybeSingle();
-                guardian = found ?? null;
-            }
+            // 1. Resolve or Create Guardian
+            const { data: existingGuardian } = await supabase
+                .from('responsaveis')
+                .select('*')
+                .eq('cpf', cleanCpf)
+                .maybeSingle();
 
-            if (guardian) {
-                // Update photo if a new one was taken (keeps the rest of the data)
-                if (photo !== guardian.foto_url) {
-                    const { data: updated, error: uError } = await supabase
-                        .from('responsaveis')
-                        .update({ foto_url: photo })
-                        .eq('id', guardian.id)
-                        .select()
-                        .maybeSingle();
-                    if (uError) throw uError;
-                    guardian = updated ?? guardian;
-                }
-            } else {
-                // Create brand new guardian
-                const { data: newGuardian, error: gError } = await supabase
+            let guardianId = existingGuardian?.id;
+            let guardianData: any;
+
+            if (!guardianId) {
+                const newAccessCode = generateAccessCode();
+                const { data: newGuardian, error: guardianError } = await supabase
                     .from('responsaveis')
                     .insert({
                         nome_completo: formData.nome,
-                        cpf: formData.cpf.trim(),
+                        cpf: cleanCpf,
                         telefone: formData.telefone,
                         foto_url: photo,
+                        codigo_acesso: newAccessCode
                     })
                     .select()
-                    .maybeSingle();
-                if (gError) throw gError;
-                guardian = newGuardian;
+                    .single();
+
+                if (guardianError) throw guardianError;
+                guardianId = newGuardian.id;
+                guardianData = newGuardian;
+            } else {
+                // Ensure existing guardian has an access code
+                const accessCodeToUse = existingGuardian.codigo_acesso || generateAccessCode();
+
+                // Update existing guardian (name, phone, AND photo if changed)
+                const { data: updatedGuardian, error: updateError } = await supabase
+                    .from('responsaveis')
+                    .update({
+                        nome_completo: formData.nome,
+                        telefone: formData.telefone,
+                        foto_url: photo,
+                        codigo_acesso: accessCodeToUse
+                    })
+                    .eq('id', guardianId)
+                    .select()
+                    .single();
+
+                if (updateError) {
+                    console.warn('Falha ao atualizar dados do responsável:', updateError);
+                }
+                guardianData = updatedGuardian || existingGuardian;
             }
 
-            // 2. Check if authorization already exists for this student + guardian pair
+            // 2. Manage Linkage (Autorizações)
             const { data: existingAuth } = await supabase
                 .from('autorizacoes')
                 .select('id')
-                .eq('aluno_id', student.id)
-                .eq('responsavel_id', guardian.id)
-                .limit(1)
+                .eq('aluno_id', studentId)
+                .eq('responsavel_id', guardianId)
                 .maybeSingle();
 
             if (existingAuth) {
                 toast.warning(
                     'Já autorizado',
-                    `${guardian.nome_completo} já é responsável autorizado para ${student.nome_completo}.`
+                    `${guardianData.nome_completo} já é responsável autorizado para ${student?.nome_completo}.`
                 );
-                setLoading(false);
-                return;
+                // Even if authorized, ensure junction table link exists
+            } else {
+                const finalParentesco = formData.parentesco === 'Outro' ? formData.parentescoOutro : formData.parentesco;
+                const { error: authError } = await supabase
+                    .from('autorizacoes')
+                    .insert({
+                        aluno_id: studentId,
+                        responsavel_id: guardianId,
+                        tipo_autorizacao: 'SECUNDARIO',
+                        parentesco: finalParentesco || 'Outro',
+                        ativa: true
+                    });
+
+                if (authError) throw authError;
             }
 
-            // 3. Create Authorization
-            const finalParentesco = formData.parentesco === 'Outro' ? formData.parentescoOutro : formData.parentesco;
+            // 3. Ensure linkage in junction table (alunos_responsaveis)
+            const { data: existingLink } = await supabase
+                .from('alunos_responsaveis')
+                .select('id')
+                .eq('aluno_id', studentId)
+                .eq('responsavel_id', guardianId)
+                .maybeSingle();
 
-            const { error: aError } = await supabase
-                .from('autorizacoes')
-                .insert({
-                    aluno_id: student.id,
-                    responsavel_id: guardian.id,
-                    tipo_autorizacao: 'SECUNDARIO',
-                    parentesco: finalParentesco || 'Outro',
-                    ativa: true
-                });
+            if (!existingLink) {
+                const { error: linkError } = await supabase
+                    .from('alunos_responsaveis')
+                    .insert({
+                        aluno_id: studentId,
+                        responsavel_id: guardianId
+                    });
 
-            if (aError) throw aError;
+                if (linkError) {
+                    console.error('Error in junction table link (alunos_responsaveis):', linkError);
+                }
+            }
 
-            // 4. Reuse existing active QR card or create a new one
-            const { data: existingQr } = await supabase
+            // 4. Manage QR Card (Synchronized with QRGenerator.tsx)
+            const { data: activeCard } = await supabase
                 .from('parent_qr_cards')
-                .select('qr_code, expires_at')
-                .eq('responsavel_id', guardian.id)
+                .select('*')
+                .eq('responsavel_id', guardianId)
                 .eq('active', true)
+                .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
             let qrValue: string;
-            let expiresAt: Date;
+            let expiresAt: string;
 
-            if (existingQr) {
-                qrValue = existingQr.qr_code;
-                expiresAt = new Date(existingQr.expires_at);
+            if (activeCard) {
+                qrValue = activeCard.qr_code;
+                expiresAt = activeCard.expires_at;
             } else {
-                qrValue = `LaSalleCheguei-${guardian.id}-${Date.now()}`;
-                expiresAt = new Date();
-                expiresAt.setMonth(expiresAt.getMonth() + 12);
+                // Look for ANY existing card (even inactive) to reuse string
+                const { data: anyCard } = await supabase
+                    .from('parent_qr_cards')
+                    .select('qr_code')
+                    .eq('responsavel_id', guardianId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                qrValue = anyCard?.qr_code || `LaSalleCheguei-${guardianId}-${Date.now()}`;
+                const expDate = new Date();
+                expDate.setMonth(expDate.getMonth() + 12);
+                expiresAt = expDate.toISOString();
 
                 const { error: qrError } = await supabase
                     .from('parent_qr_cards')
                     .insert({
-                        responsavel_id: guardian.id,
+                        responsavel_id: guardianId,
                         qr_code: qrValue,
-                        expires_at: expiresAt.toISOString(),
+                        expires_at: expiresAt,
                         active: true
                     });
                 if (qrError) throw qrError;
             }
 
+            // 5. Audit Log
+            await logAudit('CADASTRO_RESPONSAVEL', 'responsaveis', guardianId, {
+                aluno_id: studentId,
+                parentesco: formData.parentesco,
+                metodo: 'AUTO_CADASTRO'
+            }, undefined, 'e6328325-1845-420a-b333-87a747953259');
+
             setLastRegisteredGuardian({
-                ...guardian,
+                ...guardianData,
                 qr_code: qrValue,
-                expires_at: expiresAt.toISOString()
+                expires_at: expiresAt
             });
             setSuccess(true);
             toast.success('Cadastro concluído', 'Responsável autorizado com sucesso.');
         } catch (err: any) {
+            console.error('Submit Error:', err);
             toast.error('Erro no cadastro', err.message);
         } finally {
             setLoading(false);
@@ -306,7 +371,6 @@ export default function SelfRegistration() {
                     qrCode.current.append(qrRef.current);
                 }
 
-                // Allow time for QR component to be ready
                 await new Promise(resolve => setTimeout(resolve, 500));
 
                 const dataUrl = await domtoimage.toPng(cardElement, {
@@ -372,12 +436,12 @@ export default function SelfRegistration() {
                     @media print {
                         body * { visibility: hidden; }
                         #qr-card-printable, #qr-card-printable * { visibility: visible; }
-                        #qr-card-printable { 
-                            position: fixed !important; 
-                            left: 0 !important; 
-                            top: 0 !important; 
-                            width: 100% !important; 
-                            border: 2px solid #f1f5f9 !important; 
+                        #qr-card-printable {
+                            position: fixed !important;
+                            left: 0 !important;
+                            top: 0 !important;
+                            width: 100% !important;
+                            border: 2px solid #f1f5f9 !important;
                             box-shadow: none !important;
                             padding: 0 !important;
                             margin: 0 !important;
@@ -397,59 +461,92 @@ export default function SelfRegistration() {
                         <p className="text-slate-500 mb-8 font-medium">Você cadastrou com sucesso <strong>{lastRegisteredGuardian?.nome_completo}</strong> para retirar <strong>{student?.nome_completo}</strong>.</p>
                     </div>
 
-                    {/* QR Card Preview - Cleaned for Capture */}
-                    <div id="qr-card-printable" style={{ backgroundColor: '#ffffff', border: 'none' }} className="bg-white rounded-[2.5rem] overflow-hidden">
-                        <div style={{ backgroundColor: '#0f172a', border: 'none' }} className="bg-slate-900 p-8 text-center">
-                            <p style={{ color: '#10b981', border: 'none', outline: 'none' }} className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-1">Identificação de Segurança</p>
-                            <h3 style={{ color: '#ffffff', border: 'none', outline: 'none' }} className="text-xl font-black text-white italic tracking-tight uppercase leading-none">Colégio La Salle Sobradinho</h3>
+                    <div id="qr-card-printable" className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-900/5 transition-all hover:shadow-emerald-500/10 duration-500 group" style={{ backgroundColor: '#ffffff' }}>
+                        {/* Top Branding Bar */}
+                        <div className="bg-slate-900 px-10 py-8 flex items-center justify-between relative overflow-hidden print-header" style={{ backgroundColor: '#0f172a', border: 'none' }}>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}></div>
+                            <div className="relative z-10">
+                                <h2 className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em] mb-1" style={{ color: '#10B981', outline: 'none', border: 'none' }}>Instituição de Ensino</h2>
+                                <p className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none" style={{ outline: 'none', border: 'none' }}>Colégio La Salle Sobradinho</p>
+                            </div>
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                <QrCode className="w-6 h-6 text-white" />
+                            </div>
                         </div>
 
-                        <div className="p-8 space-y-6 text-center">
-                            <div className="flex justify-center items-center gap-6 py-2">
-                                {photo && (
-                                    <div style={{ backgroundColor: '#ffffff', border: '1px solid #f1f5f9' }} className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
-                                        <img src={photo} alt="Foto" className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                                <div ref={qrRef} style={{ backgroundColor: '#ffffff', border: '1px solid #f1f5f9' }} className="p-2 rounded-2xl flex-shrink-0 shadow-inner" />
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <p style={{ color: '#94a3b8' }} className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Responsável</p>
-                                    <p style={{ color: '#0f172a' }} className="text-xl md:text-2xl font-black text-slate-900 uppercase italic tracking-tighter text-center leading-tight break-words px-4">{lastRegisteredGuardian?.nome_completo}</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div style={{ backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-left">
-                                        <p style={{ color: '#94a3b8' }} className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">CPF</p>
-                                        <p style={{ color: '#334155' }} className="text-xs font-black text-slate-700">{lastRegisteredGuardian?.cpf}</p>
-                                    </div>
-                                    <div style={{ backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-left">
-                                        <p style={{ color: '#94a3b8' }} className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aluno</p>
-                                        <p style={{ color: '#334155' }} className="text-xs font-black text-slate-700 leading-tight">{student?.nome_completo}</p>
-                                    </div>
+                        <div className="p-10 space-y-10">
+                            {/* QR Code Mirror */}
+                            <div className="relative flex justify-center py-6">
+                                <div className="absolute inset-0 bg-emerald-500/5 rounded-full blur-3xl scale-75 animate-pulse no-print"></div>
+                                <div className="relative p-6 bg-white rounded-3xl" style={{ backgroundColor: '#ffffff' }}>
+                                    <div ref={qrRef} className="rounded-2xl" />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 no-print pt-4">
+                            {/* Identification Details */}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-6">
+                                    <div
+                                        className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center shrink-0 relative overflow-hidden"
+                                        style={{ backgroundColor: '#f1f5f9' }}
+                                    >
+                                        {photo ? (
+                                            <img
+                                                src={photo}
+                                                alt={lastRegisteredGuardian?.nome_completo}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <User className="w-8 h-8 text-slate-400" style={{ color: '#94a3b8' }} />
+                                        )}
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>Nome do Responsável</p>
+                                        <p className="text-xl md:text-2xl font-black text-slate-900 uppercase italic tracking-tighter break-words leading-tight" style={{ color: '#0f172a' }}>{lastRegisteredGuardian?.nome_completo}</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="p-4 bg-slate-50 rounded-2xl" style={{ backgroundColor: '#f8fafc' }}>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>CPF</p>
+                                        <p className="text-[11px] font-black text-slate-700" style={{ color: '#334155' }}>{lastRegisteredGuardian?.cpf}</p>
+                                    </div>
+                                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl" style={{ backgroundColor: '#f5f3ff' }}>
+                                        <p className="text-[10px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
+                                        <p className="text-base font-black text-indigo-700 tracking-widest" style={{ color: '#4338ca' }}>{lastRegisteredGuardian?.codigo_acesso || '---'}</p>
+                                    </div>
+                                    <div className="p-4 bg-slate-50 rounded-2xl" style={{ backgroundColor: '#f8fafc' }}>
+                                        <p className="text-[10px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Aluno</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs font-black text-emerald-600 truncate leading-tight">
+                                                {student?.nome_completo}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 no-print select-none">
                                 <button
                                     onClick={handleDownload}
-                                    className="flex items-center justify-center gap-2 px-6 py-4 bg-slate-100 hover:bg-slate-200 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-700 transition-all border border-slate-200 shadow-sm"
+                                    className="flex items-center justify-center gap-3 px-6 py-5 bg-slate-100 hover:bg-slate-200 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-700 transition-all border border-slate-200"
                                 >
-                                    <Download className="w-4 h-4 text-slate-500" /> Salvar PNG
+                                    <Download className="w-5 h-5" /> Salvar no Celular
                                 </button>
                                 <button
                                     onClick={() => window.print()}
-                                    className="flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 hover:bg-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white transition-all shadow-lg shadow-emerald-500/20"
+                                    className="flex items-center justify-center gap-3 px-6 py-5 bg-emerald-500 hover:bg-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-900 transition-all shadow-xl shadow-emerald-500/20"
                                 >
-                                    <Printer className="w-4 h-4" /> Imprimir
+                                    <Printer className="w-5 h-5" /> Imprimir Cartão
                                 </button>
                             </div>
                         </div>
 
-                        <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9' }} className="px-8 py-4 text-center italic">
-                            <p style={{ color: '#94a3b8' }} className="text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                                <Shield className="w-3 h-3 text-slate-300" /> Válido por 1 ano para identificação
+                        {/* Bottom Status Bar */}
+                        <div className="bg-slate-100 px-10 py-6 text-center print-footer" style={{ backgroundColor: '#f1f5f9' }}>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
+                                <Smartphone className="w-3 h-3" /> Sistema de Identificação Biométrica Integrado
                             </p>
                         </div>
                     </div>

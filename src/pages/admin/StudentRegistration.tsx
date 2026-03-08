@@ -206,7 +206,7 @@ export default function StudentRegistration() {
     const handleNext = (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        const calculatedSala = getSalaBySerie(formData.serie);
+        const calculatedSala = getSalaBySerie(formData.serie, formData.turma);
 
         // Retrieve fullTurma from original sessionStorage to preserve it
         const originalData = JSON.parse(sessionStorage.getItem('temp_student_data') || '{}');

@@ -376,22 +376,26 @@ export default function AdminQRGenerator() {
                     #qr-card-printable .h-12 { height: 8mm !important; }
 
                     /* Fix for info boxes (CPF, Code, Validity) */
-                    #qr-card-printable .grid-cols-3 {
+                    #qr-card-printable .grid-cols-3,
+                    #qr-card-printable .grid-cols-1.sm\:grid-cols-3 {
                         display: grid !important;
                         grid-template-columns: repeat(3, 1fr) !important;
                         gap: 2mm !important;
                     }
-                    #qr-card-printable .grid-cols-3 > div {
+                    #qr-card-printable .grid-cols-3 > div,
+                    #qr-card-printable .val-box {
                         padding: 2mm 1.5mm !important;
                         border-radius: 4mm !important;
                     }
-                    #qr-card-printable .grid-cols-3 p:first-child {
+                    #qr-card-printable .grid-cols-3 p:first-child,
+                    #qr-card-printable .val-box p:first-child {
                         font-size: 8px !important;
                         margin-bottom: 1mm !important;
                     }
                     #qr-card-printable .grid-cols-3 p:last-child,
                     #qr-card-printable .grid-cols-3 .text-sm,
-                    #qr-card-printable .grid-cols-3 .text-base {
+                    #qr-card-printable .grid-cols-3 .text-base,
+                    #qr-card-printable .val-box p:last-child {
                         font-size: 10px !important;
                         letter-spacing: normal !important;
                     }
@@ -532,7 +536,7 @@ export default function AdminQRGenerator() {
                                                     <p className="text-[10px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
                                                     <p className="text-base font-black text-indigo-700 tracking-widest" style={{ color: '#4338ca' }}>{selectedGuardian.codigo_acesso || '---'}</p>
                                                 </div>
-                                                <div className="p-4 bg-slate-50 rounded-2xl relative group/validity" style={{ backgroundColor: '#f8fafc' }}>
+                                                <div className="p-4 bg-slate-50 rounded-2xl relative group/validity val-box" style={{ backgroundColor: '#f8fafc' }}>
                                                     <p className="text-[10px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Validade</p>
                                                     <div className="flex items-center justify-between gap-2">
                                                         <div className="flex items-center gap-2 text-left">
