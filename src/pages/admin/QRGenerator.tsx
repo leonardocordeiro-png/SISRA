@@ -155,26 +155,31 @@ export default function AdminQRGenerator() {
         if (cardElement && selectedGuardian) {
             setGenerating(true);
             try {
+                // Ensure QR code is appended
                 if (qrRef.current && qrRef.current.innerHTML === '' && qrCode.current) {
                     qrCode.current.append(qrRef.current);
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // --- STEP 1: INJECT OVERRIDE STYLESHEET ---
+                // --- STEP 1: INJECT TEMPORARY CAPTURE STYLES ---
                 const captureStyle = document.createElement('style');
                 captureStyle.id = 'qr-capture-override';
-                captureStyle.textContent = `
-                    #qr-card-printable,
-                    #qr-card-printable *,
-                    #qr-card-printable *::before,
+                captureStyle.innerHTML = `
+                    #qr-card-printable {
+                        border: none !important;
+                        box-shadow: none !important;
+                        outline: none !important;
+                        border-radius: 2.5rem !important;
+                        background-color: #ffffff !important;
+                    }
+                    /* Force everything to have transparent borders and no shadows during capture */
+                    #qr-card-printable *, 
+                    #qr-card-printable *::before, 
                     #qr-card-printable *::after {
                         border-color: transparent !important;
                         border-image: none !important;
                         outline: none !important;
                         box-shadow: none !important;
                         text-shadow: none !important;
-                        text-decoration: none !important;
                     }
                     #qr-card-printable canvas {
                         border: none !important;
@@ -188,8 +193,6 @@ export default function AdminQRGenerator() {
                 document.head.appendChild(captureStyle);
 
                 // --- STEP 2: ALSO PATCH INLINE STYLES (belt-and-suspenders) ---
-                // dom-to-image inlines computed styles; we force transparent on the live DOM
-                // so the computed value IS transparent when dom-to-image reads it.
                 const allElements = [cardElement, ...Array.from(cardElement.querySelectorAll('*'))] as HTMLElement[];
                 const savedStyles = allElements.map(el => el.getAttribute('style'));
 
@@ -204,7 +207,7 @@ export default function AdminQRGenerator() {
                 });
 
                 // Let browser recalculate
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await new Promise(resolve => setTimeout(resolve, 300));
 
                 const dataUrl = await domtoimage.toPng(cardElement, {
                     bgcolor: '#ffffff',
@@ -248,8 +251,8 @@ export default function AdminQRGenerator() {
         setUploadingPhoto(true);
         try {
             const fileExt = file.name.split('.').pop();
-            const fileName = `${selectedGuardian.id}-${Math.random()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+            const fileName = `${selectedGuardian.id} -${Math.random()}.${fileExt} `;
+            const filePath = `avatars / ${fileName} `;
 
             const { error: uploadError } = await supabase.storage
                 .from('responsaveis')
@@ -317,92 +320,92 @@ export default function AdminQRGenerator() {
                     }
                     body {
                         visibility: hidden;
-                        background: white !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
+                        background: white!important;
+                        -webkit - print - color - adjust: exact!important;
+                        print - color - adjust: exact!important;
                     }
-                    #qr-card-printable, #qr-card-printable * {
+                    #qr - card - printable, #qr - card - printable * {
                         visibility: visible;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                    }
-                    #qr-card-printable {
-                        position: absolute;
-                        left: 10mm;
-                        top: 10mm;
-                        width: 85mm !important;
-                        max-width: 85mm !important;
-                        height: auto !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        border-radius: 6mm !important;
-                        overflow: hidden !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #ffffff !important;
-                    }
-                    /* Header: dark bg with rounded top corners */
-                    #qr-card-printable .print-header {
-                        border-radius: 6mm 6mm 0 0 !important;
-                        background-color: #0f172a !important;
-                        border: none !important;
-                        overflow: hidden !important;
-                    }
-                    /* Footer: light bg with rounded bottom corners */
-                    #qr-card-printable .print-footer {
-                        border-radius: 0 0 6mm 6mm !important;
-                        background-color: #f1f5f9 !important;
-                        border: none !important;
-                        margin-left: 0 !important;
-                        margin-right: 0 !important;
-                        margin-bottom: 0 !important;
-                        padding: 3mm 5mm !important;
-                    }
-                    /* Force all borders transparent in print */
-                    #qr-card-printable *,
-                    #qr-card-printable *::before,
-                    #qr-card-printable *::after {
-                        border-color: transparent !important;
-                        box-shadow: none !important;
-                    }
-                    #qr-card-printable .p-10 { padding: 5mm !important; }
-                    #qr-card-printable .px-10 { padding-left: 5mm !important; padding-right: 5mm !important; }
-                    #qr-card-printable .py-8 { padding-top: 4mm !important; padding-bottom: 4mm !important; }
-                    #qr-card-printable .text-2xl { font-size: 1.25rem !important; }
-                    #qr-card-printable .text-3xl { font-size: 1.5rem !important; }
-                    #qr-card-printable .w-16 { width: 12mm !important; height: 12mm !important; }
-                    #qr-card-printable .h-16 { height: 12mm !important; }
-                    #qr-card-printable .w-12 { width: 8mm !important; height: 8mm !important; }
-                    #qr-card-printable .h-12 { height: 8mm !important; }
-
-                    /* Fix for info boxes (CPF, Code, Validity) */
-                    #qr-card-printable .grid-cols-3,
-                    #qr-card-printable .grid-cols-1.sm\:grid-cols-3 {
-                        display: grid !important;
-                        grid-template-columns: repeat(3, 1fr) !important;
-                        gap: 2mm !important;
-                    }
-                    #qr-card-printable .grid-cols-3 > div,
-                    #qr-card-printable .val-box {
-                        padding: 2mm 1.5mm !important;
-                        border-radius: 4mm !important;
-                    }
-                    #qr-card-printable .grid-cols-3 p:first-child,
-                    #qr-card-printable .val-box p:first-child {
-                        font-size: 8px !important;
-                        margin-bottom: 1mm !important;
-                    }
-                    #qr-card-printable .grid-cols-3 p:last-child,
-                    #qr-card-printable .grid-cols-3 .text-sm,
-                    #qr-card-printable .grid-cols-3 .text-base,
-                    #qr-card-printable .val-box p:last-child {
-                        font-size: 10px !important;
-                        letter-spacing: normal !important;
-                    }
-                    
-                    .no-print { display: none !important; }
+                        - webkit - print - color - adjust: exact!important;
+                    print - color - adjust: exact!important;
                 }
-                `}
+                #qr - card - printable {
+                    position: absolute;
+                    left: 10mm;
+                    top: 10mm;
+                    width: 85mm!important;
+                    max - width: 85mm!important;
+                    height: auto!important;
+                    box - shadow: none!important;
+                    border: none!important;
+                    border - radius: 6mm!important;
+                    overflow: hidden!important;
+                    margin: 0!important;
+                    padding: 0!important;
+                    background: #ffffff!important;
+                }
+                /* Header: dark bg with rounded top corners */
+                #qr - card - printable.print - header {
+                    border - radius: 6mm 6mm 0 0!important;
+                    background - color: #0f172a!important;
+                    border: none!important;
+                    overflow: hidden!important;
+                }
+                /* Footer: light bg with rounded bottom corners */
+                #qr - card - printable.print - footer {
+                    border - radius: 0 0 6mm 6mm!important;
+                    background - color: #f1f5f9!important;
+                    border: none!important;
+                    margin - left: 0!important;
+                    margin - right: 0!important;
+                    margin - bottom: 0!important;
+                    padding: 3mm 5mm!important;
+                }
+                /* Force all borders transparent in print */
+                #qr - card - printable *,
+                    #qr - card - printable *:: before,
+                        #qr - card - printable *::after {
+                    border - color: transparent!important;
+                    box - shadow: none!important;
+                }
+                #qr - card - printable.p - 10 { padding: 5mm!important; }
+                #qr - card - printable.px - 10 { padding - left: 5mm!important; padding - right: 5mm!important; }
+                #qr - card - printable.py - 8 { padding - top: 4mm!important; padding - bottom: 4mm!important; }
+                #qr - card - printable.text - 2xl { font - size: 1.25rem!important; }
+                #qr - card - printable.text - 3xl { font - size: 1.5rem!important; }
+                #qr - card - printable.w - 16 { width: 12mm!important; height: 12mm!important; }
+                #qr - card - printable.h - 16 { height: 12mm!important; }
+                #qr - card - printable.w - 12 { width: 8mm!important; height: 8mm!important; }
+                #qr - card - printable.h - 12 { height: 8mm!important; }
+
+                /* Fix for info boxes (CPF, Code, Validity) */
+                #qr - card - printable.grid - cols - 3,
+                    #qr - card - printable.grid - cols - 1.sm\: grid - cols - 3 {
+                    display: grid!important;
+                    grid - template - columns: repeat(3, 1fr)!important;
+                    gap: 2mm!important;
+                }
+                #qr - card - printable.grid - cols - 3 > div,
+                    #qr - card - printable.val - box {
+                    padding: 2mm 1.5mm!important;
+                    border - radius: 4mm!important;
+                }
+                #qr - card - printable.grid - cols - 3 p: first - child,
+                    #qr - card - printable.val - box p: first - child {
+                    font - size: 8px!important;
+                    margin - bottom: 1mm!important;
+                }
+                #qr - card - printable.grid - cols - 3 p: last - child,
+                    #qr - card - printable.grid - cols - 3 .text - sm,
+                    #qr - card - printable.grid - cols - 3 .text - base,
+                    #qr - card - printable.val - box p: last - child {
+                    font - size: 10px!important;
+                    letter - spacing: normal!important;
+                }
+                    
+                    .no - print { display: none!important; }
+}
+`}
             </style>
 
             <div className="max-w-4xl mx-auto">
@@ -442,13 +445,13 @@ export default function AdminQRGenerator() {
                                     <button
                                         key={g.id}
                                         onClick={() => selectGuardian(g)}
-                                        className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${selectedGuardian?.id === g.id ? 'border-emerald-500 bg-emerald-50' : 'border-transparent bg-white hover:border-slate-200'}`}
+                                        className={`w - full text - left p - 4 rounded - 2xl border - 2 transition - all flex items - center justify - between group ${selectedGuardian?.id === g.id ? 'border-emerald-500 bg-emerald-50' : 'border-transparent bg-white hover:border-slate-200'} `}
                                     >
                                         <div>
                                             <p className="font-bold text-slate-900 uppercase italic tracking-tight">{g.nome_completo}</p>
                                             <p className="text-xs text-slate-500 font-medium">{g.cpf}</p>
                                         </div>
-                                        <QrCode className={`w-5 h-5 ${selectedGuardian?.id === g.id ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400'}`} />
+                                        <QrCode className={`w - 5 h - 5 ${selectedGuardian?.id === g.id ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400'} `} />
                                     </button>
                                 ))
                             ) : searchTerm && !loading && (

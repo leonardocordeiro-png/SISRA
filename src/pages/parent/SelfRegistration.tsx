@@ -367,11 +367,57 @@ export default function SelfRegistration() {
         if (cardElement && lastRegisteredGuardian) {
             setLoading(true);
             try {
+                // Ensure QR code is appended
                 if (qrRef.current && qrRef.current.innerHTML === '' && qrCode.current) {
                     qrCode.current.append(qrRef.current);
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // --- STEP 1: INJECT TEMPORARY CAPTURE STYLES ---
+                const captureStyle = document.createElement('style');
+                captureStyle.id = 'qr-capture-override';
+                captureStyle.innerHTML = `
+                    #qr-card-printable {
+                        border: none !important;
+                        box-shadow: none !important;
+                        outline: none !important;
+                        border-radius: 2.5rem !important;
+                        background-color: #ffffff !important;
+                    }
+                    /* Force everything to have transparent borders and no shadows during capture */
+                    #qr-card-printable *, 
+                    #qr-card-printable *::before, 
+                    #qr-card-printable *::after {
+                        border-color: transparent !important;
+                        border-image: none !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                        text-shadow: none !important;
+                    }
+                    #qr-card-printable canvas {
+                        border: none !important;
+                        outline: none !important;
+                    }
+                    #qr-card-printable .no-print {
+                        display: none !important;
+                    }
+                `;
+                document.head.appendChild(captureStyle);
+
+                // --- STEP 2: INLINE STYLE PATCHING (belt-and-suspenders) ---
+                const allElements = [cardElement, ...Array.from(cardElement.querySelectorAll('*'))] as HTMLElement[];
+                const savedStyles = allElements.map(el => el.getAttribute('style'));
+
+                allElements.forEach(el => {
+                    el.style.borderColor = 'transparent';
+                    el.style.outline = 'none';
+                    el.style.boxShadow = 'none';
+                    if (el.tagName === 'CANVAS') {
+                        el.style.border = 'none';
+                    }
+                });
+
+                // Let browser recalculate
+                await new Promise(resolve => setTimeout(resolve, 300));
 
                 const dataUrl = await domtoimage.toPng(cardElement, {
                     bgcolor: '#ffffff',
@@ -383,13 +429,26 @@ export default function SelfRegistration() {
                     }
                 });
 
+                // --- STEP 3: RESTORE EVERYTHING ---
+                captureStyle.remove();
+                allElements.forEach((el, i) => {
+                    if (savedStyles[i] !== null) {
+                        el.setAttribute('style', savedStyles[i]!);
+                    } else {
+                        el.removeAttribute('style');
+                    }
+                });
+
                 const link = document.createElement('a');
                 link.download = `cartao-qr-${lastRegisteredGuardian.nome_completo.toLowerCase().replace(/\s+/g, '-')}.png`;
                 link.href = dataUrl;
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
                 toast.success('Sucesso', 'Download iniciado!');
             } catch (err) {
                 console.error('Error downloading QR:', err);
+                document.getElementById('qr-capture-override')?.remove();
                 toast.error('Erro ao baixar', 'Tente tirar um print da tela.');
             } finally {
                 setLoading(false);

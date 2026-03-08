@@ -139,22 +139,26 @@ export default function ParentQRCard() {
                     qrCode.current.append(qrRef.current);
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // --- STEP 1: INJECT OVERRIDE STYLESHEET ---
+                // --- STEP 1: INJECT TEMPORARY CAPTURE STYLES ---
                 const captureStyle = document.createElement('style');
                 captureStyle.id = 'qr-capture-override';
-                captureStyle.textContent = `
-                    #qr-card-printable,
-                    #qr-card-printable *,
-                    #qr-card-printable *::before,
+                captureStyle.innerHTML = `
+                    #qr-card-printable {
+                        border: none !important;
+                        box-shadow: none !important;
+                        outline: none !important;
+                        border-radius: 2.5rem !important;
+                        background-color: #ffffff !important;
+                    }
+                    /* Force everything to have transparent borders and no shadows during capture */
+                    #qr-card-printable *, 
+                    #qr-card-printable *::before, 
                     #qr-card-printable *::after {
                         border-color: transparent !important;
                         border-image: none !important;
                         outline: none !important;
                         box-shadow: none !important;
                         text-shadow: none !important;
-                        text-decoration: none !important;
                     }
                     #qr-card-printable canvas {
                         border: none !important;
@@ -181,7 +185,7 @@ export default function ParentQRCard() {
                 });
 
                 // Let browser recalculate
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await new Promise(resolve => setTimeout(resolve, 300));
 
                 const dataUrl = await domtoimage.toPng(cardElement, {
                     bgcolor: '#ffffff',
