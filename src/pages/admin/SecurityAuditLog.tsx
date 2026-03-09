@@ -45,10 +45,7 @@ export default function SecurityAuditLog() {
         try {
             let query = supabase
                 .from('logs_auditoria')
-                .select(`
-                    *,
-                    usuario:usuarios(nome_completo, email)
-                `, { count: 'exact' });
+                .select('*', { count: 'exact' });
 
             if (filterType !== 'all') {
                 query = query.eq('acao', filterType);
