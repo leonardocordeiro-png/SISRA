@@ -18,7 +18,7 @@ type AuditLog = {
     ip_address: string;
     user_agent: string;
     criado_em: string;
-    usuario?: { nome_completo: string; email: string };
+    usuario?: { nome: string; email: string };
 };
 
 export default function SecurityAuditLog() {
@@ -47,7 +47,7 @@ export default function SecurityAuditLog() {
                 .from('logs_auditoria')
                 .select(`
                     *,
-                    usuario:usuarios(nome_completo, email)
+                    usuario:usuarios(nome, email)
                 `, { count: 'exact' });
 
             if (filterType !== 'all') {
@@ -236,10 +236,10 @@ export default function SecurityAuditLog() {
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black uppercase">
-                                                    {log.usuario?.nome_completo?.[0] || 'S'}
+                                                    {log.usuario?.nome?.[0] || 'S'}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1">{log.usuario?.nome_completo || 'Motor do Sistema'}</p>
+                                                    <p className="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1">{log.usuario?.nome || 'Motor do Sistema'}</p>
                                                     <p className="text-[10px] text-slate-400 font-medium leading-none">{log.usuario?.email || 'automated@lasallecheguei.local'}</p>
                                                 </div>
                                             </div>
