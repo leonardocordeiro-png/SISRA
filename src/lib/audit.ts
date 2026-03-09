@@ -40,6 +40,9 @@ export async function logAudit(
     escolaId?: string
 ) {
     try {
+        // Se escolaId não for provido, tentamos usar o padrão
+        const finalEscolaId = escolaId || 'e6328325-1845-420a-b333-87a747953259';
+
         const { error } = await supabase
             .from('logs_auditoria')
             .insert({
@@ -48,15 +51,25 @@ export async function logAudit(
                 registro_id: recordId,
                 detalhes: details,
                 usuario_id: userId,
-                escola_id: escolaId,
-                ip_address: '0.0.0.0', // Idealmente capturado pelo backend/edge function no Supabase
+                escola_id: finalEscolaId,
+                ip_address: '0.0.0.0',
                 user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Server-side'
             });
 
         if (error) {
-            console.error('Audit Log Error:', error);
+            // Error 42501 is RLS violation, we expect this until DB policy is fixed
+            if (error.code === '42501') {
+                console.warn(`[Audit] Permissão negada (RLS) para ação: ${action}. Verifique as políticas da tabela 'logs_auditoria'.`);
+            } else {
+                console.error('[Audit] Erro ao registrar log:', error);
+            }
+        } else {
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[Audit] Evento registrado: ${action} em ${table || 'sistema'}`);
+            }
         }
     } catch (err) {
-        console.error('Failed to log audit event:', err);
+        // Silently catch to prevent app crashes if logging fails
+        console.warn('[Audit] Falha crítica no subsistema de auditoria:', err);
     }
 }

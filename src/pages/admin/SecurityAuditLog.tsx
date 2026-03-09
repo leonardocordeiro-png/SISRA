@@ -26,6 +26,7 @@ export default function SecurityAuditLog() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all');
+    const [error, setError] = useState<string | null>(null);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -40,6 +41,7 @@ export default function SecurityAuditLog() {
 
     const fetchLogs = async () => {
         setLoading(true);
+        setError(null);
         try {
             let query = supabase
                 .from('logs_auditoria')
@@ -66,8 +68,13 @@ export default function SecurityAuditLog() {
             if (error) throw error;
             setLogs(data || []);
             setTotalCount(count || 0);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Erro ao buscar logs:', err);
+            if (err.code === '42501') {
+                setError('Permissão negada (RLS). As políticas de segurança do banco de dados precisam ser ajustadas.');
+            } else {
+                setError('Ocorreu um erro ao carregar os registros de auditoria.');
+            }
         } finally {
             setLoading(false);
         }
@@ -135,6 +142,16 @@ export default function SecurityAuditLog() {
 
             <main className="max-w-7xl mx-auto px-6 py-8">
                 <NavigationControls />
+
+                {error && (
+                    <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-4 animate-in slide-in-from-top-2">
+                        <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-sm font-bold text-rose-900 mb-1 uppercase tracking-tight">Falha na Sincronização de Auditoria</h4>
+                            <p className="text-xs text-rose-700 font-medium leading-relaxed">{error}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Stats Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 mt-6">
