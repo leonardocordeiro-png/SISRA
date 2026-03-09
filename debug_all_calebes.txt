@@ -1,0 +1,30 @@
+=== SEARCHING FOR ALL STUDENTS NAMED CALEBE ===
+[
+  {
+    "id": "249fcc3c-ab8b-448e-a594-7cbaec7aa157",
+    "escola_id": "e6328325-1845-420a-b333-87a747953259",
+    "matricula": "24312675",
+    "nome_completo": "Calebe de Carvalho Cordeiro",
+    "foto_url": null,
+    "turma": "5º Ano - Ensino Fundamental I (152M)",
+    "sala": "Sala 104",
+    "ativo": true,
+    "observacoes": null,
+    "criado_em": "2026-03-06T03:31:17.633656+00:00",
+    "atualizado_em": "2026-03-06T03:31:17.633656+00:00",
+    "config_seguranca": {},
+    "data_nascimento": null
+  }
+]
+
+--- Links for Calebe de Carvalho Cordeiro (ID: 249fcc3c-ab8b-448e-a594-7cbaec7aa157) ---
+AR: [
+  {
+    "responsavel_id": "fb4c816d-9f22-4525-ad61-1e0118c21f7d",
+    "responsaveis": {
+      "cpf": "14950120182",
+      "nome_completo": "Antonio Gomes de Carvalho"
+    }
+  }
+]
+AUTH: []

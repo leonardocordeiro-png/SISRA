@@ -31,29 +31,32 @@ export default function TotemSearch() {
         // Security: only search by full CPF (11 digits)
         if (cleanCpf.length !== 11) { setResults([]); return; }
 
+        // Build both CPF formats to handle inconsistent storage
+        const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
         const t = setTimeout(async () => {
             setLoading(true);
             try {
                 let allResults: Student[] = [];
 
-                // Search by Guardian CPF
+                // Search by Guardian CPF — try both formatted and unformatted
                 const { data: guardians } = await supabase
                     .from('responsaveis')
                     .select('*')
-                    .eq('cpf', cleanCpf);
+                    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
 
                 if (guardians && guardians.length > 0) {
-                    const guardianIds = guardians.map(g => g.id);
+                    const guardianIds = guardians.map((g: any) => g.id);
 
-                    // Query both link tables for redundancy
+                    // Query both link tables for redundancy across ALL guardian IDs
                     const [authsRes, junctionRes] = await Promise.all([
                         supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', guardianIds).eq('ativa', true),
                         supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', guardianIds)
                     ]);
 
                     const studentIds = new Set([
-                        ...(authsRes.data?.map(a => a.aluno_id) || []),
-                        ...(junctionRes.data?.map(j => j.aluno_id) || [])
+                        ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
+                        ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
                     ]);
 
                     if (studentIds.size > 0) {
@@ -64,11 +67,9 @@ export default function TotemSearch() {
 
                         if (cpfStudents) {
                             allResults = cpfStudents;
-                            // Auto-select all students found by CPF as requested
+                            // Auto-select all students found by CPF
                             setSelectedStudents(cpfStudents);
-                            if (guardians && guardians.length > 0) {
-                                setIdentifiedGuardian(guardians[0]);
-                            }
+                            setIdentifiedGuardian(guardians[0]);
                         }
                     }
                 } else {

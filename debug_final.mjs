@@ -1,44 +1,37 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 import fs from 'fs';
 
-dotenv.config();
+const supabase = createClient(
+    'https://dfwlsrmdedbtfqtsbovc.supabase.co',
+    'sb_publishable_sviojNcP8mZX_8MU71L23A_nxL5D4Jn'
+);
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+async function debug() {
+    const lines = [];
+    const log = (...args) => {
+        const line = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+        lines.push(line);
+        console.log(line);
+    };
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+    const aliceId = '2f6a1190-f3ca-4731-8e7e-1232cd0414bb';
+    const calebeId = '249fcc3c-ab8b-448e-a594-7cbaec7aa157';
 
-async function checkTables() {
-    const rid = '167b7a88-c12b-422b-9e80-73174a612292'; // Leonardo Cordeiro
-    const code = '0B4910';
-    const results = {};
+    log('=== ALICE LINKS ===');
+    const { data: aliceJ } = await supabase.from('alunos_responsaveis').select('responsaveis(*)').eq('aluno_id', aliceId);
+    aliceJ?.forEach(r => log(`- AR: ${r.responsaveis.nome_completo} | CPF: ${r.responsaveis.cpf}`));
 
-    results.autorizacoes_leonardo = (await supabase
-        .from('autorizacoes')
-        .select('*')
-        .eq('responsavel_id', rid)).data;
+    const { data: aliceA } = await supabase.from('autorizacoes').select('responsaveis(*)').eq('aluno_id', aliceId);
+    aliceA?.forEach(r => log(`- AU: ${r.responsaveis.nome_completo} | CPF: ${r.responsaveis.cpf}`));
 
-    results.alunos_responsaveis_leonardo = (await supabase
-        .from('alunos_responsaveis')
-        .select('*')
-        .eq('responsavel_id', rid)).data;
+    log('\n=== CALEBE LINKS ===');
+    const { data: calebeJ } = await supabase.from('alunos_responsaveis').select('responsaveis(*)').eq('aluno_id', calebeId);
+    calebeJ?.forEach(r => log(`- AR: ${r.responsaveis.nome_completo} | CPF: ${r.responsaveis.cpf}`));
 
-    results.responsible_with_code = (await supabase
-        .from('responsaveis')
-        .select('id, nome_completo, codigo_acesso')
-        .eq('codigo_acesso', code)).data;
+    const { data: calebeA } = await supabase.from('autorizacoes').select('responsaveis(*)').eq('aluno_id', calebeId);
+    calebeA?.forEach(r => log(`- AU: ${r.responsaveis.nome_completo} | CPF: ${r.responsaveis.cpf}`));
 
-    if (results.responsible_with_code && results.responsible_with_code.length > 0) {
-        results.active_auths_for_code = (await supabase
-            .from('autorizacoes')
-            .select('*, alunos:aluno_id (*)')
-            .eq('responsavel_id', results.responsible_with_code[0].id)
-            .eq('ativa', true)).data;
-    }
-
-    fs.writeFileSync('debug_results.json', JSON.stringify(results, null, 2));
-    console.log('Results saved to debug_results.json');
+    fs.writeFileSync('debug_final_check.txt', lines.join('\n'));
 }
 
-checkTables();
+debug();

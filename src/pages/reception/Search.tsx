@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import { useAuth } from '../../context/AuthContext';
 import NavigationControls from '../../components/NavigationControls';
 import WithdrawalQueue from '../../components/reception/WithdrawalQueue';
@@ -131,14 +132,16 @@ export default function ReceptionSearch() {
             try {
                 // If it looks like a CPF, try identifying guardian first
                 if (isCpfLookup) {
-                    const { data: resp } = await supabase
+                    const formattedCpf = cleanQuery.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
+                    const { data: guardians } = await supabase
                         .from('responsaveis')
                         .select('id, nome_completo, foto_url')
-                        .eq('cpf', cleanQuery)
-                        .maybeSingle();
+                        .or(`cpf.eq.${cleanQuery},cpf.eq.${formattedCpf}`);
 
-                    if (resp) {
-                        await resolveByResponsavelId(resp.id, resp.nome_completo);
+                    if (guardians && guardians.length > 0) {
+                        const guardianIds = guardians.map((g: any) => g.id);
+                        await resolveByMultipleIds(guardianIds, guardians[0].nome_completo, guardians[0]);
                         setLoading(false);
                         return;
                     }
@@ -215,7 +218,7 @@ export default function ReceptionSearch() {
                     responsavel_id: selectedGuardianId || null,
                     recepcionista_id: user.id,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'ROTINA',
+                    tipo_solicitacao: 'RECEPCAO',
                     // Guardian is physically present at reception — mark as arrived immediately
                     status_geofence: 'CHEGOU'
                 };
@@ -227,8 +230,21 @@ export default function ReceptionSearch() {
 
             if (error) throw error;
 
+            // Log individual audit events for each student requested (consistent with Totem)
             const selectedGuardianLocal = guardians.find(g => g.id === selectedGuardianId);
             const guardianName = selectedGuardianLocal?.nome_completo;
+
+            for (const id of studentIds) {
+                const student = relatedStudents.find(s => s.id === id) || (selectedStudent?.id === id ? selectedStudent : null);
+                await logAudit('SOLICITACAO_RETIRADA', 'solicitacoes_retirada', undefined, {
+                    aluno_nome: student?.nome_completo,
+                    aluno_id: id,
+                    responsavel_nome: guardianName,
+                    responsavel_id: selectedGuardianId,
+                    tipo: 'RECEPCAO'
+                }, undefined, userProfile?.escola_id || undefined);
+            }
+
             toast.success(
                 studentIds.length === 1 ? 'Aluno chamado!' : `${studentIds.length} alunos chamados!`,
                 guardianName ? `Responsável: ${guardianName}` : 'Notificação enviada às salas.'
@@ -299,23 +315,39 @@ export default function ReceptionSearch() {
         }
     };
 
-    // Shared logic: resolve students linked to a responsavel_id
-    const resolveByResponsavelId = async (responsavelId: string, guardianName?: string) => {
-        const { data: auths, error } = await supabase
-            .from('autorizacoes').select('alunos:aluno_id (*)')
-            .eq('responsavel_id', responsavelId).eq('ativa', true);
+    // New robust logic: resolve students linked to MULTIPLE responsavel IDs (e.g. same CPF duplicate records)
+    const resolveByMultipleIds = async (responsavelIds: string[], guardianName?: string, primaryGuardian?: any) => {
+        // Step 1: collect aluno_ids from both link tables for ALL responsavel IDs
+        const [authsRes, junctionRes] = await Promise.all([
+            supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', responsavelIds).eq('ativa', true),
+            supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', responsavelIds)
+        ]);
 
-        if (error) throw error;
-        if (!auths || auths.length === 0) throw new Error('Nenhum aluno vinculado a este responsável.');
+        const alunoIds = new Set<string>([
+            ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
+            ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
+        ]);
 
-        const foundStudents = auths.map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos).filter((s): s is Student => s !== null);
+        if (alunoIds.size === 0) throw new Error('Nenhum aluno vinculado a este responsável.');
 
-        // Fetch guardian info for the list
-        const { data: guard } = await supabase
-            .from('responsaveis')
-            .select('id, nome_completo, foto_url')
-            .eq('id', responsavelId)
-            .single();
+        // Step 2: fetch full student records
+        const { data: alunosData } = await supabase
+            .from('alunos')
+            .select('*')
+            .in('id', Array.from(alunoIds));
+
+        if (!alunosData || alunosData.length === 0) throw new Error('Nenhum aluno vinculado.');
+
+        // Fetch primary guardian info if not provided
+        let guard = primaryGuardian;
+        if (!guard) {
+            const { data } = await supabase
+                .from('responsaveis')
+                .select('id, nome_completo, foto_url')
+                .eq('id', responsavelIds[0])
+                .single();
+            guard = data;
+        }
 
         if (guard) {
             setGuardians([{
@@ -326,15 +358,38 @@ export default function ReceptionSearch() {
             }]);
         }
 
-        setSelectedGuardianId(responsavelId);
-        setRelatedStudents(foundStudents);
-        setSelectedStudentIds(new Set(foundStudents.map(s => s.id)));
+        setSelectedGuardianId(guard?.id || responsavelIds[0]);
+        setRelatedStudents(alunosData);
+        setSelectedStudentIds(new Set(alunosData.map(s => s.id)));
         setResults([]);
         setQuery('');
 
         if (guardianName || guard?.nome_completo) {
             toast.success('Responsável identificado', guardianName || guard?.nome_completo);
         }
+    };
+
+    // Keep compatibility for single ID calls (Code, QR, etc.)
+    const resolveByResponsavelId = async (responsavelId: string, guardianName?: string) => {
+        // Fetch guardian to check for same-CPF duplicates
+        const { data: guardian } = await supabase
+            .from('responsaveis')
+            .select('id, cpf, nome_completo, foto_url')
+            .eq('id', responsavelId)
+            .single();
+
+        let responsavelIds = [responsavelId];
+        if (guardian?.cpf) {
+            const cleanCpf = guardian.cpf.replace(/\D/g, '');
+            const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            const { data: sames } = await supabase
+                .from('responsaveis')
+                .select('id')
+                .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
+            if (sames) responsavelIds = [...new Set([responsavelId, ...sames.map((s: any) => s.id)])];
+        }
+
+        await resolveByMultipleIds(responsavelIds, guardianName || guardian?.nome_completo, guardian);
     };
 
     const handleSelectStudent = (student: Student) => {

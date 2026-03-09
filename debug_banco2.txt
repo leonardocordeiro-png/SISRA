@@ -1,0 +1,10 @@
+--- LOGS_AUDITORIA: OK | rows: 0 ---
+
+--- SOLICITACOES_RETIRADA: OK | rows: 0 ---
+
+--- ALUNOS COM VÍNCULO EM alunos_responsaveis: 2 ---
+
+--- CPF eq "005.162.083-90": 1 ---
+  f26cc3da-8719-4d42-9d11-63abe5c6d45a | Leonardo Dyego Santos Cordeiro
+--- CPF eq "00516208390": 1 ---
+  44902a7b-6a73-4b16-ab51-fd5a6468c6dc | Leonardo Dyego Santos Cordeiro

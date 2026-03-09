@@ -10,8 +10,8 @@ export default function TotemIdentify() {
         {
             id: 'busca',
             icon: Search,
-            title: 'Buscar por Nome',
-            description: 'Digite o nome do seu filho para localizar na lista de alunos.',
+            title: 'Buscar por CPF',
+            description: 'Digite o CPF do responsável para localizar os alunos vinculados.',
             color: 'emerald',
             path: '/totem/busca',
         },

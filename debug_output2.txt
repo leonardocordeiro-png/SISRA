@@ -1,0 +1,24 @@
+--- RESPONSÁVEIS ---
+codigo="QCM763" | len=6 | nome="Leonardo Dyego Santos Cordeiro" | id=f26cc3da-8719-4d42-9d11-63abe5c6d45a
+codigo="UVF528" | len=6 | nome="Leonardo Dyego Santos Cordeiro" | id=44902a7b-6a73-4b16-ab51-fd5a6468c6dc
+codigo="KZD564" | len=6 | nome="Andréa Silva de Carvalho Cordeiro" | id=90f8c53d-c704-4704-b3db-9d0472e12256
+codigo="YME046" | len=6 | nome="Antonio Gomes de Carvalho" | id=fb4c816d-9f22-4525-ad61-1e0118c21f7d
+
+--- AUTORIZACOES total: 0 ---
+
+--- ALUNOS_RESPONSAVEIS total: 3 ---
+  resp=44902a7b-6a73-4b16-ab51-fd5a6468c6dc | aluno=2f6a1190-f3ca-4731-8e7e-1232cd0414bb
+  resp=90f8c53d-c704-4704-b3db-9d0472e12256 | aluno=2f6a1190-f3ca-4731-8e7e-1232cd0414bb
+  resp=fb4c816d-9f22-4525-ad61-1e0118c21f7d | aluno=249fcc3c-ab8b-448e-a594-7cbaec7aa157
+
+--- ALUNOS (10) ---
+  id=89cfa12a-9615-45c9-b235-fce6c42a921d | nome="Arthur Ludovico Barreto" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=2d140b5c-0de0-4a69-9f1d-d8c6523b993d | nome="Arthur Oliveira Dumont" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=608e418b-3823-4384-a044-e4dd323361e6 | nome="Davi Batista do Lago" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=2b391587-759d-46b9-9768-9ac04ed6b968 | nome="Davi Nascimento Ferreira" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=c505d0ce-7fbb-430c-9723-1797eb240a82 | nome="Elias Passos Fernandes" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=537f0d8c-aac5-46c4-8214-08e4927f0fc0 | nome="Eloah Lubas Cerqueira" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=c696d4ca-96c6-4864-8227-cf9c2ef0ec8e | nome="Gabriel Quintanilha Gervasio" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=fd161ff5-7416-477f-8014-14a42e4249a8 | nome="Gael Alves Braga" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=ed5f1aaf-a1fc-46fb-a23d-0944ba9c5397 | nome="Isabela Ferraz Magalhães" | turma="1º Ano - Ensino Fundamental I (111M)"
+  id=0686c46a-15bb-4a3a-b6ca-34355cd6782c | nome="Jade Maria do Nascimento Silva Katumbila" | turma="1º Ano - Ensino Fundamental I (111M)"

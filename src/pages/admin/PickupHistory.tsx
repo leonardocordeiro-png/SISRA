@@ -4,7 +4,7 @@ import {
     BarChart2, Calendar, Clock, User, Shield, CheckCircle2,
     AlertCircle, Search, Download, TrendingUp,
     TrendingDown, Minus, Filter, Eye, X, AlertTriangle,
-    Activity, FileText, Users, RefreshCw, ArrowLeft, ArrowRight
+    Activity, FileText, Users, RefreshCw, ArrowLeft, ArrowRight, Printer
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
 
@@ -262,6 +262,7 @@ export default function PickupHistoryView() {
     const [pickYear, setPickYear] = useState(() => new Date().getFullYear());
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [methodFilter, setMethodFilter] = useState('all');
     const [detailRecord, setDetailRecord] = useState<PickupRecord | null>(null);
     const [activeView, setActiveView] = useState<'list' | 'analytics'>('list');
     const [page, setPage] = useState(0);
@@ -307,6 +308,9 @@ export default function PickupHistoryView() {
     const filtered = useMemo(() => {
         let r = records;
         if (statusFilter !== 'all') r = r.filter(x => x.status === statusFilter);
+        if (methodFilter !== 'all') {
+            r = r.filter(x => methodFilter === 'TOTEM' ? x.tipo_solicitacao === 'ROTINA' : x.tipo_solicitacao !== 'ROTINA');
+        }
         if (searchTerm.trim()) {
             const s = searchTerm.toLowerCase();
             r = r.filter(x =>
@@ -382,7 +386,7 @@ export default function PickupHistoryView() {
 
     // ── Export CSV ──
     const exportCSV = () => {
-        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Tempo Espera (seg)', 'Observações'];
+        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Método', 'Tempo Espera (seg)', 'Observações'];
         const rows = filtered.map(r => [
             fmtDate(r.horario_solicitacao),
             fmtTime(r.horario_solicitacao),
@@ -394,6 +398,7 @@ export default function PickupHistoryView() {
             r.responsavel?.nome_completo || '',
             r.responsavel?.cpf || '',
             STATUS_PT[r.status] || r.status,
+            r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
             r.tempo_espera_segundos?.toString() || '',
             r.observacoes || '',
         ]);
@@ -451,6 +456,9 @@ export default function PickupHistoryView() {
                         </div>
                         <button onClick={() => fetchRecords(true)} className={`p-2 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all text-slate-400 hover:text-indigo-600 ${refreshing ? 'animate-spin' : ''}`}>
                             <RefreshCw className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200 active:scale-95">
+                            <Printer className="w-4 h-4" /> Imprimir
                         </button>
                         <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
                             <Download className="w-4 h-4" /> Exportar CSV
@@ -712,15 +720,28 @@ export default function PickupHistoryView() {
                                     className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Filter className="w-4 h-4 text-slate-400" />
-                                <div className="flex bg-slate-50 p-1 rounded-xl gap-1">
-                                    {['all', 'LIBERADO', 'CONFIRMADO', 'SOLICITADO', 'CANCELADO'].map(s => (
-                                        <button key={s} onClick={() => { setStatusFilter(s); setPage(0); }}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${statusFilter === s ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                                            {s === 'all' ? 'Todos' : STATUS_PT[s]}
-                                        </button>
-                                    ))}
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Filter className="w-4 h-4 text-slate-400" />
+                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1">
+                                        {['all', 'TOTEM', 'RECEPCAO'].map(m => (
+                                            <button key={m} onClick={() => { setMethodFilter(m); setPage(0); }}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${methodFilter === m ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                                                {m === 'all' ? 'Todos Métodos' : m === 'TOTEM' ? '🖥 Totem' : '🧑‍💼 Recepção'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="h-5 w-px bg-slate-200" />
+                                <div className="flex items-center gap-2">
+                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1">
+                                        {['all', 'LIBERADO', 'CONFIRMADO', 'SOLICITADO', 'CANCELADO'].map(s => (
+                                            <button key={s} onClick={() => { setStatusFilter(s); setPage(0); }}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${statusFilter === s ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                                                {s === 'all' ? 'Todos Status' : STATUS_PT[s]}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -731,7 +752,7 @@ export default function PickupHistoryView() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-200">
-                                            {['Aluno', 'Turma / Sala', 'Responsável', 'Status', 'Solicitado', 'Liberado', 'Espera', ''].map((h, i) => (
+                                            {['Aluno', 'Turma / Sala', 'Responsável', 'Método', 'Status', 'Solicitado', 'Liberado', 'Espera', ''].map((h, i) => (
                                                 <th key={i} className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
@@ -758,6 +779,14 @@ export default function PickupHistoryView() {
                                                 <td className="px-5 py-4">
                                                     <p className="text-xs font-bold text-slate-700">{record.responsavel?.nome_completo || '—'}</p>
                                                     <p className="text-[10px] text-slate-400 font-mono">{record.responsavel?.cpf || ''}</p>
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${record.tipo_solicitacao === 'ROTINA'
+                                                        ? 'bg-violet-50 text-violet-700 border border-violet-200'
+                                                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                        }`}>
+                                                        {record.tipo_solicitacao === 'ROTINA' ? '🖥 Totem' : '🧑‍💼 Recepção'}
+                                                    </span>
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[record.status] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>

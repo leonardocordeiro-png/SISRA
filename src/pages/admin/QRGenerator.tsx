@@ -35,11 +35,19 @@ export default function AdminQRGenerator() {
 
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('responsaveis')
-                .select('*')
-                .or(`nome_completo.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`)
-                .limit(5);
+            const cleanSearch = searchTerm.replace(/\D/g, '');
+            const isCpf = cleanSearch.length === 11;
+            const formattedCpf = isCpf ? cleanSearch.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : null;
+
+            let query = supabase.from('responsaveis').select('*');
+
+            if (isCpf && formattedCpf) {
+                query = query.or(`cpf.eq.${cleanSearch},cpf.eq.${formattedCpf}`);
+            } else {
+                query = query.or(`nome_completo.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
+            }
+
+            const { data, error } = await query.limit(10);
 
             if (error) throw error;
             setGuardians(data || []);

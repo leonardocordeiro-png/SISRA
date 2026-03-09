@@ -29,10 +29,11 @@ export default function TotemCodeEntry() {
         setError(null);
 
         try {
+            // Search code case-insensitively to handle any casing stored in DB
             const { data: resp, error: err } = await supabase
                 .from('responsaveis')
-                .select('id, nome_completo, foto_url')
-                .eq('codigo_acesso', code.toUpperCase())
+                .select('id, nome_completo, foto_url, cpf')
+                .ilike('codigo_acesso', code.trim())
                 .maybeSingle();
 
             if (err || !resp) {
@@ -41,28 +42,44 @@ export default function TotemCodeEntry() {
                 return;
             }
 
-            // Query both tables for links to ensure robustness
+            // Collect all responsavel IDs with same CPF — try both formats (handles duplicate registrations with different CPF formats)
+            let responsavelIds: string[] = [resp.id];
+            if (resp.cpf) {
+                const cleanCpf = resp.cpf.replace(/\D/g, '');
+                const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                const { data: samesCpf } = await supabase
+                    .from('responsaveis')
+                    .select('id')
+                    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
+                if (samesCpf && samesCpf.length > 0) {
+                    responsavelIds = [...new Set([resp.id, ...samesCpf.map((r: any) => r.id)])];
+                }
+            }
+
+            // Step 1: collect aluno_ids from both link tables for ALL responsavel IDs
             const [authsRes, junctionRes] = await Promise.all([
-                supabase.from('autorizacoes').select('alunos:aluno_id (*)').eq('responsavel_id', resp.id).eq('ativa', true),
-                supabase.from('alunos_responsaveis').select('alunos:aluno_id (*)').eq('responsavel_id', resp.id)
+                supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', responsavelIds).eq('ativa', true),
+                supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', responsavelIds)
             ]);
 
-            const authStudents = (authsRes.data || [])
-                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
+            const alunoIds = new Set<string>([
+                ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
+                ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
+            ]);
 
-            const junctionStudents = (junctionRes.data || [])
-                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
+            if (alunoIds.size === 0) {
+                setError('Nenhum aluno vinculado a este código.');
+                setLoading(false);
+                return;
+            }
 
-            const combinedStudents = [...authStudents, ...junctionStudents];
-            const newStudents: Student[] = [];
-            const seenIds = new Set();
+            // Step 2: fetch full student records by IDs
+            const { data: alunosData } = await supabase
+                .from('alunos')
+                .select('*')
+                .in('id', Array.from(alunoIds));
 
-            combinedStudents.forEach((s: any) => {
-                if (s && !seenIds.has(s.id)) {
-                    seenIds.add(s.id);
-                    newStudents.push(s);
-                }
-            });
+            const newStudents: Student[] = alunosData || [];
 
             if (newStudents.length === 0) {
                 setError('Nenhum aluno vinculado a este código.');
@@ -212,16 +229,25 @@ export default function TotemCodeEntry() {
 
                 {/* Right: numpad keyboard */}
                 <div className="flex-1 flex flex-col items-center justify-center px-10 py-8">
-                    {/* Selected List Mini Preview */}
+                    {/* Selected Students Cards */}
                     {selectedStudents.length > 0 && (
-                        <div className="mb-6 flex flex-wrap justify-center gap-2 max-w-[600px]">
+                        <div className="mb-6 flex flex-wrap justify-center gap-3 max-w-[640px]">
                             {selectedStudents.map(s => (
-                                <div key={s.id} className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-full">
-                                    <div className="w-6 h-6 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
-                                        {s.foto_url ? <img src={s.foto_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><UserIcon className="w-3 h-3 text-slate-500" /></div>}
+                                <div key={s.id} className="flex items-center gap-5 px-6 py-4 bg-violet-500/10 border border-violet-500/30 rounded-2xl shadow-lg min-w-[240px]">
+                                    <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-violet-500/40 flex-shrink-0 shadow-md">
+                                        {s.foto_url
+                                            ? <img src={s.foto_url} className="w-full h-full object-cover" />
+                                            : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><UserIcon className="w-7 h-7 text-slate-500" /></div>
+                                        }
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-tight text-white/50">{s.nome_completo.split(' ')[0]}</span>
-                                    <button onClick={() => setSelectedStudents(prev => prev.filter(st => st.id !== s.id))} className="text-rose-500 hover:text-rose-400 ml-1">×</button>
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <span className="text-lg font-black uppercase tracking-tight text-white leading-tight truncate">{s.nome_completo}</span>
+                                        {s.turma && <span className="text-xs font-bold text-violet-400/80 uppercase tracking-wider mt-1 truncate">{s.turma}</span>}
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedStudents(prev => prev.filter(st => st.id !== s.id))}
+                                        className="w-7 h-7 flex items-center justify-center rounded-full bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 hover:text-rose-300 transition-colors flex-shrink-0 text-lg font-black"
+                                    >×</button>
                                 </div>
                             ))}
                         </div>

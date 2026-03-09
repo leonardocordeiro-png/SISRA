@@ -116,34 +116,54 @@ export default function TotemQRScan() {
 
             if (!responsavelId) throw new Error('QR Code não reconhecido ou inválido.');
 
-            const [{ data: guardian }, { data: auths }, { data: junction }] = await Promise.all([
-                supabase.from('responsaveis').select('id, nome_completo, foto_url').eq('id', responsavelId).single(),
-                supabase.from('autorizacoes').select('alunos:aluno_id (*)').eq('responsavel_id', responsavelId).eq('ativa', true),
-                supabase.from('alunos_responsaveis').select('alunos:aluno_id (*)').eq('responsavel_id', responsavelId)
-            ]);
+            // Fetch guardian info
+            const { data: guardian } = await supabase
+                .from('responsaveis')
+                .select('id, nome_completo, foto_url, cpf')
+                .eq('id', responsavelId)
+                .single();
 
             if (!guardian) throw new Error('Responsável não encontrado no sistema.');
 
-            const authStudents = (auths || [])
-                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
-
-            const junctionStudents = (junction || [])
-                .map((a: any) => Array.isArray(a.alunos) ? a.alunos[0] : a.alunos);
-
-            const combinedStudents = [...authStudents, ...junctionStudents];
-            const newStudents: Student[] = [];
-            const seenIds = new Set();
-
-            combinedStudents.forEach((s: any) => {
-                if (s && !seenIds.has(s.id)) {
-                    seenIds.add(s.id);
-                    newStudents.push(s);
+            // Collect all responsavel IDs with same CPF — try both formats (handles duplicate registrations with different CPF formats)
+            let responsavelIds: string[] = [responsavelId];
+            if ((guardian as any).cpf) {
+                const rawCpf: string = (guardian as any).cpf;
+                const cleanCpf = rawCpf.replace(/\D/g, '');
+                const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                const { data: samesCpf } = await supabase
+                    .from('responsaveis')
+                    .select('id')
+                    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
+                if (samesCpf && samesCpf.length > 0) {
+                    responsavelIds = [...new Set([responsavelId, ...samesCpf.map((r: any) => r.id)])];
                 }
-            });
+            }
+
+            // Step 1: collect aluno_ids from both link tables for ALL responsavel IDs
+            const [authsRes, junctionRes] = await Promise.all([
+                supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', responsavelIds).eq('ativa', true),
+                supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', responsavelIds)
+            ]);
+
+            const alunoIds = new Set<string>([
+                ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
+                ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
+            ]);
+
+            if (alunoIds.size === 0) throw new Error('Nenhum aluno vinculado a este QR Code.');
+
+            // Step 2: fetch full student records by IDs
+            const { data: alunosData } = await supabase
+                .from('alunos')
+                .select('*')
+                .in('id', Array.from(alunoIds));
+
+            const newStudents: Student[] = alunosData || [];
 
             if (newStudents.length === 0) throw new Error('Nenhum aluno vinculado a este QR Code.');
 
-            // Merge avoiding duplicates
+            // Merge avoiding duplicates with previously selected students
             const merged = [...selectedStudents];
             newStudents.forEach(ns => {
                 if (!merged.some(ms => ms.id === ns.id)) merged.push(ns);
