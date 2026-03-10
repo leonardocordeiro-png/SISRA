@@ -55,7 +55,9 @@ export default function SecurityAuditLog() {
             }
 
             if (searchTerm) {
-                query = query.or(`acao.ilike.%${searchTerm}%,tabela_afetada.ilike.%${searchTerm}%`);
+                // Sanitize: escape special ilike characters to prevent injection
+                const safeTerm = searchTerm.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
+                query = query.or(`acao.ilike.%${safeTerm}%,tabela_afetada.ilike.%${safeTerm}%`);
             }
 
             const from = (currentPage - 1) * pageSize;

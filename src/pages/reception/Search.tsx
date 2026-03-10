@@ -132,12 +132,10 @@ export default function ReceptionSearch() {
             try {
                 // If it looks like a CPF, try identifying guardian first
                 if (isCpfLookup) {
-                    const formattedCpf = cleanQuery.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-
                     const { data: guardians } = await supabase
                         .from('responsaveis')
                         .select('id, nome_completo, foto_url')
-                        .or(`cpf.eq.${cleanQuery},cpf.eq.${formattedCpf}`);
+                        .eq('cpf', cleanQuery);
 
                     if (guardians && guardians.length > 0) {
                         const guardianIds = guardians.map((g: any) => g.id);
@@ -148,13 +146,15 @@ export default function ReceptionSearch() {
                 }
 
                 // Regular search logic
+                // Sanitize: escape special ilike characters to prevent injection
+                const safeQuery = query.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
                 const { data: directStudents } = await supabase
-                    .from('alunos').select('*').ilike('nome_completo', `%${query}%`).limit(5);
+                    .from('alunos').select('*').ilike('nome_completo', `%${safeQuery}%`).limit(5);
 
                 const { data: auths } = await supabase
                     .from('autorizacoes')
                     .select('alunos:aluno_id (*)')
-                    .or(`nome_completo.ilike.%${query}%,cpf.ilike.%${query}%`, { foreignTable: 'responsaveis' })
+                    .or(`nome_completo.ilike.%${safeQuery}%,cpf.ilike.%${safeQuery}%`, { foreignTable: 'responsaveis' })
                     .eq('ativa', true).limit(10);
 
                 let combined: Student[] = directStudents || [];
@@ -381,11 +381,10 @@ export default function ReceptionSearch() {
         let responsavelIds = [responsavelId];
         if (guardian?.cpf) {
             const cleanCpf = guardian.cpf.replace(/\D/g, '');
-            const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
             const { data: sames } = await supabase
                 .from('responsaveis')
                 .select('id')
-                .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
+                .eq('cpf', cleanCpf);
             if (sames) responsavelIds = [...new Set([responsavelId, ...sames.map((s: any) => s.id)])];
         }
 

@@ -1,7 +1,0 @@
-=== SEARCHING ALL GUARDIANS WITH CPF 00516208390 OR 005.162.083-90 ===
-Found 2 guardians.
-- ID: f26cc3da-8719-4d42-9d11-63abe5c6d45a | Name: Leonardo Dyego Santos Cordeiro | CPF: 005.162.083-90
-- ID: 44902a7b-6a73-4b16-ab51-fd5a6468c6dc | Name: Leonardo Dyego Santos Cordeiro | CPF: 00516208390
-
---- Checking ALL links for these IDs ---
-AR: Resp ID 44902a7b-6a73-4b16-ab51-fd5a6468c6dc -> Aluno: Alice de Carvalho Cordeiro (2f6a1190-f3ca-4731-8e7e-1232cd0414bb)

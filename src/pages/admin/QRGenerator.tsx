@@ -37,16 +37,15 @@ export default function AdminQRGenerator() {
         try {
             const cleanSearch = searchTerm.replace(/\D/g, '');
             const isCpf = cleanSearch.length === 11;
-            const formattedCpf = isCpf ? cleanSearch.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : null;
+            // Sanitize: escape special ilike characters to prevent injection
+            const safeTerm = searchTerm.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
 
             let query = supabase.from('responsaveis').select('*');
-
-            if (isCpf && formattedCpf) {
-                query = query.or(`cpf.eq.${cleanSearch},cpf.eq.${formattedCpf}`);
+            if (isCpf) {
+                query = query.eq('cpf', cleanSearch);
             } else {
-                query = query.or(`nome_completo.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
+                query = query.or(`nome_completo.ilike.%${safeTerm}%,cpf.ilike.%${safeTerm}%`);
             }
-
             const { data, error } = await query.limit(10);
 
             if (error) throw error;
@@ -102,7 +101,6 @@ export default function AdminQRGenerator() {
 
             // Create or Reactivate
             if (!finalCard) {
-                console.log('[QRGen] No active card found, searching for any existing card for responsavel:', guardian.id);
                 // Check if any card exists (even inactive) to reuse QR code
                 const { data: anyCard, error: anyCardError } = await supabase
                     .from('parent_qr_cards')
@@ -112,7 +110,7 @@ export default function AdminQRGenerator() {
                     .limit(1)
                     .maybeSingle();
 
-                if (anyCardError) {
+                if (anyCardError && import.meta.env.DEV) {
                     console.error('[QRGen] Error searching for any existing card:', anyCardError);
                 }
 
@@ -120,7 +118,6 @@ export default function AdminQRGenerator() {
                 const expiresAt = new Date();
                 expiresAt.setMonth(expiresAt.getMonth() + 12); // Extending to 12 months as per standard
 
-                console.log('[QRGen] Inserting/Reactivating card with QR:', newQRCodeBase);
                 const { data: newCard, error: insertError } = await supabase
                     .from('parent_qr_cards')
                     .insert({
@@ -133,7 +130,6 @@ export default function AdminQRGenerator() {
                     .maybeSingle(); // maybeSingle instead of single() to handle RLS visibility issues gracefully
 
                 if (insertError) {
-                    console.error('[QRGen] Insert error:', insertError);
                     throw insertError;
                 }
                 finalCard = newCard;

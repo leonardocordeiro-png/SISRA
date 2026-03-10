@@ -27,3 +27,44 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# Dados sensíveis e arquivos de debug — nunca versionar
+db-state.json
+db_audit.json
+debug_results.json
+all_errors.json
+all_errors_utf8.json
+all_students.json
+all_students.txt
+cordeiro_students.json
+
+# Arquivos de saída de debug
+*.txt
+!README.md
+
+# Scripts de debug/manutenção com dados sensíveis
+debug_*.mjs
+debug_*.txt
+audit-db.mjs
+check-all.mjs
+check-db.mjs
+cleanup_db_cpfs.mjs
+export-db.mjs
+inspect-data.mjs
+list-turmas.mjs
+populate-turmas.mjs
+repair-db.mjs
+verify_db_robustness.mjs
+
+# Scripts com credenciais hardcoded
+create-admin.ts
+
+# Agentes e configurações locais
+.agent/
+.agents/
+skills-lock.json
+
+# Outputs de build e verificação
+verify_output.txt
+verify_results.json
+scripts/

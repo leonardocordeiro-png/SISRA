@@ -53,7 +53,7 @@ export async function logAudit(
 ) {
     const runAsync = async () => {
         try {
-            const finalEscolaId = escolaId || 'e6328325-1845-420a-b333-87a747953259';
+            const finalEscolaId = escolaId || import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259';
             const ip = await getPublicIP();
             const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Server-side';
 
