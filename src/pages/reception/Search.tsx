@@ -269,18 +269,51 @@ export default function ReceptionSearch() {
 
         setSending(true);
         try {
-            // ── Step 1: pre-check using EXACT same filter as WithdrawalQueue ──
-            // Use explicit active statuses + horario_confirmacao IS NULL to avoid
-            // false-positives from completed deliveries that the queue already hides.
-            const { data: existing, error: checkError } = await supabase
+            // ── Step 1: resolve escola_id (needed for all steps below) ──
+            const escolaId = userProfile?.escola_id
+                || allStudents.find(s => s.escola_id)?.escola_id
+                || null;
+
+            // ── Step 1a: silently cancel orphaned records ──
+            // Records with null escola_id or a different escola_id are invisible to
+            // WithdrawalQueue (Supabase RLS filters them) and to the classroom
+            // PriorityPipeline (explicit escola_id filter). They are stale data from
+            // dev/migration sessions. Cancelling them unblocks legitimate new calls.
+            if (escolaId) {
+                // Cancel null-escola orphans
+                await supabase
+                    .from('solicitacoes_retirada')
+                    .update({ status: 'CANCELADO', horario_confirmacao: new Date().toISOString() })
+                    .in('aluno_id', studentIds)
+                    .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
+                    .is('horario_confirmacao', null)
+                    .is('escola_id', null);
+                // Cancel wrong-escola orphans
+                await supabase
+                    .from('solicitacoes_retirada')
+                    .update({ status: 'CANCELADO', horario_confirmacao: new Date().toISOString() })
+                    .in('aluno_id', studentIds)
+                    .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
+                    .is('horario_confirmacao', null)
+                    .neq('escola_id', escolaId);
+            }
+
+            // ── Step 1b: pre-check scoped to THIS escola (same scope as queue/dashboard) ──
+            // PriorityPipeline filters by escola_id; WithdrawalQueue relies on Supabase
+            // RLS to do the same. We must match that scope so the pre-check only blocks
+            // on records the queue would actually show.
+            let preCheckQuery = supabase
                 .from('solicitacoes_retirada')
                 .select('aluno_id, status')
                 .in('aluno_id', studentIds)
                 .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
                 .is('horario_confirmacao', null);
 
+            if (escolaId) preCheckQuery = preCheckQuery.eq('escola_id', escolaId);
+
+            const { data: existing, error: checkError } = await preCheckQuery;
+
             if (checkError) {
-                // Non-fatal — log and proceed; DB will enforce constraints
                 console.warn('Pre-check warning:', checkError.code, checkError.message);
             } else if (existing && existing.length > 0) {
                 const activeIds = new Set(existing.map((r: any) => r.aluno_id));
@@ -289,15 +322,12 @@ export default function ReceptionSearch() {
                     .map(s => s.nome_completo.split(' ')[0]);
                 toast.error(
                     'Solicitação já ativa',
-                    `${dupNames.join(', ')} já possui${dupNames.length > 1 ? 'm' : ''} uma solicitação em aberto. Aguarde a conclusão ou cancele a retirada anterior.`
+                    `${dupNames.join(', ')} já possui${dupNames.length > 1 ? 'm' : ''} uma solicitação em aberto visível na Fila de Retirada.`
                 );
                 return;
             }
 
             // ── Step 2: build request payload ──
-            const escolaId = userProfile?.escola_id
-                || allStudents.find(s => s.escola_id)?.escola_id
-                || null;
 
             const requests = allStudents.map(student => {
                 const req: any = {
