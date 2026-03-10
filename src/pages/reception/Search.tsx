@@ -269,16 +269,19 @@ export default function ReceptionSearch() {
 
         setSending(true);
         try {
-            // ── Step 1: check for already-open requests (prevents unique constraint failure) ──
+            // ── Step 1: pre-check using EXACT same filter as WithdrawalQueue ──
+            // Use explicit active statuses + horario_confirmacao IS NULL to avoid
+            // false-positives from completed deliveries that the queue already hides.
             const { data: existing, error: checkError } = await supabase
                 .from('solicitacoes_retirada')
                 .select('aluno_id, status')
                 .in('aluno_id', studentIds)
-                .not('status', 'in', '(ENTREGUE,CANCELADO)');
+                .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
+                .is('horario_confirmacao', null);
 
             if (checkError) {
-                console.warn('Pre-check warning (non-fatal):', checkError.message);
-                // Non-fatal — proceed; DB will reject duplicates if any
+                // Non-fatal — log and proceed; DB will enforce constraints
+                console.warn('Pre-check warning:', checkError.code, checkError.message);
             } else if (existing && existing.length > 0) {
                 const activeIds = new Set(existing.map((r: any) => r.aluno_id));
                 const dupNames = allStudents
@@ -286,16 +289,19 @@ export default function ReceptionSearch() {
                     .map(s => s.nome_completo.split(' ')[0]);
                 toast.error(
                     'Solicitação já ativa',
-                    `${dupNames.join(', ')} já possui${dupNames.length > 1 ? 'm' : ''} uma solicitação em aberto. Aguarde a conclusão.`
+                    `${dupNames.join(', ')} já possui${dupNames.length > 1 ? 'm' : ''} uma solicitação em aberto. Aguarde a conclusão ou cancele a retirada anterior.`
                 );
                 return;
             }
 
             // ── Step 2: build request payload ──
+            const escolaId = userProfile?.escola_id
+                || allStudents.find(s => s.escola_id)?.escola_id
+                || null;
+
             const requests = allStudents.map(student => {
-                const escolaId = student.escola_id || userProfile?.escola_id || null;
                 const req: any = {
-                    escola_id: escolaId,
+                    escola_id: student.escola_id || escolaId,
                     aluno_id: student.id,
                     responsavel_id: selectedGuardianId || null,
                     recepcionista_id: user.id,
@@ -309,8 +315,24 @@ export default function ReceptionSearch() {
                 return req;
             });
 
-            // ── Step 3: insert ──
-            const { error } = await supabase.from('solicitacoes_retirada').insert(requests);
+            // ── Step 3: insert — with auto-recovery on unique constraint violation ──
+            let { error } = await supabase.from('solicitacoes_retirada').insert(requests);
+
+            if (error && (error.code === '23505' || error.message?.toLowerCase().includes('unique') || error.message?.toLowerCase().includes('duplicate'))) {
+                // Stale records not caught by pre-check (race condition or data drift).
+                // Close them and retry once.
+                console.warn('Unique constraint on insert — auto-closing stale records and retrying:', error.message);
+                await supabase
+                    .from('solicitacoes_retirada')
+                    .update({ status: 'CANCELADO', horario_confirmacao: new Date().toISOString() })
+                    .in('aluno_id', studentIds)
+                    .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
+                    .is('horario_confirmacao', null);
+
+                const retry = await supabase.from('solicitacoes_retirada').insert(requests);
+                error = retry.error;
+            }
+
             if (error) throw error;
 
             // ── Step 4: audit log ──
@@ -338,7 +360,9 @@ export default function ReceptionSearch() {
             resetAll();
         } catch (error: any) {
             console.error('Error calling students:', error);
-            const detail = error?.message || error?.details || error?.hint || 'Verifique o console para detalhes.';
+            // Surface the most useful part of the Supabase/DB error
+            const detail = error?.details || error?.message || error?.hint
+                || (typeof error === 'string' ? error : 'Verifique o console para detalhes.');
             toast.error('Erro ao chamar alunos', detail);
         } finally {
             setSending(false);
@@ -419,7 +443,10 @@ export default function ReceptionSearch() {
             ...(!junctionRes.error ? (junctionRes.data?.map((j: any) => j.aluno_id) || []) : []),
         ]);
 
-        if (alunoIds.size === 0) throw new Error('Nenhum aluno vinculado a este responsável.');
+        if (alunoIds.size === 0) {
+            const authErr = authsRes.error ? ` (autorizacoes: ${authsRes.error.message})` : '';
+            throw new Error(`Nenhum aluno vinculado a este responsável.${authErr}`);
+        }
 
         const { data: alunosData, error: alunosError } = await supabase
             .from('alunos').select('*').in('id', Array.from(alunoIds));
