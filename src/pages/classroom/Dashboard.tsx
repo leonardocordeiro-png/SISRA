@@ -11,7 +11,6 @@ import NavigationControls from '../../components/NavigationControls';
 import PriorityPipeline from '../../components/classroom/PriorityPipeline';
 import { useToast } from '../../components/ui/Toast';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type PickupRequest = {
     id: string;
     status: string;
@@ -25,42 +24,31 @@ type PickupRequest = {
         foto_url: string | null;
         observacoes: string | null;
     };
-    responsavel?: {
-        nome_completo: string;
-        foto_url: string | null;
-    } | null;
+    responsavel?: { nome_completo: string; foto_url: string | null } | null;
     mensagem_recepcao: string | null;
     status_geofence: string | null;
     distancia_estimada_metros: number | null;
 };
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const D = {
-    indigoDark:  '#1E1B4B',
-    indigo:      '#312E81',
-    indigoMid:   '#4338CA',
-    teal:        '#0D9488',
-    tealLight:   '#F0FDFA',
-    tealBorder:  '#99F6E4',
-    amber:       '#D97706',
-    amberLight:  '#FFFBEB',
-    amberBorder: '#FCD34D',
-    rose:        '#BE123C',
-    roseLight:   '#FFF1F2',
-    roseBorder:  '#FDA4AF',
-    ink:         '#0F172A',
-    inkMid:      '#475569',
-    inkMuted:    '#94A3B8',
-    border:      '#E2E8F0',
-    surface:     '#F8FAFC',
-    white:       '#FFFFFF',
-    page:        '#F1F5F9',
+// ── Brand tokens ──────────────────────────────────────────────────────────────
+const B = {
+    navy:      '#104699',
+    navyDark:  '#0a2f6b',
+    navyDeep:  '#071830',
+    gold:      '#fbd12d',
+    goldDark:  '#e8be1a',
+    red:       '#E40123',
+    gray:      '#A7A7A2',
+    grayLight: '#c8c8c4',
+    white:     '#FFFFFF',
+    card:      '#0d2a54',
+    cardBorder:'rgba(251,209,45,0.10)',
+    onGold:    '#071830',
+    textSub:   'rgba(167,167,162,0.9)',
 };
 
-// ─── Quick note presets ───────────────────────────────────────────────────────
 const QUICK_NOTES = ['A caminho', 'Lanchando', 'No banheiro', 'Em atendimento'];
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function ClassroomDashboard() {
     const { user, signOut, role } = useAuth();
     const navigate = useNavigate();
@@ -77,26 +65,23 @@ export default function ClassroomDashboard() {
     const [escolaId, setEscolaId]             = useState<string | undefined>();
     const [mounted, setMounted]               = useState(false);
 
-    // ── Font injection ────────────────────────────────────────────────────────
+    // Font injection
     useEffect(() => {
-        if (!document.getElementById('cls-dash-fonts')) {
+        if (!document.getElementById('cls-brand-fonts')) {
             const link = document.createElement('link');
-            link.id = 'cls-dash-fonts';
+            link.id = 'cls-brand-fonts';
             link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800;900&display=swap';
+            link.href = 'https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,700;0,800;0,900;1,700;1,800&family=Instrument+Sans:wght@400;500;600;700&display=swap';
             document.head.appendChild(link);
         }
         setTimeout(() => setMounted(true), 80);
     }, []);
 
-    // ── Fetch user class assignment ───────────────────────────────────────────
+    // Fetch user class assignment
     useEffect(() => {
         if (user) {
-            supabase
-                .from('usuarios')
-                .select('turma_atribuida, sala_atribuida, escola_id')
-                .eq('id', user.id)
-                .single()
+            supabase.from('usuarios').select('turma_atribuida, sala_atribuida, escola_id')
+                .eq('id', user.id).single()
                 .then(({ data }) => {
                     if (data?.escola_id) setEscolaId(data.escola_id);
                     if (data?.sala_atribuida) {
@@ -107,42 +92,32 @@ export default function ClassroomDashboard() {
                         setSelectedClass('TODAS');
                     }
                 });
-
             if (role === 'ADMIN' || role === 'COORDENADOR') {
-                supabase
-                    .from('alunos')
-                    .select('turma, sala')
-                    .then(({ data }) => {
-                        if (data) {
-                            const uniqueItems = Array.from(new Set([
-                                ...data.map(a => a.sala).filter(Boolean)
-                            ]))
-                                .filter(item => item.startsWith('Sala '))
-                                .sort();
-                            setAllClasses(uniqueItems);
-                        }
-                    });
+                supabase.from('alunos').select('turma, sala').then(({ data }) => {
+                    if (data) {
+                        setAllClasses(
+                            Array.from(new Set(data.map(a => a.sala).filter(Boolean)))
+                                .filter(i => i.startsWith('Sala ')).sort()
+                        );
+                    }
+                });
             }
         }
     }, [user, role]);
 
-    // ── Sound notification ────────────────────────────────────────────────────
     const playNotificationSound = () => {
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         audio.volume = 0.5;
-        audio.play().catch(e => console.log('Audio play failed - ensure user interacted with page', e));
+        audio.play().catch(e => console.log('Audio play failed', e));
     };
+
+    const handleSelectRequest = (req: PickupRequest) => setActiveRequest(req);
 
     const prevTotalRequestsRef = useRef(requests.length);
     useEffect(() => {
-        if (requests.length > prevTotalRequestsRef.current && soundEnabled) {
-            playNotificationSound();
-        }
+        if (requests.length > prevTotalRequestsRef.current && soundEnabled) playNotificationSound();
         prevTotalRequestsRef.current = requests.length;
     }, [requests.length, soundEnabled]);
-
-    // ── Active request auto-select & sync ─────────────────────────────────────
-    const handleSelectRequest = (req: PickupRequest) => setActiveRequest(req);
 
     useEffect(() => {
         if (requests.length > 0) {
@@ -151,9 +126,8 @@ export default function ClassroomDashboard() {
             } else {
                 const refreshed = requests.find(r => r.id === activeRequest.id);
                 if (refreshed) {
-                    if (JSON.stringify(refreshed) !== JSON.stringify(activeRequest)) {
+                    if (JSON.stringify(refreshed) !== JSON.stringify(activeRequest))
                         setTimeout(() => setActiveRequest(refreshed), 0);
-                    }
                 } else {
                     setTimeout(() => setActiveRequest(requests[0]), 0);
                 }
@@ -163,448 +137,298 @@ export default function ClassroomDashboard() {
         }
     }, [requests]);
 
-    // ── Actions ───────────────────────────────────────────────────────────────
     const handleResponse = async (requestId: string, action: 'LIBERAR' | 'AGUARDAR' | 'RECUSAR') => {
         const statusMap = { LIBERAR: 'LIBERADO', AGUARDAR: 'AGUARDANDO', RECUSAR: 'CANCELADO' };
         const msgMap    = { LIBERAR: 'Aluno liberado com sucesso!', AGUARDAR: 'Solicitação colocada em espera.', RECUSAR: 'Solicitação rejeitada e removida.' };
-
-        const { error } = await supabase
-            .from('solicitacoes_retirada')
-            .update({
-                status: statusMap[action],
-                professor_id: user?.id,
-                horario_liberacao: action === 'LIBERAR' ? new Date().toISOString() : null,
-            })
+        const { error } = await supabase.from('solicitacoes_retirada')
+            .update({ status: statusMap[action], professor_id: user?.id, horario_liberacao: action === 'LIBERAR' ? new Date().toISOString() : null })
             .eq('id', requestId);
-
-        if (error) {
-            toast.error('Erro ao atualizar status', error.message);
-        } else {
+        if (error) { toast.error('Erro ao atualizar status', error.message); }
+        else {
             toast.success('Sucesso', msgMap[action]);
-            if (action === 'RECUSAR' || action === 'AGUARDAR') {
-                if (activeRequest?.id === requestId) setActiveRequest(null);
-            }
+            if ((action === 'RECUSAR' || action === 'AGUARDAR') && activeRequest?.id === requestId) setActiveRequest(null);
         }
     };
 
     const sendQuickNote = async (requestId: string, note: string) => {
         setSendingNote(true);
-        const { error } = await supabase
-            .from('solicitacoes_retirada')
-            .update({ mensagem_sala: note })
-            .eq('id', requestId);
-        if (!error) {
-            setCustomNote('');
-        } else {
-            toast.error('Erro ao enviar nota', error.message);
-        }
+        const { error } = await supabase.from('solicitacoes_retirada').update({ mensagem_sala: note }).eq('id', requestId);
+        if (!error) { setCustomNote(''); } else { toast.error('Erro ao enviar nota', error.message); }
         setSendingNote(false);
     };
 
-    const handleLogout = async () => {
-        await signOut();
-        navigate('/sala/login');
-    };
+    const handleLogout = async () => { await signOut(); navigate('/sala/login'); };
 
-    // ─── Render ───────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div style={{
-            minHeight: '100vh',
-            background: D.page,
-            fontFamily: "'Sora', 'Nunito', system-ui, sans-serif",
-            display: 'flex', flexDirection: 'column',
-            opacity: mounted ? 1 : 0,
-            transition: 'opacity 0.35s ease',
+            minHeight: '100vh', display: 'flex', flexDirection: 'column',
+            background: B.navyDeep,
+            fontFamily: "'Instrument Sans', system-ui, sans-serif",
+            opacity: mounted ? 1 : 0, transition: 'opacity 0.4s ease',
         }}>
 
-            {/* ════════════════════════════════════════════════════
-                HEADER — Deep Indigo
-            ════════════════════════════════════════════════════ */}
+            {/* ══════════════ HEADER ══════════════ */}
             <header style={{
-                background: `linear-gradient(135deg, ${D.indigoDark} 0%, ${D.indigo} 100%)`,
+                background: B.navy,
+                borderBottom: `3px solid ${B.gold}`,
                 position: 'sticky', top: 0, zIndex: 60,
-                boxShadow: '0 4px 24px rgba(30,27,75,0.35)',
+                boxShadow: `0 4px 24px rgba(7,24,48,0.7)`,
             }}>
-                <div style={{
-                    maxWidth: '100%', padding: '0 24px',
-                    height: 68,
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    gap: 16,
-                }}>
-                    {/* Left cluster */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+                {/* Top gold stripe */}
+                <div style={{ height: 3, background: `linear-gradient(90deg, ${B.gold} 0%, ${B.goldDark} 50%, ${B.gold} 100%)` }} />
+
+                <div style={{ padding: '0 20px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+
+                    {/* Left */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
                         <NavigationControls />
+                        <div style={{ width: 1, height: 26, background: 'rgba(255,255,255,0.15)' }} />
 
-                        <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.12)' }} />
-
-                        {/* Title */}
-                        <div style={{ minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                                <div style={{
-                                    width: 8, height: 8, borderRadius: '50%',
-                                    background: '#34D399',
-                                    boxShadow: '0 0 8px #34D399',
-                                }} />
-                                <span style={{
-                                    fontFamily: 'Nunito, sans-serif',
-                                    fontSize: 9, fontWeight: 800,
-                                    letterSpacing: '0.28em', textTransform: 'uppercase',
-                                    color: 'rgba(255,255,255,0.45)',
-                                }}>Terminal da Sala</span>
-                            </div>
-                            <h1 style={{
-                                fontSize: 18, fontWeight: 700,
-                                color: '#FFFFFF', lineHeight: 1,
-                                letterSpacing: '-0.02em',
-                                whiteSpace: 'nowrap',
+                        {/* Gold school badge + title */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                                background: B.gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 2px 10px ${B.gold}45`,
                             }}>
-                                Portal do Professor
-                            </h1>
+                                <School size={17} style={{ color: B.onGold }} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.26em', textTransform: 'uppercase', color: `${B.gold}80`, marginBottom: 1 }}>
+                                    La Salle, Cheguei! · SCT
+                                </p>
+                                <h1 style={{ fontSize: 16, fontWeight: 800, color: B.white, letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'Epilogue, sans-serif' }}>
+                                    Portal da Sala
+                                </h1>
+                            </div>
                         </div>
 
-                        {/* Class filter — admin/coordinator only */}
+                        {/* Class filter */}
                         {(role === 'ADMIN' || role === 'COORDENADOR') && (
                             <div style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: '1px solid rgba(255,255,255,0.12)',
-                                borderRadius: 10,
-                                padding: '4px 6px',
-                                marginLeft: 8,
+                                display: 'flex', alignItems: 'center', gap: 5, marginLeft: 8,
+                                background: 'rgba(0,0,0,0.2)', border: `1px solid ${B.gold}22`,
+                                borderRadius: 8, padding: '3px 5px',
                             }}>
-                                <button
-                                    onClick={() => setSelectedClass('TODAS')}
-                                    style={{
-                                        padding: '6px 14px',
-                                        borderRadius: 7,
-                                        fontSize: 10, fontWeight: 800,
-                                        letterSpacing: '0.18em', textTransform: 'uppercase',
-                                        border: 'none', cursor: 'pointer',
-                                        transition: 'all 0.18s',
-                                        background: selectedClass === 'TODAS' ? 'rgba(255,255,255,0.95)' : 'transparent',
-                                        color: selectedClass === 'TODAS' ? D.indigoDark : 'rgba(255,255,255,0.5)',
-                                    }}
-                                >
-                                    Todas
-                                </button>
+                                <button onClick={() => setSelectedClass('TODAS')} style={{
+                                    padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                                    fontSize: 9, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase',
+                                    transition: 'all 0.18s', fontFamily: 'Instrument Sans, sans-serif',
+                                    background: selectedClass === 'TODAS' ? B.gold : 'transparent',
+                                    color: selectedClass === 'TODAS' ? B.onGold : 'rgba(255,255,255,0.4)',
+                                }}>Todas</button>
                                 <div style={{ position: 'relative' }}>
-                                    <select
-                                        value={selectedClass}
-                                        onChange={(e) => setSelectedClass(e.target.value)}
-                                        style={{
-                                            appearance: 'none',
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'rgba(255,255,255,0.7)',
-                                            fontSize: 10, fontWeight: 700,
-                                            letterSpacing: '0.12em', textTransform: 'uppercase',
-                                            padding: '6px 28px 6px 10px',
-                                            cursor: 'pointer',
-                                            outline: 'none',
-                                            fontFamily: 'Sora, sans-serif',
-                                        }}
-                                    >
-                                        <option value="TODAS" style={{ color: '#1E1B4B', background: '#fff' }}>Filtrar por Sala</option>
-                                        {allClasses.map(c => (
-                                            <option key={c} value={c} style={{ color: '#1E1B4B', background: '#fff' }}>{c}</option>
-                                        ))}
+                                    <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} style={{
+                                        appearance: 'none', background: 'transparent', border: 'none', outline: 'none',
+                                        color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: 600,
+                                        letterSpacing: '0.12em', textTransform: 'uppercase',
+                                        padding: '5px 20px 5px 8px', cursor: 'pointer',
+                                        fontFamily: 'Instrument Sans, sans-serif',
+                                    }}>
+                                        <option value="TODAS" style={{ color: B.onGold, background: '#fff' }}>Filtrar</option>
+                                        {allClasses.map(c => <option key={c} value={c} style={{ color: B.onGold, background: '#fff' }}>{c}</option>)}
                                     </select>
-                                    <ChevronRight size={12} style={{
-                                        position: 'absolute', right: 8, top: '50%',
-                                        transform: 'translateY(-50%) rotate(90deg)',
-                                        color: 'rgba(255,255,255,0.4)',
-                                        pointerEvents: 'none',
-                                    }} />
+                                    <ChevronRight size={10} style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%) rotate(90deg)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* Right cluster */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-                        {/* Queue count pill */}
-                        <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 10 }}>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 8,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: '1px solid rgba(255,255,255,0.12)',
-                                borderRadius: 10, padding: '6px 14px',
-                            }}>
-                                <span style={{
-                                    fontFamily: 'Nunito, sans-serif',
-                                    fontSize: 22, fontWeight: 900, color: '#FFFFFF',
-                                    lineHeight: 1,
-                                }}>{requests.length}</span>
-                                <div>
-                                    <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', lineHeight: 1, marginBottom: 2 }}>na fila</p>
-                                    <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#34D399', lineHeight: 1 }}>ao vivo</p>
+                    {/* Right */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        {/* Queue count */}
+                        <div className="hidden sm:flex" style={{
+                            alignItems: 'center', gap: 9,
+                            background: 'rgba(0,0,0,0.25)', border: `1px solid ${B.gold}28`,
+                            borderRadius: 8, padding: '6px 13px',
+                        }}>
+                            <span style={{ fontFamily: 'Epilogue, sans-serif', fontSize: 26, fontWeight: 900, color: B.gold, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                                {requests.length}
+                            </span>
+                            <div>
+                                <p style={{ fontSize: 7.5, fontWeight: 600, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 2 }}>fila</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }} />
+                                    <p style={{ fontSize: 7.5, fontWeight: 600, color: '#22C55E', letterSpacing: '0.14em', textTransform: 'uppercase' }}>ao vivo</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Sound toggle */}
-                        <button
-                            onClick={() => setSoundEnabled(!soundEnabled)}
-                            style={{
-                                width: 40, height: 40, borderRadius: 10,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: soundEnabled ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.06)',
-                                border: `1px solid ${soundEnabled ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                                color: soundEnabled ? '#34D399' : 'rgba(255,255,255,0.3)',
-                                cursor: 'pointer',
-                                transition: 'all 0.18s',
-                            }}
-                        >
-                            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                        {/* Sound */}
+                        <button onClick={() => setSoundEnabled(!soundEnabled)} style={{
+                            width: 36, height: 36, borderRadius: 7, border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: soundEnabled ? `${B.gold}22` : 'rgba(255,255,255,0.05)',
+                            color: soundEnabled ? B.gold : 'rgba(255,255,255,0.22)',
+                            transition: 'all 0.18s',
+                            outline: `1px solid ${soundEnabled ? `${B.gold}38` : 'rgba(255,255,255,0.07)'}`,
+                        }}>
+                            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
                         </button>
 
                         {/* Logout */}
-                        <button
-                            onClick={handleLogout}
-                            style={{
-                                width: 40, height: 40, borderRadius: 10,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(239,68,68,0.12)',
-                                border: '1px solid rgba(239,68,68,0.25)',
-                                color: '#FCA5A5',
-                                cursor: 'pointer',
-                                transition: 'all 0.18s',
-                            }}
-                            onMouseEnter={e => {
-                                (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.25)';
-                                (e.currentTarget as HTMLElement).style.color = '#FFF';
-                            }}
-                            onMouseLeave={e => {
-                                (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.12)';
-                                (e.currentTarget as HTMLElement).style.color = '#FCA5A5';
-                            }}
+                        <button onClick={handleLogout} style={{
+                            width: 36, height: 36, borderRadius: 7, border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: `${B.red}18`, color: '#ff7b8a',
+                            outline: `1px solid ${B.red}35`, transition: 'all 0.18s',
+                        }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${B.red}35`; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${B.red}18`; (e.currentTarget as HTMLElement).style.color = '#ff7b8a'; }}
                         >
-                            <LogOut size={16} />
+                            <LogOut size={14} />
                         </button>
                     </div>
                 </div>
             </header>
 
-            {/* ════════════════════════════════════════════════════
-                MAIN BODY
-            ════════════════════════════════════════════════════ */}
-            <main style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            {/* ══════════════ BODY ══════════════ */}
+            <main style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
-                {/* Left: Priority Pipeline sidebar */}
                 <PriorityPipeline
                     userId={user?.id || ''}
                     selectedClass={selectedClass}
                     activeRequestId={activeRequest?.id}
                     onSelectRequest={handleSelectRequest}
-                    onQueueChange={(reqs) => setRequests(reqs)}
+                    onQueueChange={reqs => setRequests(reqs)}
                     escolaId={escolaId}
                 />
 
-                {/* Right: Detail area */}
-                <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '28px 28px 40px',
-                }}>
-                    {activeRequest ? (
-                        /* ── ACTIVE REQUEST VIEW ─────────────────────── */
-                        <div style={{
-                            maxWidth: 900,
-                            opacity: mounted ? 1 : 0,
-                            transition: 'opacity 0.4s ease',
-                        }}>
+                {/* Detail scroll area */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '22px 22px 48px', minWidth: 0 }}>
 
-                            {/* ── Student Profile Card ───────────────── */}
+                    {activeRequest ? (
+                        /* ════ ACTIVE REQUEST ════ */
+                        <div style={{ maxWidth: 860, opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(10px)', transition: 'opacity 0.4s ease, transform 0.4s ease' }}>
+
+                            {/* ── Hero student card ── */}
                             <div style={{
-                                background: D.white,
-                                borderRadius: 20,
-                                boxShadow: '0 1px 3px rgba(15,23,42,0.06), 0 8px 32px rgba(15,23,42,0.08)',
-                                overflow: 'hidden',
-                                marginBottom: 20,
+                                background: B.card, borderRadius: 18, overflow: 'hidden', marginBottom: 14,
+                                border: `1px solid ${B.cardBorder}`,
+                                boxShadow: `0 8px 40px rgba(7,24,48,0.6), 0 0 0 1px rgba(251,209,45,0.05)`,
                             }}>
-                                {/* Emergency banner */}
+                                {/* Gold top rule */}
+                                <div style={{ height: 3, background: `linear-gradient(90deg, ${B.gold}, ${B.navy}80, transparent)` }} />
+
+                                {/* Emergency */}
                                 {activeRequest.tipo_solicitacao === 'EMERGENCIA' && (
-                                    <div style={{
-                                        background: D.rose,
-                                        padding: '10px 24px',
-                                        display: 'flex', alignItems: 'center', gap: 10,
-                                    }}>
-                                        <AlertTriangle size={16} style={{ color: '#fff' }} />
-                                        <span style={{
-                                            fontFamily: 'Nunito, sans-serif',
-                                            fontSize: 11, fontWeight: 900,
-                                            letterSpacing: '0.2em', textTransform: 'uppercase',
-                                            color: '#fff',
-                                        }}>Prioridade Crítica — Emergência</span>
+                                    <div style={{ background: B.red, padding: '8px 22px', display: 'flex', alignItems: 'center', gap: 9 }}>
+                                        <AlertTriangle size={14} style={{ color: '#fff' }} />
+                                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#fff' }}>
+                                            Prioridade Crítica — Atendimento Imediato
+                                        </span>
                                     </div>
                                 )}
 
-                                {/* Card body */}
-                                <div style={{ padding: '28px 32px', display: 'flex', gap: 28, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-
-                                    {/* Photo */}
-                                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                                        <div style={{
-                                            width: 120, height: 120, borderRadius: '50%',
-                                            border: `4px solid ${D.teal}`,
-                                            overflow: 'hidden',
-                                            background: D.surface,
-                                            boxShadow: `0 0 0 8px ${D.tealLight}, 0 8px 32px rgba(13,148,136,0.2)`,
-                                        }}>
-                                            {activeRequest.aluno.foto_url ? (
-                                                <img
-                                                    src={activeRequest.aluno.foto_url}
-                                                    alt=""
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                />
-                                            ) : (
-                                                <div style={{
-                                                    width: '100%', height: '100%',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    background: `linear-gradient(135deg, ${D.tealLight}, #E0F2FE)`,
-                                                }}>
-                                                    <UserIcon size={48} style={{ color: D.teal }} />
-                                                </div>
-                                            )}
+                                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                                    {/* Photo column */}
+                                    <div style={{
+                                        width: 190, flexShrink: 0,
+                                        background: `linear-gradient(160deg, ${B.navyDark} 0%, ${B.navyDeep} 100%)`,
+                                        padding: '26px 18px',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+                                        borderRight: `1px solid ${B.cardBorder}`,
+                                    }}>
+                                        {/* Student photo with gold frame */}
+                                        <div style={{ position: 'relative' }}>
+                                            <div style={{
+                                                width: 136, height: 136, borderRadius: 14, overflow: 'hidden',
+                                                border: `3px solid ${B.gold}`,
+                                                boxShadow: `0 0 0 6px ${B.gold}14, 0 10px 36px rgba(7,24,48,0.8)`,
+                                                background: B.navy,
+                                            }}>
+                                                {activeRequest.aluno.foto_url ? (
+                                                    <img src={activeRequest.aluno.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${B.navy}90, ${B.navyDark})` }}>
+                                                        <UserIcon size={52} style={{ color: `${B.gold}45` }} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {/* Gold corner accents */}
+                                            <div style={{ position: 'absolute', top: -2, left: -2, width: 16, height: 16, borderTop: `3px solid ${B.gold}`, borderLeft: `3px solid ${B.gold}`, borderRadius: '4px 0 0 0' }} />
+                                            <div style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderTop: `3px solid ${B.gold}`, borderRight: `3px solid ${B.gold}`, borderRadius: '0 4px 0 0' }} />
+                                            <div style={{ position: 'absolute', bottom: -2, left: -2, width: 16, height: 16, borderBottom: `3px solid ${B.gold}`, borderLeft: `3px solid ${B.gold}`, borderRadius: '0 0 0 4px' }} />
+                                            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderBottom: `3px solid ${B.gold}`, borderRight: `3px solid ${B.gold}`, borderRadius: '0 0 4px 0' }} />
                                         </div>
-                                        {/* Active pulse ring */}
-                                        <div style={{
-                                            position: 'absolute', inset: -8,
-                                            borderRadius: '50%',
-                                            border: `2px solid ${D.teal}`,
-                                            opacity: 0.3,
-                                            animation: 'pulse 2s ease-in-out infinite',
-                                        }} />
+
+                                        {/* Guardian */}
+                                        <div style={{ width: '100%' }}>
+                                            <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.24em', textTransform: 'uppercase', color: `${B.gold}65`, marginBottom: 7, textAlign: 'center' }}>
+                                                Quem Retira
+                                            </p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 9px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9 }}>
+                                                <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: B.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1.5px solid ${B.gold}28` }}>
+                                                    {activeRequest.responsavel?.foto_url
+                                                        ? <img src={activeRequest.responsavel.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        : <UserIcon size={12} style={{ color: `${B.gold}55` }} />}
+                                                </div>
+                                                <p style={{ fontSize: 10.5, fontWeight: 600, color: B.white, lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                                    {activeRequest.responsavel?.nome_completo || 'Não atribuído'}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* Student info */}
-                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                    {/* Info column */}
+                                    <div style={{ flex: 1, padding: '26px 24px 22px', minWidth: 0 }}>
                                         {/* Badges */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-                                            <span style={{
-                                                padding: '4px 12px',
-                                                background: D.tealLight,
-                                                border: `1px solid ${D.tealBorder}`,
-                                                borderRadius: 6,
-                                                fontSize: 10, fontWeight: 800,
-                                                letterSpacing: '0.18em', textTransform: 'uppercase',
-                                                color: D.teal,
-                                                fontFamily: 'Nunito, sans-serif',
-                                            }}>SCT Ativo</span>
-
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 13 }}>
+                                            <span style={{ padding: '3px 10px', background: `${B.gold}16`, border: `1px solid ${B.gold}38`, borderRadius: 4, fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: B.gold }}>
+                                                SCT Ativo
+                                            </span>
                                             {activeRequest.aluno.observacoes && (
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    background: D.roseLight,
-                                                    border: `1px solid ${D.roseBorder}`,
-                                                    borderRadius: 6,
-                                                    fontSize: 10, fontWeight: 800,
-                                                    letterSpacing: '0.18em', textTransform: 'uppercase',
-                                                    color: D.rose,
-                                                    fontFamily: 'Nunito, sans-serif',
-                                                    display: 'flex', alignItems: 'center', gap: 5,
-                                                }}>
-                                                    <AlertTriangle size={10} /> Alerta Médico
+                                                <span style={{ padding: '3px 10px', background: `${B.red}14`, border: `1px solid ${B.red}38`, borderRadius: 4, fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#ff7b8a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <AlertTriangle size={8} /> Alerta Médico
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Name */}
-                                        <h2 style={{
-                                            fontSize: 'clamp(26px, 3.5vw, 40px)',
-                                            fontWeight: 800,
-                                            color: D.ink,
-                                            lineHeight: 1.1,
-                                            letterSpacing: '-0.03em',
-                                            marginBottom: 16,
-                                        }}>
-                                            {activeRequest.aluno.nome_completo}
+                                        <h2 style={{ fontFamily: 'Epilogue, sans-serif', fontSize: 'clamp(22px, 3vw, 38px)', fontWeight: 900, color: B.white, letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 18 }}>
+                                            {activeRequest.aluno.nome_completo.split(' ').slice(0, 2).join(' ')}
+                                            {activeRequest.aluno.nome_completo.split(' ').length > 2 && (
+                                                <><br /><span style={{ color: B.gold }}>{activeRequest.aluno.nome_completo.split(' ').slice(2).join(' ')}</span></>
+                                            )}
                                         </h2>
 
-                                        {/* Info chips row */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                                        {/* Metadata chips */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
                                             {/* Room */}
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center', gap: 8,
-                                                padding: '8px 14px',
-                                                background: D.surface,
-                                                border: `1px solid ${D.border}`,
-                                                borderRadius: 10,
-                                            }}>
-                                                <School size={14} style={{ color: D.indigoMid }} />
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10 }}>
+                                                <div style={{ width: 30, height: 30, borderRadius: 7, background: `${B.navy}60`, border: `1px solid ${B.gold}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <School size={13} style={{ color: B.gold }} />
+                                                </div>
                                                 <div>
-                                                    <p style={{ fontSize: 11, fontWeight: 700, color: D.ink, lineHeight: 1 }}>
-                                                        {activeRequest.aluno.sala}
-                                                    </p>
-                                                    <p style={{
-                                                        fontSize: 9, fontWeight: 600, color: D.inkMuted,
-                                                        letterSpacing: '0.12em', textTransform: 'uppercase',
-                                                    }}>{activeRequest.aluno.turma}</p>
+                                                    <p style={{ fontSize: 12, fontWeight: 700, color: B.white, lineHeight: 1, marginBottom: 2 }}>{activeRequest.aluno.sala}</p>
+                                                    <p style={{ fontSize: 9.5, fontWeight: 500, color: B.gray, letterSpacing: '0.06em' }}>{activeRequest.aluno.turma}</p>
                                                 </div>
                                             </div>
 
-                                            {/* Guardian */}
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center', gap: 8,
-                                                padding: '8px 14px',
-                                                background: D.surface,
-                                                border: `1px solid ${D.border}`,
-                                                borderRadius: 10,
-                                            }}>
-                                                <div style={{
-                                                    width: 28, height: 28, borderRadius: '50%',
-                                                    overflow: 'hidden', background: D.border,
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    flexShrink: 0,
-                                                }}>
-                                                    {activeRequest.responsavel?.foto_url ? (
-                                                        <img src={activeRequest.responsavel.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (
-                                                        <UserIcon size={14} style={{ color: D.inkMuted }} />
-                                                    )}
+                                            {/* Time */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10 }}>
+                                                <div style={{ width: 30, height: 30, borderRadius: 7, background: `${B.navy}60`, border: `1px solid ${B.gold}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Clock size={13} style={{ color: B.gold }} />
                                                 </div>
                                                 <div>
-                                                    <p style={{ fontSize: 11, fontWeight: 700, color: D.ink, lineHeight: 1 }}>
-                                                        {activeRequest.responsavel?.nome_completo || 'Não atribuído'}
+                                                    <p style={{ fontSize: 12, fontWeight: 700, color: B.white, lineHeight: 1, marginBottom: 2 }}>
+                                                        {activeRequest.horario_solicitacao ? new Date(activeRequest.horario_solicitacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
                                                     </p>
-                                                    <p style={{
-                                                        fontSize: 9, fontWeight: 600, color: D.inkMuted,
-                                                        letterSpacing: '0.12em', textTransform: 'uppercase',
-                                                    }}>responsável</p>
+                                                    <p style={{ fontSize: 9.5, fontWeight: 500, color: B.gray, letterSpacing: '0.06em' }}>solicitado às</p>
                                                 </div>
                                             </div>
 
-                                            {/* Geofence status */}
+                                            {/* Geofence */}
                                             {activeRequest.status_geofence === 'CHEGOU' ? (
-                                                <div style={{
-                                                    display: 'flex', alignItems: 'center', gap: 8,
-                                                    padding: '8px 14px',
-                                                    background: D.tealLight,
-                                                    border: `1px solid ${D.tealBorder}`,
-                                                    borderRadius: 10,
-                                                }}>
-                                                    <div style={{
-                                                        width: 8, height: 8, borderRadius: '50%',
-                                                        background: D.teal,
-                                                        boxShadow: `0 0 0 3px ${D.tealBorder}`,
-                                                        animation: 'pulse 1.5s ease-in-out infinite',
-                                                    }} />
-                                                    <span style={{ fontSize: 11, fontWeight: 700, color: D.teal }}>
-                                                        Na recepção
-                                                    </span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.22)', borderRadius: 10 }}>
+                                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 0 3px rgba(34,197,94,0.22)', flexShrink: 0 }} />
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#4ADE80' }}>Na recepção</span>
                                                 </div>
                                             ) : (
-                                                <div style={{
-                                                    display: 'flex', alignItems: 'center', gap: 8,
-                                                    padding: '8px 14px',
-                                                    background: D.surface,
-                                                    border: `1px solid ${D.border}`,
-                                                    borderRadius: 10,
-                                                }}>
-                                                    <Clock size={13} style={{ color: D.inkMuted }} />
-                                                    <span style={{ fontSize: 11, fontWeight: 600, color: D.inkMuted }}>
-                                                        Em deslocamento
-                                                    </span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10 }}>
+                                                    <Clock size={12} style={{ color: B.gray }} />
+                                                    <span style={{ fontSize: 12, fontWeight: 500, color: B.gray }}>Em deslocamento</span>
                                                 </div>
                                             )}
                                         </div>
@@ -613,354 +437,141 @@ export default function ClassroomDashboard() {
 
                                 {/* Reception message */}
                                 {activeRequest.mensagem_recepcao && (
-                                    <div style={{
-                                        margin: '0 32px 24px',
-                                        padding: '16px 20px',
-                                        background: '#EFF6FF',
-                                        border: '1px solid #BFDBFE',
-                                        borderLeft: '4px solid #3B82F6',
-                                        borderRadius: 12,
-                                        display: 'flex', gap: 12, alignItems: 'flex-start',
-                                    }}>
-                                        <MessageSquare size={16} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 2 }} />
+                                    <div style={{ margin: '0 18px 18px', padding: '12px 16px', background: 'rgba(16,70,153,0.28)', border: `1px solid ${B.navy}`, borderLeft: `3px solid ${B.gold}`, borderRadius: 10, display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                                        <MessageSquare size={13} style={{ color: B.gold, flexShrink: 0, marginTop: 1 }} />
                                         <div>
-                                            <p style={{
-                                                fontSize: 10, fontWeight: 800,
-                                                letterSpacing: '0.2em', textTransform: 'uppercase',
-                                                color: '#2563EB', marginBottom: 4,
-                                                fontFamily: 'Nunito, sans-serif',
-                                            }}>Nota da Recepção</p>
-                                            <p style={{ fontSize: 14, fontWeight: 500, color: '#1E3A8A', lineHeight: 1.5 }}>
-                                                {activeRequest.mensagem_recepcao}
-                                            </p>
+                                            <p style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: B.gold, marginBottom: 4 }}>Nota da Recepção</p>
+                                            <p style={{ fontSize: 13, fontWeight: 500, color: '#C8D8F4', lineHeight: 1.5 }}>{activeRequest.mensagem_recepcao}</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* ── Controls Row ───────────────────────── */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}
-                                className="grid-cols-1 lg:grid-cols-[1fr_auto]"
-                            >
-                                {/* Note panel */}
-                                <div style={{
-                                    background: D.white,
-                                    borderRadius: 20,
-                                    boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
-                                    padding: '24px',
-                                }}>
-                                    <div style={{ marginBottom: 16 }}>
-                                        <p style={{
-                                            fontSize: 10, fontWeight: 800,
-                                            letterSpacing: '0.22em', textTransform: 'uppercase',
-                                            color: D.indigoMid, marginBottom: 2,
-                                            fontFamily: 'Nunito, sans-serif',
-                                        }}>Mensagem para Recepção</p>
-                                        <p style={{ fontSize: 12, color: D.inkMuted }}>
-                                            Status atual do aluno
-                                        </p>
-                                    </div>
+                            {/* ── Controls: notes + actions ── */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 188px', gap: 12, alignItems: 'start' }}>
 
-                                    {/* Quick note pills */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                                {/* Note panel */}
+                                <div style={{ background: B.card, borderRadius: 16, padding: '18px 20px', border: `1px solid ${B.cardBorder}`, boxShadow: '0 4px 20px rgba(7,24,48,0.4)' }}>
+                                    <p style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: B.gold, marginBottom: 2 }}>Mensagem para Recepção</p>
+                                    <p style={{ fontSize: 11, color: B.gray, marginBottom: 13 }}>Informe o status atual do aluno</p>
+
+                                    {/* Quick notes */}
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 13 }}>
                                         {QUICK_NOTES.map(note => (
-                                            <button
-                                                key={note}
-                                                onClick={() => sendQuickNote(activeRequest.id, note)}
-                                                disabled={sendingNote}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    background: D.surface,
-                                                    border: `1px solid ${D.border}`,
-                                                    borderRadius: 20,
-                                                    fontSize: 12, fontWeight: 600,
-                                                    color: D.inkMid,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.18s',
-                                                    fontFamily: 'Sora, sans-serif',
-                                                }}
-                                                onMouseEnter={e => {
-                                                    const el = e.currentTarget as HTMLElement;
-                                                    el.style.background = D.tealLight;
-                                                    el.style.borderColor = D.tealBorder;
-                                                    el.style.color = D.teal;
-                                                }}
-                                                onMouseLeave={e => {
-                                                    const el = e.currentTarget as HTMLElement;
-                                                    el.style.background = D.surface;
-                                                    el.style.borderColor = D.border;
-                                                    el.style.color = D.inkMid;
-                                                }}
-                                            >
-                                                {note}
-                                            </button>
+                                            <button key={note} onClick={() => sendQuickNote(activeRequest.id, note)} disabled={sendingNote}
+                                                style={{ padding: '6px 13px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 18, fontSize: 11.5, fontWeight: 600, color: B.grayLight, cursor: 'pointer', transition: 'all 0.17s', fontFamily: 'Instrument Sans, sans-serif' }}
+                                                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = `${B.gold}16`; el.style.borderColor = `${B.gold}42`; el.style.color = B.gold; }}
+                                                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.04)'; el.style.borderColor = 'rgba(255,255,255,0.09)'; el.style.color = B.grayLight; }}
+                                            >{note}</button>
                                         ))}
                                     </div>
 
-                                    {/* Custom note input */}
+                                    {/* Custom note */}
                                     <div style={{ position: 'relative' }}>
                                         <input
-                                            value={customNote}
-                                            onChange={(e) => setCustomNote(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && customNote && sendQuickNote(activeRequest.id, customNote)}
-                                            placeholder="Enviar mensagem personalizada…"
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 60px 14px 18px',
-                                                background: D.surface,
-                                                border: `1.5px solid ${D.border}`,
-                                                borderRadius: 14,
-                                                fontSize: 14, fontWeight: 500,
-                                                color: D.ink,
-                                                outline: 'none',
-                                                transition: 'border-color 0.18s',
-                                                fontFamily: 'Sora, sans-serif',
-                                                boxSizing: 'border-box',
-                                            }}
-                                            onFocus={e => { (e.target as HTMLInputElement).style.borderColor = D.teal; }}
-                                            onBlur={e => { (e.target as HTMLInputElement).style.borderColor = D.border; }}
+                                            value={customNote} onChange={e => setCustomNote(e.target.value)}
+                                            onKeyPress={e => e.key === 'Enter' && customNote && sendQuickNote(activeRequest.id, customNote)}
+                                            placeholder="Mensagem personalizada…"
+                                            style={{ width: '100%', padding: '11px 50px 11px 15px', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 11, fontSize: 13, fontWeight: 500, color: B.white, outline: 'none', transition: 'border-color 0.18s', fontFamily: 'Instrument Sans, sans-serif', boxSizing: 'border-box' }}
+                                            onFocus={e => (e.target as HTMLInputElement).style.borderColor = `${B.gold}50`}
+                                            onBlur={e => (e.target as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.09)'}
                                         />
-                                        <button
-                                            onClick={() => customNote && sendQuickNote(activeRequest.id, customNote)}
-                                            disabled={sendingNote || !customNote}
-                                            style={{
-                                                position: 'absolute', right: 8, top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                width: 38, height: 38, borderRadius: 10,
-                                                background: customNote ? D.teal : D.border,
-                                                border: 'none',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                color: '#fff',
-                                                cursor: customNote ? 'pointer' : 'not-allowed',
-                                                transition: 'background 0.18s',
-                                            }}
-                                        >
-                                            {sendingNote
-                                                ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-                                                : <Send size={15} />
-                                            }
+                                        <button onClick={() => customNote && sendQuickNote(activeRequest.id, customNote)} disabled={sendingNote || !customNote}
+                                            style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: 7, border: 'none', cursor: customNote ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', background: customNote ? B.gold : 'rgba(255,255,255,0.06)', color: customNote ? B.onGold : 'rgba(255,255,255,0.18)', transition: 'all 0.18s' }}>
+                                            {sendingNote ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={13} />}
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Action buttons */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 200 }}>
-                                    {/* LIBERAR — primary */}
-                                    <button
-                                        onClick={() => handleResponse(activeRequest.id, 'LIBERAR')}
-                                        style={{
-                                            width: '100%', padding: '20px 16px',
-                                            background: D.teal,
-                                            border: 'none', borderRadius: 16,
-                                            cursor: 'pointer',
-                                            display: 'flex', flexDirection: 'column',
-                                            alignItems: 'center', gap: 8,
-                                            boxShadow: `0 8px 24px ${D.teal}40`,
-                                            transition: 'all 0.18s',
-                                        }}
-                                        onMouseEnter={e => {
-                                            const el = e.currentTarget as HTMLElement;
-                                            el.style.background = '#0F766E';
-                                            el.style.transform = 'translateY(-2px)';
-                                            el.style.boxShadow = `0 12px 32px ${D.teal}50`;
-                                        }}
-                                        onMouseLeave={e => {
-                                            const el = e.currentTarget as HTMLElement;
-                                            el.style.background = D.teal;
-                                            el.style.transform = 'translateY(0)';
-                                            el.style.boxShadow = `0 8px 24px ${D.teal}40`;
-                                        }}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                                    {/* LIBERAR — gold */}
+                                    <button onClick={() => handleResponse(activeRequest.id, 'LIBERAR')}
+                                        style={{ width: '100%', padding: '17px 10px', background: `linear-gradient(135deg, ${B.gold} 0%, ${B.goldDark} 100%)`, border: 'none', borderRadius: 14, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, boxShadow: `0 6px 24px ${B.gold}38`, transition: 'all 0.2s' }}
+                                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = `0 10px 32px ${B.gold}52`; }}
+                                        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(0)'; el.style.boxShadow = `0 6px 24px ${B.gold}38`; }}
                                     >
-                                        <div style={{
-                                            width: 44, height: 44, borderRadius: '50%',
-                                            background: 'rgba(255,255,255,0.2)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        }}>
-                                            <Check size={22} style={{ color: '#fff' }} />
+                                        <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(7,24,48,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Check size={19} style={{ color: B.onGold }} />
                                         </div>
                                         <div style={{ textAlign: 'center' }}>
-                                            <p style={{
-                                                fontSize: 9, fontWeight: 800,
-                                                letterSpacing: '0.2em', textTransform: 'uppercase',
-                                                color: 'rgba(255,255,255,0.7)',
-                                                fontFamily: 'Nunito, sans-serif',
-                                                marginBottom: 2,
-                                            }}>Finalizar &amp;</p>
-                                            <p style={{
-                                                fontSize: 14, fontWeight: 800,
-                                                color: '#fff', letterSpacing: '-0.01em',
-                                            }}>Liberar Aluno</p>
+                                            <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: `${B.onGold}75`, marginBottom: 1 }}>Finalizar &amp;</p>
+                                            <p style={{ fontFamily: 'Epilogue, sans-serif', fontSize: 13, fontWeight: 800, color: B.onGold, letterSpacing: '-0.01em' }}>Liberar Aluno</p>
                                         </div>
                                     </button>
 
                                     {/* AGUARDAR */}
-                                    <button
-                                        onClick={() => {
-                                            if (confirmPending === 'AGUARDAR') {
-                                                handleResponse(activeRequest.id, 'AGUARDAR');
-                                                setConfirmPending(null);
-                                            } else {
-                                                setConfirmPending('AGUARDAR');
-                                                setTimeout(() => setConfirmPending(prev => prev === 'AGUARDAR' ? null : prev), 3000);
-                                            }
-                                        }}
-                                        style={{
-                                            width: '100%', padding: '14px 16px',
-                                            background: confirmPending === 'AGUARDAR' ? D.amberLight : D.surface,
-                                            border: `1.5px solid ${confirmPending === 'AGUARDAR' ? D.amberBorder : D.border}`,
-                                            borderRadius: 14,
-                                            cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: 10,
-                                            transition: 'all 0.18s',
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: 34, height: 34, borderRadius: 10,
-                                            background: confirmPending === 'AGUARDAR' ? `${D.amber}20` : D.border,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            flexShrink: 0,
-                                        }}>
-                                            <Clock size={16} style={{ color: confirmPending === 'AGUARDAR' ? D.amber : D.inkMuted }} />
+                                    <button onClick={() => {
+                                        if (confirmPending === 'AGUARDAR') { handleResponse(activeRequest.id, 'AGUARDAR'); setConfirmPending(null); }
+                                        else { setConfirmPending('AGUARDAR'); setTimeout(() => setConfirmPending(p => p === 'AGUARDAR' ? null : p), 3000); }
+                                    }} style={{ width: '100%', padding: '11px', background: confirmPending === 'AGUARDAR' ? `${B.gold}14` : 'rgba(255,255,255,0.04)', border: `1.5px solid ${confirmPending === 'AGUARDAR' ? `${B.gold}48` : 'rgba(255,255,255,0.09)'}`, borderRadius: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9, transition: 'all 0.18s' }}>
+                                        <div style={{ width: 30, height: 30, borderRadius: 7, background: confirmPending === 'AGUARDAR' ? `${B.gold}18` : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <Clock size={13} style={{ color: confirmPending === 'AGUARDAR' ? B.gold : B.gray }} />
                                         </div>
-                                        <span style={{
-                                            fontSize: 13, fontWeight: 700,
-                                            color: confirmPending === 'AGUARDAR' ? D.amber : D.inkMid,
-                                        }}>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: confirmPending === 'AGUARDAR' ? B.gold : B.grayLight, fontFamily: 'Instrument Sans, sans-serif' }}>
                                             {confirmPending === 'AGUARDAR' ? 'Confirmar?' : 'Aguardar'}
                                         </span>
                                     </button>
 
                                     {/* RECUSAR */}
-                                    <button
-                                        onClick={() => {
-                                            if (confirmPending === 'RECUSAR') {
-                                                handleResponse(activeRequest.id, 'RECUSAR');
-                                                setConfirmPending(null);
-                                            } else {
-                                                setConfirmPending('RECUSAR');
-                                                setTimeout(() => setConfirmPending(prev => prev === 'RECUSAR' ? null : prev), 3000);
-                                            }
-                                        }}
-                                        style={{
-                                            width: '100%', padding: '14px 16px',
-                                            background: confirmPending === 'RECUSAR' ? D.roseLight : D.surface,
-                                            border: `1.5px solid ${confirmPending === 'RECUSAR' ? D.roseBorder : D.border}`,
-                                            borderRadius: 14,
-                                            cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: 10,
-                                            transition: 'all 0.18s',
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: 34, height: 34, borderRadius: 10,
-                                            background: confirmPending === 'RECUSAR' ? `${D.rose}20` : D.border,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            flexShrink: 0,
-                                        }}>
-                                            <X size={16} style={{ color: confirmPending === 'RECUSAR' ? D.rose : D.inkMuted }} />
+                                    <button onClick={() => {
+                                        if (confirmPending === 'RECUSAR') { handleResponse(activeRequest.id, 'RECUSAR'); setConfirmPending(null); }
+                                        else { setConfirmPending('RECUSAR'); setTimeout(() => setConfirmPending(p => p === 'RECUSAR' ? null : p), 3000); }
+                                    }} style={{ width: '100%', padding: '11px', background: confirmPending === 'RECUSAR' ? `${B.red}14` : 'rgba(255,255,255,0.04)', border: `1.5px solid ${confirmPending === 'RECUSAR' ? `${B.red}48` : 'rgba(255,255,255,0.09)'}`, borderRadius: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9, transition: 'all 0.18s' }}>
+                                        <div style={{ width: 30, height: 30, borderRadius: 7, background: confirmPending === 'RECUSAR' ? `${B.red}18` : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <X size={13} style={{ color: confirmPending === 'RECUSAR' ? '#ff7b8a' : B.gray }} />
                                         </div>
-                                        <span style={{
-                                            fontSize: 13, fontWeight: 700,
-                                            color: confirmPending === 'RECUSAR' ? D.rose : D.inkMid,
-                                        }}>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: confirmPending === 'RECUSAR' ? '#ff7b8a' : B.grayLight, fontFamily: 'Instrument Sans, sans-serif' }}>
                                             {confirmPending === 'RECUSAR' ? 'Confirmar?' : 'Rejeitar'}
                                         </span>
                                     </button>
                                 </div>
                             </div>
                         </div>
+
                     ) : (
-                        /* ── EMPTY STATE ───────────────────────────── */
-                        <div style={{
-                            display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', justifyContent: 'center',
-                            height: '100%', minHeight: 480,
-                            textAlign: 'center', gap: 24,
-                            opacity: mounted ? 1 : 0,
-                            transition: 'opacity 0.5s ease 0.1s',
-                        }}>
-                            {/* Bell icon with rings */}
-                            <div style={{ position: 'relative', marginBottom: 8 }}>
-                                <div style={{
-                                    position: 'absolute', inset: -20,
-                                    borderRadius: '50%',
-                                    border: `1.5px solid ${D.teal}20`,
-                                    animation: 'ping 3s ease-in-out infinite',
-                                }} />
-                                <div style={{
-                                    position: 'absolute', inset: -10,
-                                    borderRadius: '50%',
-                                    border: `1.5px solid ${D.teal}30`,
-                                    animation: 'ping 3s ease-in-out infinite 0.5s',
-                                }} />
-                                <div style={{
-                                    width: 96, height: 96, borderRadius: '50%',
-                                    background: D.tealLight,
-                                    border: `2px solid ${D.tealBorder}`,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    position: 'relative',
-                                }}>
-                                    <Bell size={40} style={{ color: D.teal }} />
+                        /* ════ EMPTY STATE ════ */
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 500, textAlign: 'center', gap: 26, opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease 0.1s' }}>
+
+                            {/* Concentric rings */}
+                            <div style={{ position: 'relative', width: 152, height: 152 }}>
+                                <div style={{ position: 'absolute', inset: -28, borderRadius: '50%', border: `1px solid ${B.gold}10`, animation: 'ringPulse 3.5s ease-in-out infinite' }} />
+                                <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', border: `1px solid ${B.gold}18`, animation: 'ringPulse 3.5s ease-in-out infinite 0.4s' }} />
+                                <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: `1.5px solid ${B.gold}28`, animation: 'ringPulse 3.5s ease-in-out infinite 0.8s' }} />
+                                <div style={{ width: 152, height: 152, borderRadius: '50%', background: `radial-gradient(circle at 38% 35%, ${B.navy}, ${B.navyDark})`, border: `2.5px solid ${B.gold}38`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 48px ${B.gold}12, 0 12px 48px rgba(7,24,48,0.8)` }}>
+                                    <Bell size={50} style={{ color: B.gold, filter: `drop-shadow(0 0 10px ${B.gold}60)`, animation: 'bellSway 3s ease-in-out infinite' }} />
                                 </div>
                             </div>
 
                             <div>
-                                <h2 style={{
-                                    fontSize: 28, fontWeight: 800,
-                                    color: D.ink, letterSpacing: '-0.03em',
-                                    marginBottom: 8,
-                                }}>
+                                <h2 style={{ fontFamily: 'Epilogue, sans-serif', fontSize: 24, fontWeight: 800, color: B.white, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15 }}>
                                     Aguardando Solicitações
                                 </h2>
-                                <p style={{
-                                    fontSize: 14, color: D.inkMuted,
-                                    maxWidth: 320, lineHeight: 1.6,
-                                    fontFamily: 'Nunito, sans-serif',
-                                }}>
+                                <p style={{ fontSize: 13, color: B.gray, maxWidth: 290, lineHeight: 1.65, margin: '0 auto' }}>
                                     Monitoramento ativo. Novas solicitações de retirada aparecerão aqui automaticamente.
                                 </p>
                             </div>
 
-                            {/* Status chip */}
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 8,
-                                padding: '8px 18px',
-                                background: D.tealLight,
-                                border: `1px solid ${D.tealBorder}`,
-                                borderRadius: 20,
-                            }}>
-                                <div style={{
-                                    width: 7, height: 7, borderRadius: '50%',
-                                    background: D.teal,
-                                    animation: 'pulse 1.5s ease-in-out infinite',
-                                }} />
-                                <span style={{
-                                    fontSize: 11, fontWeight: 700,
-                                    color: D.teal,
-                                    fontFamily: 'Nunito, sans-serif',
-                                    letterSpacing: '0.1em', textTransform: 'uppercase',
-                                }}>
-                                    Varredura Ativa
-                                </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 20px', background: `${B.gold}12`, border: `1px solid ${B.gold}28`, borderRadius: 30 }}>
+                                <div style={{ width: 7, height: 7, borderRadius: '50%', background: B.gold, boxShadow: `0 0 8px ${B.gold}`, animation: 'glowPulse 1.5s ease-in-out infinite' }} />
+                                <span style={{ fontSize: 10, fontWeight: 700, color: B.gold, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Varredura Ativa</span>
+                            </div>
+
+                            <div style={{ padding: '10px 22px', background: 'rgba(16,70,153,0.18)', border: `1px solid ${B.navy}55`, borderRadius: 10 }}>
+                                <p style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                                    La Salle, Cheguei! — Sistema Escolar
+                                </p>
                             </div>
                         </div>
                     )}
                 </div>
             </main>
 
-            {/* Global keyframes */}
             <style>{`
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.6; transform: scale(0.95); }
-                }
-                @keyframes ping {
-                    0% { transform: scale(1); opacity: 0.4; }
-                    80%, 100% { transform: scale(1.8); opacity: 0; }
-                }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes glowPulse { 0%,100%{opacity:1;box-shadow:0 0 8px ${B.gold};} 50%{opacity:.6;box-shadow:0 0 18px ${B.gold};} }
+                @keyframes bellSway { 0%,100%{transform:rotate(-7deg);} 50%{transform:rotate(7deg);} }
+                @keyframes ringPulse { 0%{opacity:.25;transform:scale(1);} 50%{opacity:.6;transform:scale(1.04);} 100%{opacity:.25;transform:scale(1);} }
             `}</style>
         </div>
     );
