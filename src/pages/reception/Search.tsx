@@ -256,59 +256,77 @@ export default function ReceptionSearch() {
     }, [selectedStudent, relatedStudents]);
 
     const handleCallStudents = async () => {
-        // Build student list depending on mode
         const isRelatedMode = relatedStudents.length > 0;
-        const studentIds = isRelatedMode
-            ? Array.from(selectedStudentIds)
-            : [selectedStudent?.id, ...multiStudents.map(s => s.id)].filter(Boolean) as string[];
+
+        // Build student list for the call
+        const allStudents: Student[] = isRelatedMode
+            ? relatedStudents.filter(s => selectedStudentIds.has(s.id))
+            : [selectedStudent, ...multiStudents].filter(Boolean) as Student[];
+
+        const studentIds = allStudents.map(s => s.id);
 
         if (studentIds.length === 0 || !user) return;
 
         setSending(true);
         try {
-            const requests = studentIds.map(id => {
-                if (isRelatedMode && !relatedStudents.some(s => s.id === id)) {
-                    throw new Error('Falha de segurança: Tentativa de retirar aluno não vinculado ao grupo.');
-                }
+            // ── Step 1: check for already-open requests (prevents unique constraint failure) ──
+            const { data: existing, error: checkError } = await supabase
+                .from('solicitacoes_retirada')
+                .select('aluno_id, status')
+                .in('aluno_id', studentIds)
+                .not('status', 'in', '(ENTREGUE,CANCELADO)');
 
-                const baseRequest: any = {
-                    escola_id: userProfile?.escola_id || 'e6328325-1845-420a-b333-87a747953259',
-                    aluno_id: id,
+            if (checkError) {
+                console.warn('Pre-check warning (non-fatal):', checkError.message);
+                // Non-fatal — proceed; DB will reject duplicates if any
+            } else if (existing && existing.length > 0) {
+                const activeIds = new Set(existing.map((r: any) => r.aluno_id));
+                const dupNames = allStudents
+                    .filter(s => activeIds.has(s.id))
+                    .map(s => s.nome_completo.split(' ')[0]);
+                toast.error(
+                    'Solicitação já ativa',
+                    `${dupNames.join(', ')} já possui${dupNames.length > 1 ? 'm' : ''} uma solicitação em aberto. Aguarde a conclusão.`
+                );
+                return;
+            }
+
+            // ── Step 2: build request payload ──
+            const requests = allStudents.map(student => {
+                const escolaId = student.escola_id || userProfile?.escola_id || null;
+                const req: any = {
+                    escola_id: escolaId,
+                    aluno_id: student.id,
                     responsavel_id: selectedGuardianId || null,
                     recepcionista_id: user.id,
                     status: 'SOLICITADO',
                     tipo_solicitacao: 'RECEPCAO',
                     status_geofence: 'CHEGOU',
                 };
-
-                // Store manual pickup name in mensagem_recepcao for audit trail
                 if (useManualPickup && manualPickupName.trim()) {
-                    baseRequest.mensagem_recepcao = `Retirada avulsa — Responsável não cadastrado: ${manualPickupName.trim()}`;
+                    req.mensagem_recepcao = `Retirada avulsa — ${manualPickupName.trim()}`;
                 }
-
-                return baseRequest;
+                return req;
             });
 
+            // ── Step 3: insert ──
             const { error } = await supabase.from('solicitacoes_retirada').insert(requests);
             if (error) throw error;
 
+            // ── Step 4: audit log ──
             const selectedGuardianLocal = guardians.find(g => g.id === selectedGuardianId);
             const guardianName = useManualPickup && manualPickupName.trim()
                 ? `[Avulso] ${manualPickupName.trim()}`
                 : selectedGuardianLocal?.nome_completo;
 
-            for (const id of studentIds) {
-                const student = isRelatedMode
-                    ? relatedStudents.find(s => s.id === id)
-                    : (id === selectedStudent?.id ? selectedStudent : multiStudents.find(s => s.id === id));
-
+            for (const student of allStudents) {
                 await logAudit('SOLICITACAO_RETIRADA', 'solicitacoes_retirada', undefined, {
-                    aluno_nome: student?.nome_completo,
-                    aluno_id: id,
+                    aluno_nome: student.nome_completo,
+                    aluno_id: student.id,
                     responsavel_nome: guardianName,
                     responsavel_id: selectedGuardianId,
                     tipo: useManualPickup ? 'RECEPCAO_AVULSA' : 'RECEPCAO'
-                }, undefined, userProfile?.escola_id || undefined);
+                }, undefined, student.escola_id || userProfile?.escola_id || undefined);
             }
 
             toast.success(
@@ -316,17 +334,23 @@ export default function ReceptionSearch() {
                 guardianName ? `Responsável: ${guardianName}` : 'Notificação enviada às salas.'
             );
 
-            // Reset all state
-            setQuery(''); setSelectedStudent(null); setRelatedStudents([]);
-            setSelectedStudentIds(new Set()); setResults([]); setSelectedGuardianId(null);
-            setMultiStudents([]); setIsAddingMore(false); setAddMoreQuery(''); setAddMoreResults([]);
-            setUseManualPickup(false); setManualPickupName('');
-        } catch (error) {
+            // ── Step 5: reset all state ──
+            resetAll();
+        } catch (error: any) {
             console.error('Error calling students:', error);
-            toast.error('Erro ao chamar alunos', 'Tente novamente.');
+            const detail = error?.message || error?.details || error?.hint || 'Verifique o console para detalhes.';
+            toast.error('Erro ao chamar alunos', detail);
         } finally {
             setSending(false);
         }
+    };
+
+    const resetAll = () => {
+        setQuery(''); setSelectedStudent(null); setRelatedStudents([]);
+        setSelectedStudentIds(new Set()); setResults([]); setSelectedGuardianId(null);
+        setGuardians([]); setMultiStudents([]); setIsAddingMore(false);
+        setAddMoreQuery(''); setAddMoreResults([]);
+        setUseManualPickup(false); setManualPickupName('');
     };
 
     const handleLogout = async () => { await signOut(); navigate('/login'); };
@@ -378,45 +402,65 @@ export default function ReceptionSearch() {
     };
 
     const resolveByMultipleIds = async (responsavelIds: string[], guardianName?: string, primaryGuardian?: any) => {
+        // Reset any previous manual-search state before loading QR/Code result
+        setSelectedStudent(null); setMultiStudents([]);
+        setIsAddingMore(false); setAddMoreQuery(''); setAddMoreResults([]);
+        setUseManualPickup(false); setManualPickupName('');
+
+        // Query both link tables; gracefully handle if alunos_responsaveis doesn't exist
         const [authsRes, junctionRes] = await Promise.all([
             supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', responsavelIds).eq('ativa', true),
-            supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', responsavelIds)
+            supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', responsavelIds),
         ]);
 
         const alunoIds = new Set<string>([
             ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
-            ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
+            // Only use junction result if query succeeded (table may not exist in all deployments)
+            ...(!junctionRes.error ? (junctionRes.data?.map((j: any) => j.aluno_id) || []) : []),
         ]);
 
         if (alunoIds.size === 0) throw new Error('Nenhum aluno vinculado a este responsável.');
 
-        const { data: alunosData } = await supabase.from('alunos').select('*').in('id', Array.from(alunoIds));
-        if (!alunosData || alunosData.length === 0) throw new Error('Nenhum aluno vinculado.');
+        const { data: alunosData, error: alunosError } = await supabase
+            .from('alunos').select('*').in('id', Array.from(alunoIds));
+
+        if (alunosError) throw new Error(`Erro ao buscar alunos: ${alunosError.message}`);
+        if (!alunosData || alunosData.length === 0) throw new Error('Nenhum aluno encontrado para este responsável.');
 
         let guard = primaryGuardian;
         if (!guard) {
-            const { data } = await supabase.from('responsaveis').select('id, nome_completo, foto_url').eq('id', responsavelIds[0]).single();
+            const { data } = await supabase
+                .from('responsaveis').select('id, nome_completo, foto_url').eq('id', responsavelIds[0]).single();
             guard = data;
         }
 
-        if (guard) setGuardians([{ id: guard.id, nome_completo: guard.nome_completo, foto_url: guard.foto_url, parentesco: 'Responsável' }]);
-        setSelectedGuardianId(guard?.id || responsavelIds[0]);
+        if (guard) {
+            setGuardians([{ id: guard.id, nome_completo: guard.nome_completo, foto_url: guard.foto_url, parentesco: 'Responsável' }]);
+            setSelectedGuardianId(guard.id);
+        }
         setRelatedStudents(alunosData);
         setSelectedStudentIds(new Set(alunosData.map((s: Student) => s.id)));
         setResults([]); setQuery('');
 
-        if (guardianName || guard?.nome_completo) toast.success('Responsável identificado', guardianName || guard?.nome_completo);
+        toast.success('Responsável identificado', guardianName || guard?.nome_completo || 'Responsável encontrado');
     };
 
     const resolveByResponsavelId = async (responsavelId: string, guardianName?: string) => {
-        const { data: guardian } = await supabase.from('responsaveis').select('id, cpf, nome_completo, foto_url').eq('id', responsavelId).single();
+        const { data: guardian, error: gError } = await supabase
+            .from('responsaveis').select('id, cpf, nome_completo, foto_url').eq('id', responsavelId).single();
+
+        if (gError || !guardian) throw new Error('Responsável não encontrado no sistema.');
+
         let responsavelIds = [responsavelId];
-        if (guardian?.cpf) {
+        if (guardian.cpf) {
             const cleanCpf = guardian.cpf.replace(/\D/g, '');
-            const { data: sames } = await supabase.from('responsaveis').select('id').eq('cpf', cleanCpf);
-            if (sames) responsavelIds = [...new Set([responsavelId, ...sames.map((s: any) => s.id)])];
+            if (cleanCpf.length >= 11) {
+                const { data: sames } = await supabase.from('responsaveis').select('id').eq('cpf', cleanCpf);
+                if (sames && sames.length > 0)
+                    responsavelIds = [...new Set([responsavelId, ...sames.map((s: any) => s.id)])];
+            }
         }
-        await resolveByMultipleIds(responsavelIds, guardianName || guardian?.nome_completo, guardian);
+        await resolveByMultipleIds(responsavelIds, guardianName || guardian.nome_completo, guardian);
     };
 
     const handleSelectStudent = (student: Student) => {
@@ -445,13 +489,7 @@ export default function ReceptionSearch() {
         });
     };
 
-    const handleClearSelection = () => {
-        setSelectedStudent(null); setRelatedStudents([]);
-        setSelectedGuardianId(null); setSelectedStudentIds(new Set());
-        setMultiStudents([]); setIsAddingMore(false);
-        setAddMoreQuery(''); setAddMoreResults([]);
-        setUseManualPickup(false); setManualPickupName('');
-    };
+    const handleClearSelection = () => resetAll();
 
     const selectedGuardian = guardians.find(g => g.id === selectedGuardianId);
     const isRelatedMode = relatedStudents.length > 0;
