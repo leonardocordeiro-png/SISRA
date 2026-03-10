@@ -206,7 +206,7 @@ export default function ClassroomDashboard() {
 
                         {/* Class filter */}
                         {(role === 'ADMIN' || role === 'COORDENADOR') && (
-                            <div style={{
+                            <div className="cls-class-filter" style={{
                                 display: 'flex', alignItems: 'center', gap: 5, marginLeft: 8,
                                 background: 'rgba(0,0,0,0.2)', border: `1px solid ${B.gold}22`,
                                 borderRadius: 8, padding: '3px 5px',
@@ -284,7 +284,7 @@ export default function ClassroomDashboard() {
             </header>
 
             {/* ══════════════ BODY ══════════════ */}
-            <main style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+            <main className="cls-main-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 <PriorityPipeline
                     userId={user?.id || ''}
@@ -321,9 +321,9 @@ export default function ClassroomDashboard() {
                                     </div>
                                 )}
 
-                                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                                <div className="cls-hero-card" style={{ display: 'flex', flexWrap: 'wrap' }}>
                                     {/* Photo column */}
-                                    <div style={{
+                                    <div className="cls-photo-col" style={{
                                         width: 190, flexShrink: 0,
                                         background: `linear-gradient(160deg, ${B.navyDark} 0%, ${B.navyDeep} 100%)`,
                                         padding: '26px 18px',
@@ -448,7 +448,7 @@ export default function ClassroomDashboard() {
                             </div>
 
                             {/* ── Controls: notes + actions ── */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 188px', gap: 12, alignItems: 'start' }}>
+                            <div className="cls-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 188px', gap: 12, alignItems: 'start' }}>
 
                                 {/* Note panel */}
                                 <div style={{ background: B.card, borderRadius: 16, padding: '18px 20px', border: `1px solid ${B.cardBorder}`, boxShadow: '0 4px 20px rgba(7,24,48,0.4)' }}>
@@ -484,7 +484,7 @@ export default function ClassroomDashboard() {
                                 </div>
 
                                 {/* Action buttons */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                                <div className="cls-action-btns" style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                                     {/* LIBERAR — gold */}
                                     <button onClick={() => handleResponse(activeRequest.id, 'LIBERAR')}
                                         style={{ width: '100%', padding: '17px 10px', background: `linear-gradient(135deg, ${B.gold} 0%, ${B.goldDark} 100%)`, border: 'none', borderRadius: 14, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, boxShadow: `0 6px 24px ${B.gold}38`, transition: 'all 0.2s' }}
@@ -572,6 +572,33 @@ export default function ClassroomDashboard() {
                 @keyframes glowPulse { 0%,100%{opacity:1;box-shadow:0 0 8px ${B.gold};} 50%{opacity:.6;box-shadow:0 0 18px ${B.gold};} }
                 @keyframes bellSway { 0%,100%{transform:rotate(-7deg);} 50%{transform:rotate(7deg);} }
                 @keyframes ringPulse { 0%{opacity:.25;transform:scale(1);} 50%{opacity:.6;transform:scale(1.04);} 100%{opacity:.25;transform:scale(1);} }
+
+                /* ── Responsive: tablet (max 1024px) ── */
+                @media (max-width: 1024px) {
+                    .cls-main-body { flex-direction: column !important; overflow-y: auto !important; }
+                }
+
+                /* ── Responsive: mobile (max 640px) ── */
+                @media (max-width: 640px) {
+                    .cls-main-body { flex-direction: column !important; overflow-y: auto !important; }
+                    .cls-hero-card { flex-direction: column !important; }
+                    .cls-photo-col {
+                        width: 100% !important;
+                        border-right: none !important;
+                        border-bottom: 1px solid rgba(251,209,45,0.1);
+                        flex-direction: row !important;
+                        align-items: center !important;
+                        gap: 16px !important;
+                        padding: 18px 18px !important;
+                    }
+                    .cls-controls-grid { grid-template-columns: 1fr !important; }
+                    .cls-action-btns {
+                        display: grid !important;
+                        grid-template-columns: 1fr 1fr 1fr !important;
+                        width: 100% !important;
+                    }
+                    .cls-class-filter { display: none !important; }
+                }
             `}</style>
         </div>
     );

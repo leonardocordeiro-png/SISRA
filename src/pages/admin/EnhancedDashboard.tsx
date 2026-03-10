@@ -284,7 +284,7 @@ export default function EnhancedAdminDashboard() {
                 </div>
 
                 {/* ── STAT CARDS ────────────────────────────────────── */}
-                <div style={{
+                <div className="enh-stat-cards" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                     gap: 20,
@@ -357,7 +357,7 @@ export default function EnhancedAdminDashboard() {
                     gap: 24,
                     alignItems: 'start',
                 }}
-                    className="grid-cols-1 lg:grid-cols-[1fr_320px]"
+                    className="enh-body-grid grid-cols-1 lg:grid-cols-[1fr_320px]"
                 >
                     {/* ── Recent Activity: Timeline ────────────────── */}
                     <div style={{
@@ -614,6 +614,16 @@ export default function EnhancedAdminDashboard() {
                     </div>
                 )}
             </main>
+
+            <style>{`
+                @media (max-width: 1024px) {
+                    .enh-body-grid { grid-template-columns: 1fr !important; }
+                }
+                @media (max-width: 640px) {
+                    .enh-body-grid { grid-template-columns: 1fr !important; }
+                    .enh-stat-cards { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important; }
+                }
+            `}</style>
         </div>
     );
 }

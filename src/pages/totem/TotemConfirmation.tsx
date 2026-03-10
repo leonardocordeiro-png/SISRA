@@ -161,7 +161,7 @@ export default function TotemConfirmation() {
                     <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:48px_48px]" />
                 </div>
 
-                <div className="relative z-10 flex flex-col items-center gap-8 text-center px-12">
+                <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 sm:px-8 md:px-12">
                     <div className="relative">
                         <div className="absolute -inset-12 bg-emerald-500/20 blur-3xl rounded-full animate-pulse" />
                         <div className="relative w-40 h-40 bg-emerald-500 rounded-[3rem] flex items-center justify-center shadow-[0_0_80px_rgba(16,185,129,0.5)]">
@@ -170,7 +170,7 @@ export default function TotemConfirmation() {
                     </div>
 
                     <div>
-                        <h1 className="text-6xl font-black italic tracking-tighter text-white uppercase leading-none mb-4">
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none mb-4">
                             Tudo <span className="text-emerald-500">Pronto!</span>
                         </h1>
                         <p className="text-slate-400 text-xl font-medium max-w-2xl">
@@ -233,7 +233,7 @@ export default function TotemConfirmation() {
             </div>
 
             {/* Header */}
-            <div className="relative z-20 flex items-center justify-between px-12 py-5 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md">
+            <div className="relative z-20 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3 md:py-5 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md">
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95 text-slate-400 hover:text-white"
@@ -242,16 +242,16 @@ export default function TotemConfirmation() {
                     <span className="text-xs font-black uppercase tracking-widest">Voltar</span>
                 </button>
                 <div className="text-center">
-                    <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
                         <div className="w-1.5 h-7 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
                         Finalizar Chamada
                     </h1>
                 </div>
             </div>
 
-            <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
+            <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-0 overflow-hidden">
                 {/* Left: Guardian Selection (IDENTIFY YOURSELF) */}
-                <div className="w-[480px] flex-shrink-0 flex flex-col px-10 py-8 border-r border-white/5 gap-6 overflow-y-auto bg-black/20">
+                <div className="w-full md:w-[480px] flex-shrink-0 flex flex-col px-4 sm:px-6 md:px-10 py-4 md:py-8 border-r border-white/5 gap-6 overflow-y-auto bg-black/20">
                     <div className="space-y-1">
                         <h2 className="text-xl font-black italic text-white uppercase tracking-tight">Quem está retirando?</h2>
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Selecione você na lista abaixo</p>
@@ -291,7 +291,7 @@ export default function TotemConfirmation() {
                 </div>
 
                 {/* Right: Selected Students Preview + Confirm */}
-                <div className="flex-1 flex flex-col px-10 py-8 gap-6 overflow-hidden">
+                <div className="flex-1 flex flex-col px-4 sm:px-6 md:px-10 py-4 md:py-8 gap-6 overflow-hidden">
                     <div className="flex items-center justify-between">
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Estudantes Selecionados ({selectedIds.size})</p>
                     </div>

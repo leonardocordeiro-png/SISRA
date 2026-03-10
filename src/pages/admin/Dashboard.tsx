@@ -393,7 +393,7 @@ export default function AdminDashboard() {
 
             {/* ─── Main Grid ─────────────────────────────────────────────── */}
             <main
-                className="relative z-10 flex-1 grid"
+                className="adm-main-grid relative z-10 flex-1 grid"
                 style={{
                     gridTemplateColumns: '320px 1fr',
                     opacity: mounted ? 1 : 0,
@@ -495,7 +495,7 @@ export default function AdminDashboard() {
 
                     {/* ─── Command Cards Grid ──────────────────────────────── */}
                     <div
-                        className="grid shrink-0"
+                        className="adm-cards-grid grid shrink-0"
                         style={{
                             gridTemplateColumns: '1fr 1fr 1fr',
                             borderBottom: `1px solid ${border}`,
@@ -570,7 +570,7 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Bottom: Additional quick links */}
-                        <div className="grid grid-cols-3 h-24">
+                        <div className="adm-bottom-strip grid grid-cols-3 h-24">
                             {[
                                 { icon: FileText, label: 'Histórico', path: '/admin/historico-retiradas' },
                                 { icon: UserCheck, label: 'Funcionários', path: '/admin/funcionarios' },
@@ -599,6 +599,20 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </main>
+
+            {/* ─── Responsive styles ─────────────────────────────────────── */}
+            <style>{`
+                @media (max-width: 1024px) {
+                    .adm-main-grid { grid-template-columns: 1fr !important; }
+                    .adm-cards-grid { grid-template-columns: 1fr 1fr !important; }
+                }
+                @media (max-width: 640px) {
+                    .adm-main-grid { grid-template-columns: 1fr !important; }
+                    .adm-cards-grid { grid-template-columns: 1fr !important; }
+                    .adm-bottom-strip { grid-template-columns: 1fr !important; height: auto !important; }
+                    .adm-bottom-strip > button { padding-top: 16px !important; padding-bottom: 16px !important; border-right: none !important; border-bottom: 1px solid var(--adm-border, #1C1C26) !important; }
+                }
+            `}</style>
 
             {/* ─── Footer ────────────────────────────────────────────────── */}
             <footer

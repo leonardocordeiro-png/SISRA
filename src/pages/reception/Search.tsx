@@ -440,7 +440,7 @@ export default function ReceptionSearch() {
                 </div>
 
                 {/* Advanced Monitoring HUD */}
-                <div className="hidden lg:flex items-center gap-8 bg-white/[0.03] border border-white/10 px-8 py-3 rounded-2xl backdrop-blur-md">
+                <div className="hidden md:flex items-center gap-8 bg-white/[0.03] border border-white/10 px-8 py-3 rounded-2xl backdrop-blur-md">
                     <div className="flex flex-col items-center">
                         <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">Carga da Fila</span>
                         <div className="flex items-center gap-2">
@@ -678,7 +678,7 @@ export default function ReceptionSearch() {
                                     {/* Interaction Area */}
                                     <div className="space-y-8">
                                         {relatedStudents.length > 0 ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-3 custom-scrollbar">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[200px] sm:max-h-[320px] overflow-y-auto pr-3 custom-scrollbar">
                                                 {relatedStudents.map(student => {
                                                     const isSelected = selectedStudentIds.has(student.id);
                                                     return (
@@ -850,10 +850,10 @@ export default function ReceptionSearch() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center p-24 text-center relative overflow-hidden h-full min-h-[500px]">
+                            <div className="flex flex-col items-center justify-center p-8 sm:p-16 md:p-24 text-center relative overflow-hidden h-full min-h-[300px] sm:min-h-[500px]">
                                 {/* Decorative Orbitals (Empty State) */}
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full animate-[spin_60s_linear_infinite]" />
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/[0.03] rounded-full animate-[spin_40s_linear_infinite_reverse]" />
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[600px] sm:h-[600px] border border-white/5 rounded-full animate-[spin_60s_linear_infinite]" />
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] sm:w-[400px] sm:h-[400px] border border-white/[0.03] rounded-full animate-[spin_40s_linear_infinite_reverse]" />
 
                                 <div className="relative mx-auto w-40 h-40 group mb-10">
                                     <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>

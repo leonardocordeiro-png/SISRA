@@ -31,19 +31,16 @@ export default function TotemSearch() {
         // Security: only search by full CPF (11 digits)
         if (cleanCpf.length !== 11) { setResults([]); return; }
 
-        // Build both CPF formats to handle inconsistent storage
-        const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-
         const t = setTimeout(async () => {
             setLoading(true);
             try {
                 let allResults: Student[] = [];
 
-                // Search by Guardian CPF — try both formatted and unformatted
+                // Search by Guardian CPF — strictly using normalized numeric CPF
                 const { data: guardians } = await supabase
                     .from('responsaveis')
                     .select('*')
-                    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
+                    .eq('cpf', cleanCpf);
 
                 if (guardians && guardians.length > 0) {
                     const guardianIds = guardians.map((g: any) => g.id);
@@ -114,7 +111,7 @@ export default function TotemSearch() {
             </div>
 
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between px-12 py-5 border-b border-white/5">
+            <div className="relative z-10 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3 md:py-5 border-b border-white/5">
                 <button
                     onClick={() => navigate('/totem/identificar')}
                     className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95 text-slate-400 hover:text-white"
@@ -123,7 +120,7 @@ export default function TotemSearch() {
                     <span className="text-sm font-black uppercase tracking-widest">Voltar</span>
                 </button>
                 <div className="text-center">
-                    <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
                         <div className="w-1.5 h-7 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
                         Buscar Estudantes
                     </h1>
@@ -141,11 +138,11 @@ export default function TotemSearch() {
             </div>
 
             {/* Main: LEFT keyboard | RIGHT results */}
-            <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
+            <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-0 overflow-hidden">
 
                 {/* Left: search input + keyboard */}
                 <form
-                    className="flex flex-col w-[45%] min-w-[500px] flex-shrink-0 px-8 py-8 border-r border-white/5 gap-6"
+                    className="flex flex-col w-full md:w-[45%] md:min-w-[400px] flex-shrink-0 px-4 sm:px-6 md:px-8 py-4 md:py-8 border-r border-white/5 gap-6"
                     autoComplete="off"
                     onSubmit={e => e.preventDefault()}
                 >
@@ -167,7 +164,7 @@ export default function TotemSearch() {
                 </form>
 
                 {/* Right: results */}
-                <div className="flex-1 flex flex-col px-10 py-8 gap-4 overflow-y-auto pb-60">
+                <div className="flex-1 flex flex-col px-4 sm:px-6 md:px-10 py-4 md:py-8 gap-4 overflow-y-auto pb-60">
                     {results.length === 0 && query.trim().length < 2 && selectedStudents.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
                             <div className="w-24 h-24 bg-white/[0.04] border border-white/10 rounded-[2rem] flex items-center justify-center">
@@ -226,12 +223,12 @@ export default function TotemSearch() {
 
                 {/* Fixed Action Button - Positioned to the right to avoid keypad overlap */}
                 {selectedStudents.length > 0 && (
-                    <div className="fixed bottom-12 right-12 z-50 pointer-events-none">
+                    <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-12 md:right-12 z-50 pointer-events-none">
                         <button
                             onClick={handleNext}
-                            className="pointer-events-auto px-12 py-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-[2.5rem] font-black text-3xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_30px_60px_rgba(16,185,129,0.4)] flex items-center gap-6 border-4 border-[#020617]"
+                            className="pointer-events-auto px-6 py-4 sm:px-8 sm:py-6 md:px-12 md:py-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-[2.5rem] font-black text-xl sm:text-2xl md:text-3xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_30px_60px_rgba(16,185,129,0.4)] flex items-center gap-6 border-4 border-[#020617]"
                         >
-                            <SearchIcon className="w-10 h-10" /> CHAMAR AGORA ({selectedStudents.length}) <ChevronRight className="w-10 h-10" />
+                            <SearchIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" /> CHAMAR AGORA ({selectedStudents.length}) <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
                         </button>
                     </div>
                 )}

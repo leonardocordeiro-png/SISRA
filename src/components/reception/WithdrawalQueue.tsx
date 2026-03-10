@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Clock, User as UserIcon, MessageSquare, AlertCircle, Check, MapPin, Activity } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import { logAudit } from '../../lib/audit';
 
 import type { Student } from '../../types';
 
@@ -83,6 +84,16 @@ export default function WithdrawalQueue() {
                 .eq('id', pickupId);
 
             if (error) throw error;
+
+            // Audit Log: Confirmação de Chegada na Recepção
+            logAudit(
+                'CONFIRMACAO_ENTREGA',
+                'solicitacoes_retirada',
+                pickupId,
+                { status_anterior: 'LIBERADO_SALA', acao: 'CHEGOU_NA_PORTARIA' },
+                user?.id
+            );
+
             addLog(`Aluno ${pickupId} chegou na recepção.`);
         } catch (error: any) {
             console.error('Error marking as at reception:', error);
@@ -102,6 +113,15 @@ export default function WithdrawalQueue() {
                 .eq('id', pickupId);
 
             if (error) throw error;
+
+            // Audit Log: Entrega Finalizada
+            logAudit(
+                'CONFIRMACAO_ENTREGA',
+                'solicitacoes_retirada',
+                pickupId,
+                { status: 'LIBERADO', acao: 'ENTREGA_CONCLUIDA' },
+                user?.id
+            );
 
             // Optimistic update
             setPendingPickups(prev => prev.filter(p => p.id !== pickupId));
@@ -123,6 +143,15 @@ export default function WithdrawalQueue() {
                 .eq('id', pickupId);
 
             if (error) throw error;
+
+            // Audit Log: Aluno Ausente / Reset
+            logAudit(
+                'ALTERACAO_CONFIGURACAO',
+                'solicitacoes_retirada',
+                pickupId,
+                { motivo: 'ALUNO_AUSENTE', acao: 'RETORNADO_PARA_FILA' },
+                user?.id
+            );
 
             // Optimistic update handled by subscription/polling
             addLog(`Solicitação ${pickupId} retornada para a fila de prioridade.`);

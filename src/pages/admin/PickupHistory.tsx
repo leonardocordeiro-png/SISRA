@@ -444,7 +444,7 @@ export default function PickupHistoryView() {
                             <span className="text-[10px] text-slate-400 font-medium">Retiradas · Auditoria · Análise</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
                         {/* View toggle */}
                         <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
                             <button onClick={() => setActiveView('list')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeView === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-700'}`}>
@@ -457,11 +457,11 @@ export default function PickupHistoryView() {
                         <button onClick={() => fetchRecords(true)} className={`p-2 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all text-slate-400 hover:text-indigo-600 ${refreshing ? 'animate-spin' : ''}`}>
                             <RefreshCw className="w-4 h-4" />
                         </button>
-                        <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200 active:scale-95">
-                            <Printer className="w-4 h-4" /> Imprimir
+                        <button onClick={() => window.print()} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200 active:scale-95">
+                            <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Imprimir</span>
                         </button>
-                        <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
-                            <Download className="w-4 h-4" /> Exportar CSV
+                        <button onClick={exportCSV} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
+                            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Exportar CSV</span>
                         </button>
                     </div>
                 </div>
@@ -709,8 +709,8 @@ export default function PickupHistoryView() {
                 {activeView === 'list' && (
                     <>
                         {/* Filters */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-                            <div className="relative flex-1 md:w-80 w-full">
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col gap-4">
+                            <div className="relative w-full">
                                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
                                 <input
                                     type="text"
@@ -720,24 +720,23 @@ export default function PickupHistoryView() {
                                     className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
                                 <div className="flex items-center gap-2">
-                                    <Filter className="w-4 h-4 text-slate-400" />
-                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1">
+                                    <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1 overflow-x-auto">
                                         {['all', 'TOTEM', 'RECEPCAO'].map(m => (
                                             <button key={m} onClick={() => { setMethodFilter(m); setPage(0); }}
-                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${methodFilter === m ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${methodFilter === m ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
                                                 {m === 'all' ? 'Todos Métodos' : m === 'TOTEM' ? '🖥 Totem' : '🧑‍💼 Recepção'}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                                <div className="h-5 w-px bg-slate-200" />
                                 <div className="flex items-center gap-2">
-                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1">
+                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1 overflow-x-auto">
                                         {['all', 'LIBERADO', 'CONFIRMADO', 'SOLICITADO', 'CANCELADO'].map(s => (
                                             <button key={s} onClick={() => { setStatusFilter(s); setPage(0); }}
-                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${statusFilter === s ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === s ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
                                                 {s === 'all' ? 'Todos Status' : STATUS_PT[s]}
                                             </button>
                                         ))}

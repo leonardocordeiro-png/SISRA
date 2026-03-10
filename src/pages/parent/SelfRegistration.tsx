@@ -107,11 +107,10 @@ export default function SelfRegistration() {
     const checkCpf = async (cpf: string) => {
         setCpfChecking(true);
         try {
-            const formattedCpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
             const { data: found } = await supabase
                 .from('responsaveis')
                 .select('*')
-                .or(`cpf.eq.${cpf},cpf.eq.${formattedCpf}`)
+                .eq('cpf', cpf)
                 .limit(1)
                 .maybeSingle();
 
@@ -184,13 +183,10 @@ export default function SelfRegistration() {
         try {
             const cleanCpf = formData.cpf.replace(/\D/g, '');
             const studentId = student.id;
-
-            // 1. Resolve or Create Guardian
-            const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
             const { data: existingGuardian } = await supabase
                 .from('responsaveis')
                 .select('*')
-                .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
+                .eq('cpf', cleanCpf)
                 .maybeSingle();
 
             let guardianId = existingGuardian?.id;

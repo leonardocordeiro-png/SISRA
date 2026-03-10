@@ -125,7 +125,7 @@ export default function TotemCodeEntry() {
             </div>
 
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between px-12 py-5 border-b border-white/5">
+            <div className="relative z-10 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3 md:py-5 border-b border-white/5">
                 <button
                     onClick={() => navigate('/totem/identificar')}
                     className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95 text-slate-400 hover:text-white"
@@ -134,7 +134,7 @@ export default function TotemCodeEntry() {
                     <span className="text-sm font-black uppercase tracking-widest">Voltar</span>
                 </button>
                 <div className="text-center">
-                    <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
                         <div className="w-1.5 h-7 bg-violet-500 rounded-full shadow-[0_0_10px_rgba(124,58,237,0.6)]" />
                         Código de Acesso
                     </h1>
@@ -152,12 +152,12 @@ export default function TotemCodeEntry() {
             </div>
 
             {/* Main: LEFT instructions + display | RIGHT keyboard */}
-            <div className="relative z-10 flex-1 flex flex-row gap-0 overflow-hidden">
+            <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-0 overflow-hidden">
 
                 {/* Left: instructions + code display */}
                 {/* Left: instructions + code display */}
                 <form
-                    className="flex flex-col w-[350px] flex-shrink-0 px-6 py-10 border-r border-white/5 gap-8 justify-center"
+                    className="flex flex-col w-full md:w-[350px] flex-shrink-0 px-4 sm:px-6 py-6 md:py-10 border-r border-white/5 gap-8 justify-center"
                     autoComplete="off"
                     onSubmit={e => e.preventDefault()}
                 >
@@ -228,7 +228,7 @@ export default function TotemCodeEntry() {
                 </form>
 
                 {/* Right: numpad keyboard */}
-                <div className="flex-1 flex flex-col items-center justify-center px-10 py-8">
+                <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 md:px-10 py-4 md:py-8">
                     {/* Selected Students Cards */}
                     {selectedStudents.length > 0 && (
                         <div className="mb-6 flex flex-wrap justify-center gap-3 max-w-[640px]">

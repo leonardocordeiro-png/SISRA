@@ -351,7 +351,7 @@ export default function AdminQRGenerator() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-12 font-sans">
+        <div className="min-h-screen bg-slate-50 p-4 sm:p-6 md:p-12 font-sans">
             <style>
                 {`
                 @media print {
@@ -657,7 +657,7 @@ export default function AdminQRGenerator() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-[600px] bg-white rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-center px-10 text-slate-400">
+                            <div className="h-[400px] sm:h-[600px] bg-white rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-center px-10 text-slate-400">
                                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-2">
                                     <QrCode className="w-10 h-10 opacity-20" />
                                 </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User as UserIcon, Check, Search, ArrowDownNarrowWide, Clock } from 'lucide-react';
+import { User as UserIcon, Check, Search, ArrowDownNarrowWide, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 
 interface Aluno {
@@ -48,6 +48,7 @@ export default function PriorityPipeline({
     const [requests, setRequests] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     async function fetchRequests() {
         let query = supabase
@@ -159,6 +160,29 @@ export default function PriorityPipeline({
 
     return (
         <div className="w-full md:w-[400px] border-b md:border-b-0 md:border-r border-white/10 bg-slate-950/40 backdrop-blur-3xl flex flex-col z-20 shrink-0 relative overflow-hidden">
+
+            {/* Mobile toggle bar — only visible on small screens */}
+            <button
+                className="md:hidden flex items-center justify-between px-5 py-3 border-b border-white/10 w-full text-left"
+                onClick={() => setIsMobileOpen(prev => !prev)}
+                aria-expanded={isMobileOpen}
+            >
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Fila</span>
+                    </div>
+                    <span className="text-sm font-black text-white tabular-nums">{requests.length} aluno{requests.length !== 1 ? 's' : ''}</span>
+                </div>
+                {isMobileOpen
+                    ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                    : <ChevronDown className="w-4 h-4 text-slate-400" />
+                }
+            </button>
+
+            {/* Main content — always visible on md+, toggled on mobile */}
+            <div className={`md:flex md:flex-col md:flex-1 md:min-h-0 md:overflow-hidden ${isMobileOpen ? 'flex flex-col max-h-[60vh] overflow-hidden' : 'hidden'}`}>
+
             {/* HUD Header */}
             <div className="p-6 border-b border-white/10 space-y-4">
                 <div className="flex items-center justify-between">
@@ -297,6 +321,8 @@ export default function PriorityPipeline({
                     <span className="text-[10px] font-black text-white italic">v{__APP_VERSION__}</span>
                 </div>
             </div>
+
+            </div>{/* end collapsible wrapper */}
         </div>
     );
 }
