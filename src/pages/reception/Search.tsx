@@ -336,7 +336,7 @@ export default function ReceptionSearch() {
                     responsavel_id: selectedGuardianId || null,
                     recepcionista_id: user.id,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'RECEPCAO',
+                    tipo_solicitacao: 'EMERGENCIA',
                     status_geofence: 'CHEGOU',
                 };
                 if (useManualPickup && manualPickupName.trim()) {
