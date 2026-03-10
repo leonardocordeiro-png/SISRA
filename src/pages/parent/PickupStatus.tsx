@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
-    CheckCircle, Phone, ShieldCheck, Bell, School,
+    CheckCircle, ShieldCheck, Bell, School,
     User, Info, Loader2, Navigation, Activity, Wifi, MapPin
 } from 'lucide-react';
 import GeoTracker from '../../components/parent/GeoTracker';
@@ -404,13 +404,6 @@ export default function ParentPickupStatus() {
                             </div>
                         </div>
 
-                        {/* Contact Button */}
-                        <div className="mt-12">
-                            <button className="w-full bg-white/5 hover:bg-white/10 text-slate-300 font-black text-[10px] italic uppercase tracking-[0.3em] py-5 rounded-[1.5rem] border border-white/5 transition-all flex items-center justify-center gap-4 active:scale-[0.98]">
-                                <Phone className="w-4 h-4 text-blue-500 animate-pulse" />
-                                Ligar para a Portaria
-                            </button>
-                        </div>
                     </div>
                 </section>
 
@@ -426,20 +419,33 @@ export default function ParentPickupStatus() {
                 <div className="px-2 space-y-4">
                     <button
                         onClick={async () => {
-                            const { error } = await supabase
-                                .from('solicitacoes_retirada')
-                                .update({ status_geofence: 'CHEGOU', distancia_estimada_metros: 0 })
-                                .eq('id', pickup.id);
+                            // Update ALL active pickups for this guardian today —
+                            // not just pickup.id, so multi-student requests are all
+                            // marked as CHEGOU at the same time.
+                            const todayStart = new Date();
+                            todayStart.setHours(0, 0, 0, 0);
+
+                            const filter = guardianId
+                                ? supabase
+                                    .from('solicitacoes_retirada')
+                                    .update({ status_geofence: 'CHEGOU', distancia_estimada_metros: 0 })
+                                    .eq('responsavel_id', guardianId)
+                                    .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                                    .gte('horario_solicitacao', todayStart.toISOString())
+                                : supabase
+                                    .from('solicitacoes_retirada')
+                                    .update({ status_geofence: 'CHEGOU', distancia_estimada_metros: 0 })
+                                    .eq('id', pickup.id);
+
+                            const { error } = await filter;
                             if (!error) {
                                 toast.success('Chegada confirmada!', 'A escola foi notificada da sua chegada.');
                                 fetchPickupStatus();
                             }
                         }}
-                        className="w-full py-5 bg-white/[0.03] hover:bg-white/[0.06] text-white rounded-3xl border border-white/10 italic hover:border-blue-500/50 font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 group"
+                        className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-3xl font-black text-[10px] italic uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-emerald-500/20 active:scale-95 group"
                     >
-                        <div className="bg-blue-500/10 p-2 rounded-xl group-hover:bg-blue-500/20 transition-all">
-                            <CheckCircle className="w-4 h-4 text-blue-500" />
-                        </div>
+                        <CheckCircle className="w-5 h-5" />
                         Confirmar Chegada Manualmente
                     </button>
                     <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest text-center px-8 leading-relaxed opacity-50">
