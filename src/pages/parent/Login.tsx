@@ -63,10 +63,10 @@ export default function ParentLogin() {
             setSelectedIds(new Set(foundStudents.map((s: any) => s.id)));
             setStep('SELECT_STUDENT');
 
+            // Store only the guardian ID and name — never persist CPF
             localStorage.setItem('sisra_parent_session', JSON.stringify({
                 id: responsavel.id,
                 nome: responsavel.nome_completo,
-                cpf: cleanCpf
             }));
 
             // Audit Log: Identificação de Sucesso

@@ -12,5 +12,10 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     strictPort: true,
+    // Explicitly allow browser APIs used in the app.
+    // Without this, Chromium can block Geolocation with "permissions policy" error.
+    headers: {
+      'Permissions-Policy': 'geolocation=(self), camera=(self), microphone=(self)',
+    },
   }
 })
