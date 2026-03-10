@@ -42,6 +42,8 @@ import ParentLogin from './pages/parent/Login';
 import SelfRegistration from './pages/parent/SelfRegistration';
 
 import SystemStatus from './pages/system/SystemStatus';
+import ReceptionBoard from './pages/display/ReceptionBoard';
+import FamilyPortal from './pages/portal/FamilyPortal';
 
 import TotemHome from './pages/totem/TotemHome';
 import TotemIdentify from './pages/totem/TotemIdentify';
@@ -215,6 +217,10 @@ function App() {
                 <DailySafetyChecklist />
               </ProtectedRoute>
             } />
+
+            {/* Display & Portal Routes (public — no auth required) */}
+            <Route path="/display" element={<ReceptionBoard />} />
+            <Route path="/portal" element={<FamilyPortal />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
