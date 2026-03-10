@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader2, ChevronRight, AlertCircle } from 'lucide-react';
 
@@ -36,12 +37,17 @@ export default function ReceptionLogin() {
 
                 if (userData.tipo_usuario !== 'RECEPCIONISTA' && userData.tipo_usuario !== 'ADMIN' && userData.tipo_usuario !== 'COORDENADOR') {
                     await supabase.auth.signOut();
+                    logAudit('ACESSO_NEGADO', 'usuarios', data.user.id, { email, motivo: 'Perfil sem permissão de acesso ao terminal de recepção', perfil: userData.tipo_usuario, portal: 'RECEPCAO' });
                     throw new Error('Acesso não autorizado para este perfil.');
                 }
 
+                logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: userData.tipo_usuario, portal: 'RECEPCAO' }, data.user.id);
                 navigate('/recepcao/busca');
             }
         } catch (err: any) {
+            if (err.message !== 'Acesso não autorizado para este perfil.') {
+                logAudit('LOGIN_FALHA', 'usuarios', undefined, { email, motivo: err.message, portal: 'RECEPCAO' });
+            }
             setError(err.message || 'Erro ao realizar login');
         } finally {
             setLoading(false);

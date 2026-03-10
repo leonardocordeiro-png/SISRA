@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import { useNavigate } from 'react-router-dom';
 import { School, Loader2, Eye, EyeOff, ChevronRight } from 'lucide-react';
 
@@ -36,12 +37,17 @@ export default function ClassroomLogin() {
 
                 if (userData.tipo_usuario !== 'SCT' && userData.tipo_usuario !== 'ADMIN' && userData.tipo_usuario !== 'COORDENADOR') {
                     await supabase.auth.signOut();
+                    logAudit('ACESSO_NEGADO', 'usuarios', data.user.id, { email, motivo: 'Perfil sem permissão de acesso ao portal de sala', perfil: userData.tipo_usuario, portal: 'SALA' });
                     throw new Error('Acesso restrito para SCTs.');
                 }
 
+                logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: userData.tipo_usuario, turma: userData.turma_atribuida, portal: 'SALA' }, data.user.id);
                 navigate('/sala/dashboard');
             }
         } catch (err: any) {
+            if (err.message !== 'Acesso restrito para SCTs.') {
+                logAudit('LOGIN_FALHA', 'usuarios', undefined, { email, motivo: err.message, portal: 'SALA' });
+            }
             setError(err.message || 'Erro ao acessar sala');
         } finally {
             setLoading(false);

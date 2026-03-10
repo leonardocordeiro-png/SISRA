@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import { Search, QrCode, Download, Printer, User as UserIcon, Calendar, Smartphone, ArrowLeft, Loader2, Camera, Edit2, Check, X } from 'lucide-react';
 import QRCodeStyling from 'qr-code-styling';
 import domtoimage from 'dom-to-image-more';
@@ -133,6 +134,13 @@ export default function AdminQRGenerator() {
                     throw insertError;
                 }
                 finalCard = newCard;
+                // Log audit: new QR card created or reactivated
+                logAudit('GERACAO_CARTAO_QR', 'parent_qr_cards', finalCard?.id, {
+                    responsavel_nome: guardian.nome_completo,
+                    responsavel_id: guardian.id,
+                    qr_code: finalCard?.qr_code,
+                    acao: anyCard ? 'REATIVACAO' : 'CRIACAO_NOVA'
+                });
             }
 
             setSelectedGuardian({
