@@ -21,15 +21,27 @@ export type AuditAction =
     | 'ANALISE'
     | 'MANUTENCAO';
 
+let cachedIP: string | null = null;
+
+/**
+ * Obtém o endereço IP público do cliente.
+ */
+async function getPublicIP(): Promise<string> {
+    if (cachedIP) return cachedIP;
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        cachedIP = data.ip;
+        return cachedIP || '0.0.0.0';
+    } catch (err) {
+        console.warn('[Audit] Falha ao obter IP público:', err);
+        return '0.0.0.0';
+    }
+}
+
 /**
  * Registra uma ação no log de auditoria do sistema.
- * 
- * @param action Tipo da ação (enum AuditAction)
- * @param table Tabela afetada (opcional)
- * @param recordId ID do registro afetado (opcional)
- * @param details Objeto JSON com detalhes adicionais da ação
- * @param userId ID do usuário que realizou a ação
- * @param escolaId ID da escola associada
+ * Implementado como não-bloqueante para não interromper o fluxo principal do usuário em caso de falha.
  */
 export async function logAudit(
     action: AuditAction,
@@ -39,37 +51,53 @@ export async function logAudit(
     userId?: string,
     escolaId?: string
 ) {
-    try {
-        // Se escolaId não for provido, tentamos usar o padrão
-        const finalEscolaId = escolaId || 'e6328325-1845-420a-b333-87a747953259';
+    const runAsync = async () => {
+        try {
+            const finalEscolaId = escolaId || 'e6328325-1845-420a-b333-87a747953259';
+            const ip = await getPublicIP();
+            const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Server-side';
 
-        const { error } = await supabase
-            .from('logs_auditoria')
-            .insert({
+            const logData: any = {
                 acao: action,
                 tabela_afetada: table,
                 registro_id: recordId,
                 detalhes: details,
-                usuario_id: userId,
                 escola_id: finalEscolaId,
-                ip_address: '0.0.0.0',
-                user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Server-side'
-            });
+                ip_address: ip,
+                user_agent: userAgent
+            };
 
-        if (error) {
-            // Error 42501 is RLS violation, we expect this until DB policy is fixed
-            if (error.code === '42501') {
-                console.warn(`[Audit] Permissão negada (RLS) para ação: ${action}. Verifique as políticas da tabela 'logs_auditoria'.`);
-            } else {
-                console.error('[Audit] Erro ao registrar log:', error);
+            // Se o ID for de um usuário interno (Staff/Admin), preenchemos usuario_id.
+            // Caso contrário, mantemos apenas nos detalhes para evitar erros de integridade (FK).
+            if (userId) {
+                const isSystemUser =
+                    table === 'usuarios' ||
+                    (['SISTEMA_LOGIN', 'SISTEMA_LOGOUT', 'LOGIN_SUCESSO'].includes(action) && details?.role);
+
+                if (isSystemUser) {
+                    logData.usuario_id = userId;
+                } else {
+                    logData.detalhes = { ...details, responsavel_id: userId };
+                }
             }
-        } else {
-            if (process.env.NODE_ENV === 'development') {
-                console.log(`[Audit] Evento registrado: ${action} em ${table || 'sistema'}`);
+
+            const { error } = await supabase
+                .from('logs_auditoria')
+                .insert(logData);
+
+            if (error) {
+                if (error.code === '42501') {
+                    console.warn(`[Audit] Permissão negada (RLS) para ação: ${action}.`);
+                } else if (error.code === '23503') {
+                    console.warn(`[Audit] Erro de Integridade (FK) para ação: ${action}. ID: ${userId}`);
+                } else {
+                    console.error('[Audit] Erro ao registrar log:', error);
+                }
             }
+        } catch (err) {
+            console.warn('[Audit] Falha crítica silenciosa no subsistema de auditoria:', err);
         }
-    } catch (err) {
-        // Silently catch to prevent app crashes if logging fails
-        console.warn('[Audit] Falha crítica no subsistema de auditoria:', err);
-    }
+    };
+
+    return runAsync();
 }

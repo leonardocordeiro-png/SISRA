@@ -120,7 +120,7 @@ export default function TotemConfirmation() {
                     responsavel_nome: selectedGuardian.nome_completo,
                     responsavel_id: selectedGuardian.id,
                     tipo: 'TOTEM'
-                }, undefined, req.escola_id || undefined);
+                }, selectedGuardian.id, req.escola_id || undefined);
             }
 
             setStep('success');

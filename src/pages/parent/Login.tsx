@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, Lock, CheckCircle2, Bell } from 'lucide-react';
+import { logAudit } from '../../lib/audit';
 
 export default function ParentLogin() {
     const toast = useToast();
@@ -68,6 +69,19 @@ export default function ParentLogin() {
                 cpf: cleanCpf
             }));
 
+            // Audit Log: Identificação de Sucesso
+            logAudit(
+                'LOGIN_SUCESSO',
+                'responsaveis',
+                responsavel.id,
+                {
+                    metodo: 'PORTAL_GUARDIÃO_CPF',
+                    nome: responsavel.nome_completo,
+                    alunos_vinculados: links.length
+                },
+                responsavel.id
+            );
+
         } catch (err: any) {
             setError(err.message || 'Falha na verificação de sinal.');
         } finally {
@@ -108,6 +122,20 @@ export default function ParentLogin() {
                 .insert(requests);
 
             if (error) throw error;
+
+            // Audit Log: Solicitação de Retirada
+            logAudit(
+                'SOLICITACAO_RETIRADA',
+                'solicitacoes_retirada',
+                undefined,
+                {
+                    responsavel_id: guardianId,
+                    qtd_alunos: selectedIds.size,
+                    alunos_ids: Array.from(selectedIds),
+                    origem: 'PORTAL_GUARDIÃO'
+                },
+                guardianId
+            );
 
             toast.success(
                 selectedIds.size === 1 ? 'Solicitação enviada!' : `${selectedIds.size} solicitações enviadas!`,
