@@ -5,10 +5,27 @@ import { useNavigate } from 'react-router-dom';
 import {
     LogOut, Users, School, Activity, TrendingUp, QrCode,
     BarChart2, Shield, Settings, ChevronRight, LayoutDashboard,
-    Sun, Moon, ArrowUpRight, Lock, FileText, UserCheck, LayoutGrid
+    ArrowUpRight, Lock, FileText, UserCheck, LayoutGrid
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
 import { logAudit } from '../../lib/audit';
+
+// ── Brand tokens (identical to sala/dashboard) ────────────────────────────────
+const B = {
+    navy:       '#104699',
+    navyDark:   '#0a2f6b',
+    navyDeep:   '#071830',
+    gold:       '#fbd12d',
+    goldDark:   '#e8be1a',
+    red:        '#E40123',
+    gray:       '#A7A7A2',
+    grayLight:  '#c8c8c4',
+    white:      '#FFFFFF',
+    card:       '#0d2a54',
+    cardBorder: 'rgba(251,209,45,0.10)',
+    onGold:     '#071830',
+    textSub:    'rgba(167,167,162,0.9)',
+};
 
 // ─── Animated counter hook ────────────────────────────────────────────────────
 
@@ -43,11 +60,21 @@ function LiveClock() {
         return () => clearInterval(t);
     }, []);
     return (
-        <span style={{ fontFamily: "'JetBrains Mono', monospace" }} className="text-[11px] text-[#4A4A5E] tracking-widest">
-            {time.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).toUpperCase()}
-            &nbsp;&nbsp;
-            <span className="text-[#5AFFB4]">{time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-        </span>
+        <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+            background: 'rgba(0,0,0,0.2)', border: `1px solid ${B.gold}18`,
+            borderRadius: 8, padding: '5px 12px',
+        }}>
+            <span style={{ fontFamily: 'Epilogue, sans-serif', fontSize: 20, fontWeight: 900, color: B.gold, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                <span style={{ fontSize: 13, color: `${B.gold}80`, marginLeft: 3 }}>
+                    :{String(time.getSeconds()).padStart(2, '0')}
+                </span>
+            </span>
+            <span style={{ fontSize: 8.5, fontWeight: 600, color: B.gray, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 1 }}>
+                {time.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+            </span>
+        </div>
     );
 }
 
@@ -58,26 +85,34 @@ function StatBlock({ label, value, unit = '', highlight = false, delay = 0 }: {
 }) {
     const animated = useCountUp(value, 1000 + delay);
     return (
-        <div
-            className="relative group cursor-default border-b border-[#1C1C26] last:border-b-0 py-7 px-8 hover:bg-[#0C0C12] transition-colors duration-300"
+        <div style={{
+            padding: '22px 22px',
+            borderBottom: `1px solid ${B.cardBorder}`,
+            position: 'relative', overflow: 'hidden',
+            transition: 'background 0.2s',
+            cursor: 'default',
+        }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-            {/* Left accent bar */}
-            <div
-                className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-0 group-hover:h-full transition-all duration-500 ${highlight ? 'bg-[#5AFFB4]' : 'bg-[#2A2A3A]'}`}
-            />
+            {/* Left gold accent */}
+            {highlight && (
+                <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 3, height: '60%', background: B.gold, borderRadius: '0 2px 2px 0' }} />
+            )}
 
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#3D3D52] mb-3">
+            <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: `${B.gold}65`, marginBottom: 8 }}>
                 {label}
             </p>
-            <div className="flex items-baseline gap-2">
-                <span
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    className={`text-5xl font-black leading-none tracking-tight tabular-nums ${highlight ? 'text-[#5AFFB4]' : 'text-white'}`}
-                >
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{
+                    fontFamily: 'Epilogue, sans-serif',
+                    fontSize: 44, fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em',
+                    color: highlight ? B.gold : B.white,
+                }}>
                     {animated.toLocaleString('pt-BR')}
                 </span>
                 {unit && (
-                    <span className="text-[11px] text-[#3D3D52] font-bold uppercase tracking-widest">{unit}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: B.gray, letterSpacing: '0.18em', textTransform: 'uppercase' }}>{unit}</span>
                 )}
             </div>
         </div>
@@ -86,80 +121,73 @@ function StatBlock({ label, value, unit = '', highlight = false, delay = 0 }: {
 
 // ─── Command Card ─────────────────────────────────────────────────────────────
 
-function CommandCard({ index, title, desc, icon: Icon, path, cta, accent = '#5AFFB4', isDark }: {
-    index: string; title: string; desc: string; icon: any; path: string; cta: string; accent?: string; isDark: boolean;
+function CommandCard({ index, title, desc, icon: Icon, path, cta, accentGold = false }: {
+    index: string; title: string; desc: string; icon: any; path: string; cta: string; accentGold?: boolean;
 }) {
     const navigate = useNavigate();
     return (
         <button
             onClick={() => navigate(path)}
-            className="group relative text-left w-full h-full flex flex-col overflow-hidden transition-all duration-500 active:scale-[0.98]"
             style={{
-                background: isDark ? '#0C0C12' : '#F8F8FC',
-                border: `1px solid ${isDark ? '#1C1C26' : '#E4E4EF'}`,
+                textAlign: 'left', width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+                overflow: 'hidden', background: B.card,
+                border: 'none', cursor: 'pointer',
+                transition: 'all 0.25s',
+                position: 'relative',
             }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = B.navyDark; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = B.card; }}
         >
-            {/* Hover overlay */}
-            <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{ background: `radial-gradient(ellipse at 20% 30%, ${accent}08 0%, transparent 70%)` }}
-            />
+            {/* Top gold rule */}
+            <div style={{ height: 2, background: accentGold ? `linear-gradient(90deg, ${B.gold}, transparent)` : `linear-gradient(90deg, ${B.navy}80, transparent)`, flexShrink: 0 }} />
 
-            {/* Index number — top-right */}
-            <div
-                className="absolute top-6 right-6 text-[10px] font-black tracking-[0.2em] opacity-20 group-hover:opacity-60 transition-opacity duration-300"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: accent }}
-            >
-                [{index}]
+            {/* Index — top right */}
+            <div style={{
+                position: 'absolute', top: 14, right: 14,
+                fontFamily: 'Epilogue, sans-serif', fontSize: 11, fontWeight: 900,
+                color: accentGold ? `${B.gold}45` : `${B.gray}30`,
+                letterSpacing: '0.05em',
+            }}>
+                {index}
             </div>
 
-            <div className="flex-1 p-8 flex flex-col gap-6">
+            <div style={{ flex: 1, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/* Icon */}
-                <div
-                    className="w-12 h-12 flex items-center justify-center border transition-all duration-500 group-hover:scale-110"
-                    style={{
-                        borderColor: isDark ? '#2A2A3A' : '#DDDDED',
-                        background: isDark ? '#111118' : '#EFEFF8',
-                        color: accent
-                    }}
-                >
-                    <Icon className="w-5 h-5" />
+                <div style={{
+                    width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+                    background: accentGold ? `${B.gold}18` : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${accentGold ? `${B.gold}38` : B.cardBorder}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: accentGold ? B.gold : B.gray,
+                }}>
+                    <Icon size={18} />
                 </div>
 
                 {/* Text */}
-                <div className="space-y-2 flex-1">
-                    <h3
-                        className="text-xl font-black uppercase tracking-tight leading-none"
-                        style={{
-                            fontFamily: "'Bebas Neue', cursive",
-                            fontSize: '1.6rem',
-                            letterSpacing: '0.04em',
-                            color: isDark ? '#FFFFFF' : '#0A0A14'
-                        }}
-                    >
+                <div style={{ flex: 1 }}>
+                    <h3 style={{
+                        fontFamily: 'Epilogue, sans-serif',
+                        fontSize: 18, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.1,
+                        color: B.white, marginBottom: 7,
+                    }}>
                         {title}
                     </h3>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] leading-relaxed" style={{ color: isDark ? '#3D3D52' : '#8888A0' }}>
+                    <p style={{ fontSize: 10.5, fontWeight: 500, color: B.textSub, lineHeight: 1.55 }}>
                         {desc}
                     </p>
                 </div>
             </div>
 
             {/* CTA bar */}
-            <div
-                className="px-8 py-4 flex items-center justify-between border-t transition-all duration-300"
-                style={{ borderColor: isDark ? '#1C1C26' : '#E4E4EF' }}
-            >
-                <span
-                    className="text-[9px] font-black uppercase tracking-[0.3em] transition-colors duration-300 group-hover:opacity-100 opacity-60"
-                    style={{ color: accent, fontFamily: "'JetBrains Mono', monospace" }}
-                >
+            <div style={{
+                padding: '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                borderTop: `1px solid ${B.cardBorder}`,
+                background: 'rgba(0,0,0,0.18)',
+            }}>
+                <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: accentGold ? B.gold : B.gray }}>
                     {cta}
                 </span>
-                <ArrowUpRight
-                    className="w-4 h-4 transition-all duration-500 group-hover:translate-x-1 group-hover:-translate-y-1 opacity-30 group-hover:opacity-100"
-                    style={{ color: accent }}
-                />
+                <ArrowUpRight size={13} style={{ color: accentGold ? B.gold : B.gray }} />
             </div>
         </button>
     );
@@ -167,35 +195,43 @@ function CommandCard({ index, title, desc, icon: Icon, path, cta, accent = '#5AF
 
 // ─── Deck Item ────────────────────────────────────────────────────────────────
 
-function DeckItem({ icon: Icon, label, path, isDark }: { icon: any; label: string; path: string; isDark: boolean }) {
+function DeckItem({ icon: Icon, label, path }: { icon: any; label: string; path: string; }) {
     const navigate = useNavigate();
+    const [hovered, setHovered] = useState(false);
     return (
         <button
             onClick={() => navigate(path)}
-            className="group flex items-center gap-3 px-5 py-3.5 text-left w-full transition-all duration-300 active:scale-[0.98]"
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
             style={{
-                borderBottom: `1px solid ${isDark ? '#1C1C26' : '#E4E4EF'}`,
+                display: 'flex', alignItems: 'center', gap: 11, padding: '13px 20px',
+                textAlign: 'left', width: '100%', background: hovered ? 'rgba(255,255,255,0.03)' : 'transparent',
+                border: 'none', borderBottom: `1px solid ${B.cardBorder}`,
+                cursor: 'pointer', transition: 'background 0.18s',
             }}
         >
-            <div
-                className="w-7 h-7 flex items-center justify-center shrink-0 transition-all duration-300"
-                style={{
-                    background: isDark ? '#111118' : '#EEEEFC',
-                    border: `1px solid ${isDark ? '#2A2A3A' : '#DDDDED'}`,
-                    color: isDark ? '#4A4A5E' : '#6A6A88'
-                }}
-            >
-                <Icon className="w-3.5 h-3.5 group-hover:text-[#5AFFB4] transition-colors duration-300" />
+            <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: hovered ? `${B.gold}18` : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${hovered ? `${B.gold}38` : B.cardBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: hovered ? B.gold : B.gray,
+                transition: 'all 0.18s',
+            }}>
+                <Icon size={13} />
             </div>
-            <span
-                className="text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-300"
-                style={{ color: isDark ? '#4A4A5E' : '#6A6A88' }}
-            >
-                <span className="group-hover:text-white dark:group-hover:text-white transition-colors duration-300">
-                    {label}
-                </span>
+            <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+                color: hovered ? B.white : B.grayLight,
+                fontFamily: 'Instrument Sans, sans-serif',
+                transition: 'color 0.18s', flex: 1,
+            }}>
+                {label}
             </span>
-            <ChevronRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-300 text-[#5AFFB4]" />
+            <ChevronRight size={12} style={{
+                color: hovered ? B.gold : 'transparent',
+                transition: 'all 0.18s',
+            }} />
         </button>
     );
 }
@@ -205,7 +241,6 @@ function DeckItem({ icon: Icon, label, path, isDark }: { icon: any; label: strin
 export default function AdminDashboard() {
     const { signOut } = useAuth();
     const navigate = useNavigate();
-    const [isDarkMode, setIsDarkMode] = useState(true);
     const [mounted, setMounted] = useState(false);
     const [stats, setStats] = useState({
         totalStudents: 0,
@@ -214,17 +249,15 @@ export default function AdminDashboard() {
         avgWaitTime: 0
     });
 
-    // Inject fonts
+    // Inject fonts (same as sala/dashboard)
     useEffect(() => {
-        const existing = document.getElementById('dashboard-fonts');
-        if (!existing) {
+        if (!document.getElementById('adm-brand-fonts')) {
             const link = document.createElement('link');
-            link.id = 'dashboard-fonts';
+            link.id = 'adm-brand-fonts';
             link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap';
+            link.href = 'https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,700;0,800;0,900;1,700;1,800&family=Instrument+Sans:wght@400;500;600;700&display=swap';
             document.head.appendChild(link);
         }
-        // Trigger mount animation
         const t = setTimeout(() => setMounted(true), 80);
         return () => clearTimeout(t);
     }, []);
@@ -272,183 +305,144 @@ export default function AdminDashboard() {
         navigate('/admin/login');
     };
 
-    const bg = isDarkMode ? '#070709' : '#F2F2F8';
-    const surface = isDarkMode ? '#0C0C12' : '#FFFFFF';
-    const border = isDarkMode ? '#1C1C26' : '#E4E4EF';
-    const textPrimary = isDarkMode ? '#FFFFFF' : '#0A0A14';
-    const textMuted = isDarkMode ? '#3D3D52' : '#8888A0';
-
     return (
-        <div
-            className="min-h-screen flex flex-col transition-colors duration-700"
-            style={{ background: bg, color: textPrimary }}
-        >
-            {/* ─── Subtle background texture ─────────────────────────────── */}
-            <div
-                className="fixed inset-0 pointer-events-none z-0 opacity-[0.025]"
-                style={{
-                    backgroundImage: `
-                        linear-gradient(to right, #5AFFB4 1px, transparent 1px),
-                        linear-gradient(to bottom, #5AFFB4 1px, transparent 1px)
-                    `,
-                    backgroundSize: '80px 80px',
-                    maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)'
-                }}
-            />
+        <div style={{
+            minHeight: '100vh', display: 'flex', flexDirection: 'column',
+            background: B.navyDeep,
+            fontFamily: "'Instrument Sans', system-ui, sans-serif",
+            opacity: mounted ? 1 : 0, transition: 'opacity 0.4s ease',
+        }}>
 
-            {/* ─── Header ────────────────────────────────────────────────── */}
-            <header
-                className="relative z-20 flex items-center justify-between px-8 py-4 shrink-0"
-                style={{
-                    borderBottom: `1px solid ${border}`,
-                    background: isDarkMode ? 'rgba(7,7,9,0.92)' : 'rgba(242,242,248,0.92)',
-                    backdropFilter: 'blur(24px)',
-                }}
-            >
-                {/* Left: Classification badge + title */}
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3">
-                        {/* Classification stripe */}
-                        <div className="flex flex-col gap-[3px]">
-                            {['#5AFFB4', '#2A2A3A', '#2A2A3A'].map((c, i) => (
-                                <div key={i} style={{ width: 20, height: 3, background: c }} />
-                            ))}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <span
-                                    className="text-xl tracking-[0.05em] leading-none"
-                                    style={{ fontFamily: "'Bebas Neue', cursive", color: textPrimary }}
-                                >
-                                    Command Center Prime
-                                </span>
-                                <span
-                                    className="text-[8px] px-2 py-0.5 font-black tracking-[0.25em] border"
-                                    style={{
-                                        color: '#5AFFB4',
-                                        borderColor: '#5AFFB420',
-                                        background: '#5AFFB408',
-                                        fontFamily: "'JetBrains Mono', monospace"
-                                    }}
-                                >
-                                    ACTIVE
-                                </span>
+            {/* ══════════════ HEADER ══════════════ */}
+            <header style={{
+                background: B.navy,
+                borderBottom: `3px solid ${B.gold}`,
+                position: 'sticky', top: 0, zIndex: 60,
+                boxShadow: `0 4px 24px rgba(7,24,48,0.7)`,
+            }}>
+                {/* Top gold stripe */}
+                <div style={{ height: 3, background: `linear-gradient(90deg, ${B.gold} 0%, ${B.goldDark} 50%, ${B.gold} 100%)` }} />
+
+                <div style={{ padding: '0 20px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+
+                    {/* Left */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
+                        <NavigationControls />
+                        <div style={{ width: 1, height: 26, background: 'rgba(255,255,255,0.15)' }} />
+
+                        {/* Gold school badge + title */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                                background: B.gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 2px 10px ${B.gold}45`,
+                            }}>
+                                <LayoutDashboard size={17} style={{ color: B.onGold }} />
                             </div>
-                            <p
-                                className="text-[9px] font-black tracking-[0.3em] uppercase mt-0.5"
-                                style={{ color: textMuted, fontFamily: "'JetBrains Mono', monospace" }}
-                            >
-                                NODE // SISRA.ADM.MAIN_DECK
-                            </p>
+                            <div>
+                                <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.26em', textTransform: 'uppercase', color: `${B.gold}80`, marginBottom: 1 }}>
+                                    La Salle, Cheguei! · ADM
+                                </p>
+                                <h1 style={{ fontSize: 16, fontWeight: 800, color: B.white, letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'Epilogue, sans-serif' }}>
+                                    Painel Administrativo
+                                </h1>
+                            </div>
                         </div>
                     </div>
 
-                    <NavigationControls />
-                </div>
-
-                {/* Center: live clock */}
-                <div className="hidden md:block">
-                    <LiveClock />
-                </div>
-
-                {/* Right: controls */}
-                <div className="flex items-center gap-3">
-                    {/* System health pill */}
-                    <div
-                        className="hidden lg:flex items-center gap-2.5 px-4 py-2"
-                        style={{ border: `1px solid ${border}`, background: isDarkMode ? '#0C0C12' : '#FFFFFF' }}
-                    >
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#5AFFB4] animate-pulse" />
-                        <span
-                            className="text-[9px] font-black uppercase tracking-[0.25em] text-[#5AFFB4]"
-                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        >
-                            SYSTEM // NOMINAL
-                        </span>
+                    {/* Center clock */}
+                    <div className="hidden md:block">
+                        <LiveClock />
                     </div>
 
-                    <button
-                        onClick={() => setIsDarkMode(!isDarkMode)}
-                        className="p-2 transition-all duration-300 hover:opacity-70"
-                        style={{ border: `1px solid ${border}`, background: surface, color: textMuted }}
-                    >
-                        {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                    </button>
+                    {/* Right */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        {/* Live status pill */}
+                        <div className="hidden lg:flex" style={{
+                            alignItems: 'center', gap: 9,
+                            background: 'rgba(0,0,0,0.25)', border: `1px solid ${B.gold}28`,
+                            borderRadius: 8, padding: '6px 13px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }} />
+                                <p style={{ fontSize: 7.5, fontWeight: 600, color: '#22C55E', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Sistema Ativo</p>
+                            </div>
+                        </div>
 
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 hover:bg-[#FF4D4D] hover:border-[#FF4D4D] hover:text-white active:scale-95"
-                        style={{
-                            border: '1px solid #FF4D4D30',
-                            background: '#FF4D4D08',
-                            color: '#FF4D4D',
-                            fontFamily: "'JetBrains Mono', monospace"
+                        {/* Logout */}
+                        <button onClick={handleLogout} style={{
+                            display: 'flex', alignItems: 'center', gap: 7,
+                            padding: '8px 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                            background: `${B.red}18`, color: '#ff7b8a',
+                            outline: `1px solid ${B.red}35`, transition: 'all 0.18s',
+                            fontSize: 11, fontWeight: 700, fontFamily: 'Instrument Sans, sans-serif',
                         }}
-                    >
-                        <LogOut className="w-3.5 h-3.5" />
-                        Encerrar
-                    </button>
+                            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = `${B.red}35`; el.style.color = '#fff'; }}
+                            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = `${B.red}18`; el.style.color = '#ff7b8a'; }}
+                        >
+                            <LogOut size={13} />
+                            <span className="hidden sm:inline">Sair</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* ─── Main Grid ─────────────────────────────────────────────── */}
+            {/* ══════════════ BODY ══════════════ */}
             <main
-                className="adm-main-grid relative z-10 flex-1 grid"
+                className="adm-main-grid"
                 style={{
-                    gridTemplateColumns: '320px 1fr',
+                    flex: 1, display: 'grid', gridTemplateColumns: '280px 1fr', minHeight: 0,
                     opacity: mounted ? 1 : 0,
                     transform: mounted ? 'none' : 'translateY(8px)',
-                    transition: 'opacity 0.6s ease, transform 0.6s ease',
+                    transition: 'opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s',
                 }}
             >
-                {/* ─── LEFT RAIL: Identity + Stats ───────────────────────── */}
-                <aside
-                    className="flex flex-col"
-                    style={{ borderRight: `1px solid ${border}` }}
-                >
-                    {/* System identity block */}
-                    <div
-                        className="px-8 py-10 relative overflow-hidden"
-                        style={{ borderBottom: `1px solid ${border}` }}
-                    >
-                        {/* Large background letter */}
-                        <div
-                            className="absolute -bottom-6 -right-4 text-[140px] font-black leading-none select-none pointer-events-none opacity-[0.03]"
-                            style={{ fontFamily: "'Bebas Neue', cursive", color: '#5AFFB4' }}
-                        >
-                            S
-                        </div>
+                {/* ─── LEFT RAIL ──────────────────────────────────────────── */}
+                <aside style={{
+                    display: 'flex', flexDirection: 'column',
+                    borderRight: `1px solid ${B.cardBorder}`,
+                    background: `linear-gradient(180deg, ${B.navyDark} 0%, ${B.navyDeep} 100%)`,
+                }}>
+                    {/* Identity block */}
+                    <div style={{
+                        padding: '28px 22px 22px', position: 'relative', overflow: 'hidden',
+                        borderBottom: `1px solid ${B.cardBorder}`,
+                    }}>
+                        {/* Gold line accent */}
+                        <div style={{ height: 2, background: `linear-gradient(90deg, ${B.gold}, transparent)`, marginBottom: 20, borderRadius: 1 }} />
 
-                        <div className="relative">
-                            <div
-                                className="w-10 h-10 flex items-center justify-center mb-6"
-                                style={{
-                                    border: `1px solid ${border}`,
-                                    background: '#5AFFB408',
-                                    color: '#5AFFB4'
-                                }}
-                            >
-                                <LayoutDashboard className="w-5 h-5" />
+                        {/* Decorative background letter */}
+                        <div style={{
+                            position: 'absolute', bottom: -10, right: -8,
+                            fontFamily: 'Epilogue, sans-serif', fontSize: 120, fontWeight: 900,
+                            color: `${B.gold}06`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none',
+                        }}>A</div>
+
+                        <div style={{ position: 'relative' }}>
+                            <div style={{
+                                width: 38, height: 38, borderRadius: 9, marginBottom: 16,
+                                background: `${B.gold}18`, border: `1px solid ${B.gold}38`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <LayoutDashboard size={17} style={{ color: B.gold }} />
                             </div>
-                            <h2
-                                className="text-4xl leading-none mb-2"
-                                style={{ fontFamily: "'Bebas Neue', cursive", color: textPrimary, letterSpacing: '0.04em' }}
-                            >
+                            <h2 style={{
+                                fontFamily: 'Epilogue, sans-serif',
+                                fontSize: 32, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.08,
+                                color: B.white, marginBottom: 6,
+                            }}>
                                 SISRA
                                 <br />
-                                <span style={{ color: '#5AFFB4' }}>OPS</span>
+                                <span style={{ color: B.gold }}>Admin</span>
                             </h2>
-                            <p
-                                className="text-[9px] font-black tracking-[0.3em] uppercase"
-                                style={{ color: textMuted, fontFamily: "'JetBrains Mono', monospace" }}
-                            >
-                                Admin Interface · 2026
+                            <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.26em', textTransform: 'uppercase', color: `${B.gold}55` }}>
+                                Interface Administrativa · 2026
                             </p>
                         </div>
                     </div>
 
                     {/* Stat blocks */}
-                    <div className="flex-1 flex flex-col divide-y divide-[#1C1C26]">
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                         <StatBlock label="Total de Alunos" value={stats.totalStudents} highlight delay={0} />
                         <StatBlock label="Retiradas Hoje" value={stats.dailyPickups} delay={100} />
                         <StatBlock label="Em Atendimento" value={stats.activePickups} delay={200} />
@@ -456,73 +450,62 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Footer status strip */}
-                    <div
-                        className="px-8 py-4 flex items-center gap-3"
-                        style={{ borderTop: `1px solid ${border}` }}
-                    >
-                        <Activity className="w-3 h-3 text-[#5AFFB4] animate-pulse shrink-0" />
-                        <span
-                            className="text-[8px] font-black uppercase tracking-[0.25em] text-[#3D3D52]"
-                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        >
-                            Uptime // 98.4% · Latência // 14ms
+                    <div style={{
+                        padding: '11px 22px', display: 'flex', alignItems: 'center', gap: 8,
+                        borderTop: `1px solid ${B.cardBorder}`,
+                    }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px #22C55E', flexShrink: 0 }} />
+                        <span style={{ fontSize: 8.5, fontWeight: 600, color: B.textSub, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                            Uptime 98.4% · 14ms
                         </span>
                     </div>
                 </aside>
 
-                {/* ─── RIGHT CONTENT ──────────────────────────────────────── */}
-                <div className="flex flex-col overflow-y-auto">
+                {/* ─── RIGHT CONTENT ─────────────────────────────────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
                     {/* Section label */}
-                    <div
-                        className="flex items-center gap-4 px-8 py-4 shrink-0"
-                        style={{ borderBottom: `1px solid ${border}` }}
-                    >
-                        <span
-                            className="text-[9px] font-black uppercase tracking-[0.35em]"
-                            style={{ color: textMuted, fontFamily: "'JetBrains Mono', monospace" }}
-                        >
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px',
+                        borderBottom: `1px solid ${B.cardBorder}`,
+                        background: 'rgba(0,0,0,0.12)',
+                    }}>
+                        <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: `${B.gold}70` }}>
                             Módulos Operacionais
                         </span>
-                        <div className="flex-1 h-px" style={{ background: border }} />
-                        <span
-                            className="text-[9px] font-black uppercase tracking-[0.35em] text-[#5AFFB4]"
-                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        >
+                        <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${B.gold}28, transparent)` }} />
+                        <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: B.gold }}>
                             3 Ativos
                         </span>
                     </div>
 
-                    {/* ─── Command Cards Grid ──────────────────────────────── */}
+                    {/* ── Command Cards Grid ───────────────────────────────── */}
                     <div
-                        className="adm-cards-grid grid shrink-0"
+                        className="adm-cards-grid"
                         style={{
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            borderBottom: `1px solid ${border}`,
+                            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', flexShrink: 0,
+                            borderBottom: `1px solid ${B.cardBorder}`,
                         }}
                     >
-                        <div style={{ borderRight: `1px solid ${border}` }}>
+                        <div style={{ borderRight: `1px solid ${B.cardBorder}` }}>
                             <CommandCard
                                 index="01"
                                 title="Sala de Aula"
                                 desc="Gestão de professores e SCTs. Chamadas e alertas em tempo real."
                                 icon={School}
                                 path="/sala/dashboard"
-                                cta="Acessar Terminal"
-                                accent="#5AFFB4"
-                                isDark={isDarkMode}
+                                cta="Acessar Portal"
+                                accentGold
                             />
                         </div>
-                        <div style={{ borderRight: `1px solid ${border}` }}>
+                        <div style={{ borderRight: `1px solid ${B.cardBorder}` }}>
                             <CommandCard
                                 index="02"
                                 title="Terminal Recepção"
                                 desc="Identificação e busca de alunos para controle de portaria."
                                 icon={Activity}
                                 path="/recepcao/busca"
-                                cta="Iniciar Missão"
-                                accent="#4DC8FF"
-                                isDark={isDarkMode}
+                                cta="Abrir Terminal"
                             />
                         </div>
                         <div>
@@ -532,65 +515,60 @@ export default function AdminDashboard() {
                                 desc="Telemetria, auditoria de retiradas e exportação de logs completos."
                                 icon={BarChart2}
                                 path="/admin/exportar-dados"
-                                cta="Manifesto de Dados"
-                                accent="#C27AFF"
-                                isDark={isDarkMode}
+                                cta="Ver Relatórios"
                             />
                         </div>
                     </div>
 
-                    {/* ─── Management Deck ────────────────────────────────── */}
-                    <div className="flex-1">
+                    {/* ── Management Deck ──────────────────────────────────── */}
+                    <div style={{ flex: 1 }}>
                         {/* Section label */}
-                        <div
-                            className="flex items-center gap-4 px-8 py-4"
-                            style={{ borderBottom: `1px solid ${border}` }}
-                        >
-                            <span
-                                className="text-[9px] font-black uppercase tracking-[0.35em]"
-                                style={{ color: textMuted, fontFamily: "'JetBrains Mono', monospace" }}
-                            >
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px',
+                            borderBottom: `1px solid ${B.cardBorder}`,
+                            background: 'rgba(0,0,0,0.12)',
+                        }}>
+                            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: `${B.gold}70` }}>
                                 Deck de Gestão Global
                             </span>
-                            <div className="flex-1 h-px" style={{ background: border }} />
+                            <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${B.gold}28, transparent)` }} />
                         </div>
 
-                        {/* Nav items in 2-column grid */}
-                        <div className="grid grid-cols-2" style={{ borderBottom: `1px solid ${border}` }}>
-                            <div style={{ borderRight: `1px solid ${border}` }}>
-                                <DeckItem icon={Users} label="Gestão de Alunos" path="/admin/alunos" isDark={isDarkMode} />
-                                <DeckItem icon={Lock} label="Controle de Acessos" path="/admin/usuarios" isDark={isDarkMode} />
-                                <DeckItem icon={LayoutGrid} label="Estrutura de Turmas" path="/admin/turmas" isDark={isDarkMode} />
+                        {/* Nav items in 2-col grid */}
+                        <div className="adm-deck-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: `1px solid ${B.cardBorder}` }}>
+                            <div style={{ borderRight: `1px solid ${B.cardBorder}` }}>
+                                <DeckItem icon={Users}      label="Gestão de Alunos"       path="/admin/alunos" />
+                                <DeckItem icon={Lock}       label="Controle de Acessos"     path="/admin/usuarios" />
+                                <DeckItem icon={LayoutGrid} label="Estrutura de Turmas"     path="/admin/turmas" />
                             </div>
                             <div>
-                                <DeckItem icon={QrCode} label="Central de Cartões QR" path="/admin/cartoes-qr" isDark={isDarkMode} />
-                                <DeckItem icon={Shield} label="Auditoria de Segurança" path="/admin/auditoria-seguranca" isDark={isDarkMode} />
-                                <DeckItem icon={Settings} label="Configurações Globais" path="/admin/configuracoes" isDark={isDarkMode} />
+                                <DeckItem icon={QrCode}   label="Central de Cartões QR"    path="/admin/cartoes-qr" />
+                                <DeckItem icon={Shield}   label="Auditoria de Segurança"   path="/admin/auditoria-seguranca" />
+                                <DeckItem icon={Settings} label="Configurações Globais"    path="/admin/configuracoes" />
                             </div>
                         </div>
 
-                        {/* Bottom: Additional quick links */}
-                        <div className="adm-bottom-strip grid grid-cols-3 h-24">
+                        {/* Bottom quick links */}
+                        <div className="adm-bottom-strip" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', height: 88 }}>
                             {[
-                                { icon: FileText, label: 'Histórico', path: '/admin/historico-retiradas' },
-                                { icon: UserCheck, label: 'Funcionários', path: '/admin/funcionarios' },
-                                { icon: TrendingUp, label: 'Relatórios', path: '/admin/exportar-dados' },
+                                { icon: FileText,   label: 'Histórico',    path: '/admin/historico-retiradas' },
+                                { icon: UserCheck,  label: 'Funcionários', path: '/admin/funcionarios' },
+                                { icon: TrendingUp, label: 'Relatórios',   path: '/admin/exportar-dados' },
                             ].map((item, i) => (
                                 <button
                                     key={i}
                                     onClick={() => navigate(item.path)}
-                                    className="group flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-[0.97]"
                                     style={{
-                                        borderRight: i < 2 ? `1px solid ${border}` : 'none',
-                                        background: 'transparent',
-                                        color: textMuted,
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                        background: 'transparent', border: 'none', cursor: 'pointer',
+                                        borderRight: i < 2 ? `1px solid ${B.cardBorder}` : 'none',
+                                        color: B.gray, transition: 'all 0.2s',
                                     }}
+                                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.03)'; el.style.color = B.gold; }}
+                                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = B.gray; }}
                                 >
-                                    <item.icon className="w-4 h-4 group-hover:text-[#5AFFB4] transition-colors duration-300" />
-                                    <span
-                                        className="text-[8px] font-black uppercase tracking-[0.25em] group-hover:text-white transition-colors duration-300"
-                                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                                    >
+                                    <item.icon size={15} />
+                                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'Instrument Sans, sans-serif' }}>
                                         {item.label}
                                     </span>
                                 </button>
@@ -600,7 +578,7 @@ export default function AdminDashboard() {
                 </div>
             </main>
 
-            {/* ─── Responsive styles ─────────────────────────────────────── */}
+            {/* ── Responsive styles ────────────────────────────────────────── */}
             <style>{`
                 @media (max-width: 1024px) {
                     .adm-main-grid { grid-template-columns: 1fr !important; }
@@ -609,32 +587,24 @@ export default function AdminDashboard() {
                 @media (max-width: 640px) {
                     .adm-main-grid { grid-template-columns: 1fr !important; }
                     .adm-cards-grid { grid-template-columns: 1fr !important; }
+                    .adm-deck-grid  { grid-template-columns: 1fr !important; }
                     .adm-bottom-strip { grid-template-columns: 1fr !important; height: auto !important; }
-                    .adm-bottom-strip > button { padding-top: 16px !important; padding-bottom: 16px !important; border-right: none !important; border-bottom: 1px solid var(--adm-border, #1C1C26) !important; }
+                    .adm-bottom-strip > button { padding: 16px 0 !important; border-right: none !important; border-bottom: 1px solid rgba(251,209,45,0.10) !important; }
                 }
             `}</style>
 
-            {/* ─── Footer ────────────────────────────────────────────────── */}
-            <footer
-                className="relative z-20 px-8 py-3 flex items-center justify-between shrink-0"
-                style={{
-                    borderTop: `1px solid ${border}`,
-                    background: isDarkMode ? 'rgba(7,7,9,0.95)' : 'rgba(242,242,248,0.95)',
-                }}
-            >
-                <span
-                    className="text-[8px] font-black uppercase tracking-[0.3em] opacity-30"
-                    style={{ color: textPrimary, fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                    SISRA System Infrastructure © 2026
+            {/* ── Footer ───────────────────────────────────────────────────── */}
+            <footer style={{
+                padding: '10px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                borderTop: `1px solid ${B.cardBorder}`,
+                background: B.navyDeep,
+            }}>
+                <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.22em', textTransform: 'uppercase', color: `${B.gold}30`, fontFamily: 'Instrument Sans, sans-serif' }}>
+                    La Salle, Cheguei! — SISRA © 2026
                 </span>
-                <div className="flex items-center gap-6 opacity-30">
-                    {['SECURE_LINK // RSA_4096', 'LATENCY // 14MS', 'ENV // PROD'].map(tag => (
-                        <span
-                            key={tag}
-                            className="text-[7px] font-bold tracking-widest uppercase"
-                            style={{ color: textMuted, fontFamily: "'JetBrains Mono', monospace" }}
-                        >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20, opacity: 0.3 }}>
+                    {['Seguro · RSA-4096', 'Latência · 14ms', 'Env · Produção'].map(tag => (
+                        <span key={tag} style={{ fontSize: 7.5, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: B.gray, fontFamily: 'Instrument Sans, sans-serif' }}>
                             {tag}
                         </span>
                     ))}
