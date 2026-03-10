@@ -87,7 +87,6 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
     const [distance, setDistance]       = useState<number | null>(null);
     const [geofence, setGeofence]       = useState<string | null>(null);
     const [geoError, setGeoError]       = useState<GeoErrorInfo | null>(null);
-    const [permDenied, setPermDenied]   = useState(false);
     const [school, setSchool]           = useState<SchoolCoords | null>(null);
     const [loadingSchool, setLoadingSchool] = useState(false);
 
@@ -188,23 +187,10 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
         if (!school) return;
 
         setGeoError(null);
-        setPermDenied(false);
 
-        // Check permission state before starting (not all browsers support this)
-        if (navigator.permissions) {
-            try {
-                const perm = await navigator.permissions.query({ name: 'geolocation' });
-                if (perm.state === 'denied') {
-                    setPermDenied(true);
-                    setGeoError({
-                        title: 'Permissão de localização negada',
-                        message: 'Você recusou o acesso à localização anteriormente. Para reativar: Configurações do navegador → Privacidade → Localização → Permitir.',
-                        hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
-                    });
-                    return;
-                }
-            } catch { /* permissions API not supported — proceed normally */ }
-        }
+        // Never pre-check navigator.permissions here — doing so would prevent
+        // the browser from showing its native permission dialog when state='prompt'.
+        // Always call watchPosition directly; diagnose errors in the error callback.
 
         if (!navigator.geolocation) {
             setGeoError({
@@ -231,8 +217,24 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
             writeToSupabase(dist, latitude, longitude, status);
         };
 
-        const onError = (err: GeolocationPositionError) => {
-            setGeoError(diagnoseGeoError(err));
+        const onError = async (err: GeolocationPositionError) => {
+            // Post-check permission state to refine the message shown to the user.
+            // We do this AFTER the error, not before, so watchPosition always runs
+            // and the browser can show its native permission dialog when needed.
+            let info = diagnoseGeoError(err);
+            if (err.code === err.PERMISSION_DENIED && navigator.permissions) {
+                try {
+                    const perm = await navigator.permissions.query({ name: 'geolocation' });
+                    if (perm.state === 'denied') {
+                        info = {
+                            title: 'Permissão bloqueada no navegador',
+                            message: 'O acesso à localização está bloqueado para este site. Para reativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois recarregue a página.',
+                            hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
+                        };
+                    }
+                } catch { /* Permissions API indisponível — usar mensagem padrão */ }
+            }
+            setGeoError(info);
             setTracking(false);
             if (watchIdRef.current !== null) {
                 navigator.geolocation.clearWatch(watchIdRef.current);
@@ -291,7 +293,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
 
                 <button
                     onClick={tracking ? stopTracking : startTracking}
-                    disabled={loadingSchool || permDenied}
+                    disabled={loadingSchool}
                     className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 ${
                         tracking
                             ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
