@@ -230,7 +230,7 @@ export default function PriorityPipeline({
                             <button
                                 key={req.id}
                                 onClick={() => onSelectRequest(req)}
-                                className={`w-72 md:w-full group relative p-4 rounded-[1.5rem] border-2 transition-all duration-500 flex items-center gap-4 text-left shrink-0 overflow-hidden ${activeRequestId === req.id
+                                className={`w-72 md:w-full group relative p-4 rounded-[1.5rem] border-2 transition-all duration-500 flex items-start gap-4 text-left shrink-0 overflow-hidden ${activeRequestId === req.id
                                     ? 'bg-emerald-500 border-emerald-400 shadow-[0_15px_40px_rgba(16,185,129,0.25)] scale-[1.02] z-10'
                                     : 'bg-white/[0.03] border-white/5 hover:border-emerald-500/30 hover:bg-white/[0.06] hover:translate-x-1'}`}
                             >
@@ -256,24 +256,27 @@ export default function PriorityPipeline({
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-hidden">
-                                    <p className={`font-black uppercase italic tracking-tighter leading-none mb-1 text-base ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}>
-                                        {req.aluno.nome_completo.split(' ')[0]} {req.aluno.nome_completo.split(' ')[1] || ''}
+                                <div className="flex-1 min-w-0">
+                                    <p
+                                        className={`font-black uppercase italic tracking-tighter leading-snug mb-1.5 text-sm ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}
+                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                                    >
+                                        {req.aluno.nome_completo}
                                     </p>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md ${activeRequestId === req.id ? 'bg-slate-950/20' : 'bg-emerald-500/10'}`}>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md shrink-0 ${activeRequestId === req.id ? 'bg-slate-950/20' : 'bg-emerald-500/10'}`}>
                                             <span className={`text-[9px] font-black uppercase tracking-widest ${activeRequestId === req.id ? 'text-slate-950' : 'text-emerald-400'}`}>
                                                 {req.aluno.turma}
                                             </span>
                                         </div>
                                         {req.status_geofence === 'CHEGOU' && (
-                                            <div className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-md animate-pulse">
+                                            <div className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-md animate-pulse shrink-0">
                                                 <div className="w-1 h-1 bg-white rounded-full"></div>
                                                 <span className={`text-[8px] font-black uppercase tracking-widest ${activeRequestId === req.id ? 'text-slate-950' : 'text-white'}`}>NA RECEPÇÃO</span>
                                             </div>
                                         )}
                                         {req.status === 'AGUARDANDO' && (
-                                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md ${activeRequestId === req.id ? 'bg-slate-950/20' : 'bg-amber-500/20 border border-amber-500/30'}`}>
+                                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md shrink-0 ${activeRequestId === req.id ? 'bg-slate-950/20' : 'bg-amber-500/20 border border-amber-500/30'}`}>
                                                 <Clock className={`w-3 h-3 ${activeRequestId === req.id ? 'text-slate-950' : 'text-amber-500'}`} />
                                                 <span className={`text-[8px] font-black uppercase tracking-widest ${activeRequestId === req.id ? 'text-slate-950' : 'text-amber-500'}`}>EM ESPERA</span>
                                             </div>

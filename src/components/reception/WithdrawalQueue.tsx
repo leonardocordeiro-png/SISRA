@@ -219,46 +219,54 @@ export default function WithdrawalQueue() {
                     const isNear = pickup.status_geofence === 'PERTO';
 
                     return (
-                        <div key={pickup.id} className="group relative p-5 bg-[#020617]/40 rounded-3xl border border-white/5 hover:border-emerald-500/40 hover:bg-[#020617]/60 transition-all duration-500 shadow-xl overflow-hidden">
+                        <div key={pickup.id} className="group relative p-4 bg-[#020617]/40 rounded-3xl border border-white/5 hover:border-emerald-500/40 hover:bg-[#020617]/60 transition-all duration-500 shadow-xl">
                             {/* Scanning effect on hover */}
                             <div className="absolute inset-x-0 h-[1px] bg-emerald-500/20 blur-[1px] top-0 opacity-0 group-hover:opacity-100 animate-scan pointer-events-none"></div>
 
-                            <div className="flex justify-between items-start mb-5">
-                                <div className="flex gap-4">
-                                    <div className="relative shrink-0">
-                                        <div className="w-16 h-16 bg-[#020617] rounded-3xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 shadow-2xl relative">
-                                            {pickup.aluno.foto_url ? (
-                                                <img src={pickup.aluno.foto_url} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-slate-700">
-                                                    <UserIcon className="w-8 h-8" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-[#020617] rounded-full animate-pulse shadow-lg"></div>
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="font-black text-white leading-tight uppercase italic tracking-tighter text-sm truncate group-hover:text-emerald-400 transition-colors">{pickup.aluno.nome_completo}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest leading-none">{pickup.aluno.turma}</p>
-                                            <div className="w-1 h-1 bg-white/10 rounded-full"></div>
-                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">SALA {pickup.aluno.sala}</p>
-                                        </div>
-
-                                        {pickup.distancia_estimada_metros && (
-                                            <div className={`mt-3 inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border backdrop-blur-md transition-all duration-500 ${isAtDoor ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 animate-pulse' :
-                                                isNear ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-slate-500'
-                                                }`}>
-                                                <MapPin className={`w-3 h-3 ${isAtDoor ? 'animate-bounce' : ''}`} />
-                                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">
-                                                    {isAtDoor ? 'NA RECEPÇÃO' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
-                                                    {' '}({pickup.distancia_estimada_metros}m)
-                                                </span>
+                            <div className="flex items-start gap-3 mb-4">
+                                {/* Photo */}
+                                <div className="relative shrink-0">
+                                    <div className="w-14 h-14 bg-[#020617] rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 shadow-2xl">
+                                        {pickup.aluno.foto_url ? (
+                                            <img src={pickup.aluno.foto_url} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-700">
+                                                <UserIcon className="w-7 h-7" />
                                             </div>
                                         )}
                                     </div>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-[#020617] rounded-full animate-pulse shadow-lg"></div>
                                 </div>
-                                <StatusBadge status={pickup.status} />
+
+                                {/* Info + badge */}
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                    <p
+                                        className="font-black text-white leading-snug uppercase italic tracking-tighter text-sm group-hover:text-emerald-400 transition-colors mb-1"
+                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                                    >{pickup.aluno.nome_completo}</p>
+                                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <p className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest leading-none">{pickup.aluno.turma}</p>
+                                            <div className="w-1 h-1 bg-white/10 rounded-full shrink-0"></div>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">SALA {pickup.aluno.sala}</p>
+                                        </div>
+                                        <div className="shrink-0">
+                                            <StatusBadge status={pickup.status} />
+                                        </div>
+                                    </div>
+
+                                    {pickup.distancia_estimada_metros && (
+                                        <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xl border backdrop-blur-md transition-all duration-500 ${isAtDoor ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 animate-pulse' :
+                                            isNear ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-slate-500'
+                                            }`}>
+                                            <MapPin className={`w-3 h-3 shrink-0 ${isAtDoor ? 'animate-bounce' : ''}`} />
+                                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">
+                                                {isAtDoor ? 'NA RECEPÇÃO' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
+                                                {' '}({pickup.distancia_estimada_metros}m)
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {pickup.mensagem_sala && (

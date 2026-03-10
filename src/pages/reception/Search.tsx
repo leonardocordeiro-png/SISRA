@@ -134,6 +134,7 @@ export default function ReceptionSearch() {
     const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null);
     const [useManualPickup, setUseManualPickup] = useState(false);       // no-guardian mode
     const [manualPickupName, setManualPickupName] = useState('');        // name typed manually
+    const [isEmergency, setIsEmergency] = useState(false);              // emergency call flag
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
@@ -336,7 +337,7 @@ export default function ReceptionSearch() {
                     responsavel_id: selectedGuardianId || null,
                     recepcionista_id: user.id,
                     status: 'SOLICITADO',
-                    tipo_solicitacao: 'EMERGENCIA',
+                    tipo_solicitacao: isEmergency ? 'EMERGENCIA' : 'RECEPCAO',
                     status_geofence: 'CHEGOU',
                 };
                 if (useManualPickup && manualPickupName.trim()) {
@@ -404,7 +405,7 @@ export default function ReceptionSearch() {
         setSelectedStudentIds(new Set()); setResults([]); setSelectedGuardianId(null);
         setGuardians([]); setMultiStudents([]); setIsAddingMore(false);
         setAddMoreQuery(''); setAddMoreResults([]);
-        setUseManualPickup(false); setManualPickupName('');
+        setUseManualPickup(false); setManualPickupName(''); setIsEmergency(false);
     };
 
     const handleLogout = async () => { await signOut(); navigate('/login'); };
@@ -788,6 +789,29 @@ export default function ReceptionSearch() {
                                         </div>
                                     </div>
 
+                                    {/* Emergency toggle (QR/Code mode) */}
+                                    <div style={{ padding: '0 22px 12px' }}>
+                                        <button onClick={() => setIsEmergency(v => !v)} style={{
+                                            width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
+                                            background: isEmergency ? `${B.red}18` : 'rgba(255,255,255,0.03)',
+                                            border: `1.5px solid ${isEmergency ? B.red + '60' : B.cardBorder}`,
+                                            borderRadius: 11, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                        }}>
+                                            <div style={{
+                                                width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                                                background: isEmergency ? B.red : 'rgba(255,255,255,0.05)',
+                                                border: `1.5px solid ${isEmergency ? B.red : B.cardBorder}`,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s',
+                                            }}>
+                                                {isEmergency && <CheckCircle2 size={13} style={{ color: '#fff' }} />}
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: isEmergency ? '#ff7b8a' : B.grayLight, transition: 'color 0.18s' }}>Chamada de Emergência</p>
+                                                <p style={{ fontSize: 9.5, color: B.gray, marginTop: 1 }}>Marca a solicitação como prioridade crítica na sala</p>
+                                            </div>
+                                        </button>
+                                    </div>
+
                                     {/* Call button */}
                                     <div style={{ padding: '0 22px 22px' }}>
                                         <button onClick={handleCallStudents}
@@ -1037,6 +1061,27 @@ export default function ReceptionSearch() {
                                             : <><AlertCircle size={15} style={{ color: B.gold, flexShrink: 0 }} /><p style={{ fontSize: 11, fontWeight: 600, color: B.gold }}>{useManualPickup ? 'Digite o nome de quem está retirando' : 'Selecione um responsável ou use retirada avulsa'}</p></>
                                         }
                                     </div>
+
+                                    {/* Emergency toggle (manual mode) */}
+                                    <button onClick={() => setIsEmergency(v => !v)} style={{
+                                        width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
+                                        background: isEmergency ? `${B.red}18` : 'rgba(255,255,255,0.03)',
+                                        border: `1.5px solid ${isEmergency ? B.red + '60' : B.cardBorder}`,
+                                        borderRadius: 11, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                    }}>
+                                        <div style={{
+                                            width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                                            background: isEmergency ? B.red : 'rgba(255,255,255,0.05)',
+                                            border: `1.5px solid ${isEmergency ? B.red : B.cardBorder}`,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s',
+                                        }}>
+                                            {isEmergency && <CheckCircle2 size={13} style={{ color: '#fff' }} />}
+                                        </div>
+                                        <div>
+                                            <p style={{ fontSize: 11, fontWeight: 700, color: isEmergency ? '#ff7b8a' : B.grayLight, transition: 'color 0.18s' }}>Chamada de Emergência</p>
+                                            <p style={{ fontSize: 9.5, color: B.gray, marginTop: 1 }}>Marca a solicitação como prioridade crítica na sala</p>
+                                        </div>
+                                    </button>
 
                                     {/* Call button (manual mode) */}
                                     <button onClick={handleCallStudents} disabled={sending || !canCall} style={{
