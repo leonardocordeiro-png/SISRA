@@ -752,16 +752,16 @@ export default function ReceptionSearch() {
                     style={{
                         flex: 1,
                         overflowY: 'auto',
-                        padding: '60px 80px',
+                        padding: '48px 80px 60px',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: hasSelection ? 'flex-start' : 'center',
+                        justifyContent: 'flex-start',
                         position: 'relative',
                     }}
                 >
                     {/* Search bar */}
-                    <div style={{ width: '100%', maxWidth: 700, marginBottom: hasSelection ? 24 : 60, position: 'relative' }}>
+                    <div style={{ width: '100%', maxWidth: 700, marginBottom: 24, position: 'relative' }}>
                         <div style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }}>
                             {loading ? (
                                 <div style={{ width: 20, height: 20, border: `2px solid ${D.gold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
@@ -1241,9 +1241,9 @@ export default function ReceptionSearch() {
                                 </div>
                             )}
                         </div>
-                    ) : (
+                    ) : results.length === 0 ? (
                         /* ════ EMPTY STATE ════ */
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease 0.15s', position: 'relative' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginTop: 60, opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease 0.15s', position: 'relative' }}>
                             {/* Decorative rings */}
                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, height: 460, borderRadius: '50%', border: '1px solid rgba(199,158,97,0.05)', animation: 'rec-ring 4s ease-in-out infinite', pointerEvents: 'none' }} />
                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 340, height: 340, borderRadius: '50%', border: '1px solid rgba(199,158,97,0.07)', animation: 'rec-ring 4s ease-in-out infinite 0.5s', pointerEvents: 'none' }} />
@@ -1269,7 +1269,7 @@ export default function ReceptionSearch() {
                                 MONITORAMENTO ATIVO
                             </div>
                         </div>
-                    )}
+                    ) : null}
                 </main>
 
                 {/* RIGHT PANEL - 320px */}
