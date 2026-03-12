@@ -96,7 +96,7 @@ export default function AuthorizationRules() {
         setIsSaving(true);
 
         try {
-            const escola_id = 'e6328325-1845-420a-b333-87a747953259';
+            const escola_id = import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259';
             const editModeId = sessionStorage.getItem('edit_mode_student_id');
 
             // Build the correct turma string
@@ -141,6 +141,7 @@ export default function AuthorizationRules() {
                 });
 
                 await supabase.from('autorizacoes').delete().eq('aluno_id', studentId);
+                await supabase.from('alunos_responsaveis').delete().eq('aluno_id', studentId);
             } else {
                 const { data: student, error: studentError } = await supabase
                     .from('alunos')

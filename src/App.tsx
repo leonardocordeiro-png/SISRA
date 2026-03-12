@@ -30,6 +30,7 @@ import StudentRegistration from './pages/admin/StudentRegistration';
 import SystemSettings from './pages/admin/SystemSettings';
 import StaffLeaderboard from './pages/admin/StaffLeaderboard';
 import AdminQRGenerator from './pages/admin/QRGenerator';
+import MassScheduleUpdate from './pages/admin/MassScheduleUpdate';
 
 import OnboardingDashboard from './pages/staff/OnboardingDashboard';
 import FeedbackForm from './pages/staff/FeedbackForm';
@@ -148,6 +149,11 @@ function App() {
             <Route path="/admin/regras-autorizacao" element={
               <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
                 <AuthorizationRules />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/manutencao/horarios" element={
+              <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
+                <MassScheduleUpdate />
               </ProtectedRoute>
             } />
             <Route path="/admin/auditoria-seguranca" element={
