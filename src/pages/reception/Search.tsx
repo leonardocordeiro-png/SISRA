@@ -144,22 +144,6 @@ export default function ReceptionSearch() {
     const [mounted, setMounted] = useState(false);
     const addMoreInputRef = useRef<HTMLInputElement>(null);
 
-    // Queue count for right panel display
-    const [queueCount, setQueueCount] = useState(0);
-    useEffect(() => {
-        const fetchCount = async () => {
-            const { count } = await supabase
-                .from('solicitacoes_retirada')
-                .select('*', { count: 'exact', head: true })
-                .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
-                .is('horario_confirmacao', null);
-            if (count !== null) setQueueCount(count);
-        };
-        fetchCount();
-        const interval = setInterval(fetchCount, 3000);
-        return () => clearInterval(interval);
-    }, []);
-
     // Font injection
     useEffect(() => {
         if (!document.getElementById('rec-brand-fonts')) {
@@ -592,16 +576,18 @@ export default function ReceptionSearch() {
                 @keyframes rec-glow   { 0%,100%{ opacity:1; box-shadow:0 0 8px #C79E61; } 50%{ opacity:.6; box-shadow:0 0 18px #C79E61; } }
                 @keyframes rec-ring   { 0%{ opacity:.2; transform:translate(-50%,-50%) scale(1); } 50%{ opacity:.5; transform:translate(-50%,-50%) scale(1.04); } 100%{ opacity:.2; transform:translate(-50%,-50%) scale(1); } }
                 @media (max-width: 1280px) {
-                    .rec-sidebar-left { display: none !important; }
-                    .rec-center { padding: 40px 40px !important; }
+                    .rec-search-panel { width: 340px !important; padding: 24px 18px !important; }
+                    .rec-queue-main { padding: 24px 28px !important; }
                 }
                 @media (max-width: 1024px) {
-                    .rec-right-panel { display: none !important; }
-                    .rec-center { padding: 30px 24px !important; }
+                    .rec-body { flex-direction: column !important; overflow-y: auto !important; overflow-x: hidden !important; }
+                    .rec-search-panel { width: 100% !important; max-height: 50vh; border-right: none !important; border-bottom: 1px solid rgba(199,158,97,0.08) !important; }
+                    .rec-queue-main { padding: 20px !important; min-height: 0; }
                 }
                 @media (max-width: 640px) {
                     header { padding: 0 16px !important; }
-                    .rec-center { padding: 20px 16px !important; }
+                    .rec-search-panel { padding: 20px 16px !important; }
+                    .rec-queue-main { padding: 16px !important; }
                 }
             `}</style>
 
@@ -719,54 +705,29 @@ export default function ReceptionSearch() {
             </header>
 
             {/* ══════════ BODY (below fixed header) ══════════ */}
-            <div style={{ display: 'flex', flex: 1, marginTop: 80, overflow: 'hidden' }}>
+            <div className="rec-body" style={{ display: 'flex', flex: 1, marginTop: 80, overflow: 'hidden' }}>
 
-                {/* LEFT SIDEBAR - 320px - decorative watermark */}
+                {/* ══ LEFT PANEL: Search & Student Identification ══ */}
                 <aside
-                    className="rec-sidebar-left"
+                    className="rec-search-panel"
                     style={{
-                        width: 320,
+                        width: 400,
                         flexShrink: 0,
                         display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRight: '1px solid rgba(199,158,97,0.05)',
-                    }}
-                >
-                    <div style={{
-                        writingMode: 'vertical-rl',
-                        textTransform: 'uppercase',
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: D.gold,
-                        letterSpacing: 4,
-                        opacity: 0.15,
-                    }}>
-                        A LA SALLE
-                    </div>
-                </aside>
-
-                {/* CENTER CONTENT - scrollable */}
-                <main
-                    className="rec-center"
-                    style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        padding: '48px 80px 60px',
-                        display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        position: 'relative',
+                        overflowY: 'auto',
+                        padding: '32px 24px',
+                        borderRight: '1px solid rgba(199,158,97,0.08)',
+                        gap: 0,
                     }}
                 >
                     {/* Search bar */}
-                    <div style={{ width: '100%', maxWidth: 700, marginBottom: 24, position: 'relative' }}>
-                        <div style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }}>
+                    <div style={{ position: 'relative', marginBottom: 14 }}>
+                        <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }}>
                             {loading ? (
-                                <div style={{ width: 20, height: 20, border: `2px solid ${D.gold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
+                                <div style={{ width: 18, height: 18, border: `2px solid ${D.gold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
                             ) : (
-                                <SearchIcon size={20} style={{ color: D.muted }} />
+                                <SearchIcon size={18} style={{ color: D.muted }} />
                             )}
                         </div>
                         <input
@@ -775,14 +736,14 @@ export default function ReceptionSearch() {
                             value={query}
                             onChange={e => setQuery(e.target.value)}
                             style={{
-                                width: '100%', padding: '18px 24px 18px 56px', borderRadius: 30, boxSizing: 'border-box',
+                                width: '100%', padding: '14px 16px 14px 48px', borderRadius: 14, boxSizing: 'border-box',
                                 border: `1px solid ${query ? D.panelBorder : 'rgba(199,158,97,0.1)'}`,
                                 background: 'rgba(11,16,29,0.7)',
-                                color: D.white, fontSize: 16, outline: 'none',
+                                color: D.white, fontSize: 15, outline: 'none',
                                 transition: 'all 0.3s',
                                 fontFamily: "'Inter', sans-serif",
                             }}
-                            onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'rgba(71,184,255,0.6)'; (e.target as HTMLInputElement).style.boxShadow = '0 0 20px rgba(71,184,255,0.5)'; }}
+                            onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'rgba(71,184,255,0.6)'; (e.target as HTMLInputElement).style.boxShadow = '0 0 16px rgba(71,184,255,0.4)'; }}
                             onBlur={e => { (e.target as HTMLInputElement).style.borderColor = query ? D.panelBorder : 'rgba(199,158,97,0.1)'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }}
                         />
                     </div>
@@ -790,13 +751,12 @@ export default function ReceptionSearch() {
                     {/* Search results dropdown */}
                     {results.length > 0 && !selectedStudent && (
                         <div style={{
-                            width: '100%', maxWidth: 700,
                             background: D.panelBg,
                             backdropFilter: 'blur(20px)',
                             border: `1px solid ${D.panelBorder}`,
                             borderRadius: 12,
                             overflow: 'hidden',
-                            marginBottom: 24,
+                            marginBottom: 16,
                             boxShadow: `0 16px 48px rgba(0,0,0,0.5)`,
                         }}>
                             {results.map((student, idx) => (
@@ -804,28 +764,28 @@ export default function ReceptionSearch() {
                                     key={student.id}
                                     onClick={() => handleSelectStudent(student)}
                                     style={{
-                                        width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14,
-                                        padding: '14px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
+                                        width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12,
+                                        padding: '12px 14px', border: 'none', background: 'transparent', cursor: 'pointer',
                                         borderBottom: idx < results.length - 1 ? `1px solid rgba(199,158,97,0.1)` : 'none',
                                         transition: 'background 0.15s',
                                     }}
                                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(199,158,97,0.06)'; }}
                                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                                 >
-                                    <div style={{ width: 48, height: 48, borderRadius: 10, overflow: 'hidden', border: `2px solid ${D.panelBorderSub}`, flexShrink: 0, background: 'rgba(17,24,43,0.8)' }}>
+                                    <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', border: `2px solid ${D.panelBorderSub}`, flexShrink: 0, background: 'rgba(17,24,43,0.8)' }}>
                                         {student.foto_url
                                             ? <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={22} style={{ color: `rgba(199,158,97,0.4)` }} /></div>}
+                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={20} style={{ color: `rgba(199,158,97,0.4)` }} /></div>}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ fontSize: 15, fontWeight: 700, color: D.white, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.nome_completo}</p>
-                                        <div style={{ display: 'flex', gap: 8 }}>
-                                            <span style={{ fontSize: 11, fontWeight: 700, color: D.gold, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{student.turma}</span>
-                                            <span style={{ fontSize: 11, color: D.muted }}>·</span>
-                                            <span style={{ fontSize: 11, fontWeight: 600, color: D.muted }}>{student.sala}</span>
+                                        <p style={{ fontSize: 14, fontWeight: 700, color: D.white, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.nome_completo}</p>
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            <span style={{ fontSize: 10, fontWeight: 700, color: D.gold, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{student.turma}</span>
+                                            <span style={{ fontSize: 10, color: D.muted }}>·</span>
+                                            <span style={{ fontSize: 10, fontWeight: 600, color: D.muted }}>{student.sala}</span>
                                         </div>
                                     </div>
-                                    <ChevronRight size={15} style={{ color: D.muted, flexShrink: 0 }} />
+                                    <ChevronRight size={14} style={{ color: D.muted, flexShrink: 0 }} />
                                 </button>
                             ))}
                         </div>
@@ -833,7 +793,7 @@ export default function ReceptionSearch() {
 
                     {/* ── Active: Student Detail Panel ── */}
                     {hasSelection ? (
-                        <div style={{ width: '100%', maxWidth: 700, opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(10px)', transition: 'opacity 0.4s, transform 0.4s' }}>
+                        <div style={{ opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(10px)', transition: 'opacity 0.4s, transform 0.4s' }}>
 
                             {/* ════ RELATED MODE (from QR/Code) ════ */}
                             {isRelatedMode ? (
@@ -848,58 +808,58 @@ export default function ReceptionSearch() {
                                     <div style={{ height: 3, background: `linear-gradient(90deg, ${D.gold}, rgba(160,122,61,0.4), transparent)` }} />
 
                                     {/* Guardian hero */}
-                                    <div style={{ padding: '22px 24px 18px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: `1px solid ${D.panelBorderSub}` }}>
+                                    <div style={{ padding: '18px 18px 14px', display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${D.panelBorderSub}` }}>
                                         <div style={{ position: 'relative', flexShrink: 0 }}>
-                                            <div style={{ width: 72, height: 72, borderRadius: 14, overflow: 'hidden', border: `3px solid ${D.gold}`, boxShadow: `0 0 0 5px rgba(199,158,97,0.12)`, background: D.panelBg }}>
+                                            <div style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: `3px solid ${D.gold}`, boxShadow: `0 0 0 4px rgba(199,158,97,0.12)`, background: D.panelBg }}>
                                                 {selectedGuardian?.foto_url
                                                     ? <img src={selectedGuardian.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => setIsPhotoZoomed(true)} />
-                                                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={30} style={{ color: `rgba(199,158,97,0.4)` }} /></div>}
+                                                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={26} style={{ color: `rgba(199,158,97,0.4)` }} /></div>}
                                             </div>
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: `rgba(199,158,97,0.6)` }}>Responsável Identificado</span>
-                                            <h2 style={{ fontSize: 22, fontWeight: 900, color: D.white, letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 3 }}>
+                                            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: `rgba(199,158,97,0.6)` }}>Responsável Identificado</span>
+                                            <h2 style={{ fontSize: 18, fontWeight: 900, color: D.white, letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 2 }}>
                                                 {selectedGuardian?.nome_completo || 'Grupo Familiar'}
                                             </h2>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                                                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: D.green, boxShadow: `0 0 6px ${D.green}` }} />
-                                                <span style={{ fontSize: 11, fontWeight: 600, color: D.green }}>{relatedStudents.length} aluno{relatedStudents.length > 1 ? 's' : ''} vinculado{relatedStudents.length > 1 ? 's' : ''}</span>
+                                                <span style={{ fontSize: 10, fontWeight: 600, color: D.green }}>{relatedStudents.length} aluno{relatedStudents.length > 1 ? 's' : ''} vinculado{relatedStudents.length > 1 ? 's' : ''}</span>
                                             </div>
                                         </div>
                                         <button
                                             onClick={handleClearSelection}
-                                            style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: 'rgba(228,1,35,0.12)', color: '#ff7b8a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', outline: '1px solid rgba(228,1,35,0.25)', transition: 'all 0.18s' }}
+                                            style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: 'rgba(228,1,35,0.12)', color: '#ff7b8a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', outline: '1px solid rgba(228,1,35,0.25)', transition: 'all 0.18s', flexShrink: 0 }}
                                             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(228,1,35,0.3)'; el.style.color = '#fff'; }}
                                             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(228,1,35,0.12)'; el.style.color = '#ff7b8a'; }}
                                         >
-                                            <X size={15} />
+                                            <X size={13} />
                                         </button>
                                     </div>
 
                                     {/* Students grid */}
-                                    <div style={{ padding: '18px 24px' }}>
-                                        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: `rgba(199,158,97,0.6)`, marginBottom: 14 }}>
+                                    <div style={{ padding: '14px 18px' }}>
+                                        <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: `rgba(199,158,97,0.6)`, marginBottom: 10 }}>
                                             Selecionar alunos para chamar
                                         </p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxHeight: 280, overflowY: 'auto' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
                                             {relatedStudents.map(student => {
                                                 const isSel = selectedStudentIds.has(student.id);
                                                 return (
                                                     <button key={student.id} onClick={() => toggleStudentSelection(student.id)} style={{
-                                                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                                                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                                                         background: isSel ? 'rgba(199,158,97,0.12)' : 'rgba(255,255,255,0.02)',
                                                         border: `1.5px solid ${isSel ? D.panelBorder : 'rgba(199,158,97,0.1)'}`,
-                                                        borderRadius: 10, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                                        borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
                                                     }}>
-                                                        <div style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, flexShrink: 0, background: D.panelBg, transition: 'border-color 0.18s' }}>
-                                                            {student.foto_url ? <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={18} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
+                                                        <div style={{ width: 36, height: 36, borderRadius: 8, overflow: 'hidden', border: `2px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, flexShrink: 0, background: D.panelBg, transition: 'border-color 0.18s' }}>
+                                                            {student.foto_url ? <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={16} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
                                                         </div>
                                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                                            <p style={{ fontSize: 12, fontWeight: 700, color: isSel ? D.white : D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: 2 }}>{student.nome_completo}</p>
-                                                            <p style={{ fontSize: 10, color: D.muted }}>{student.turma}</p>
+                                                            <p style={{ fontSize: 11, fontWeight: 700, color: isSel ? D.white : D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: 1 }}>{student.nome_completo}</p>
+                                                            <p style={{ fontSize: 9, color: D.muted }}>{student.turma}</p>
                                                         </div>
-                                                        <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: isSel ? D.gold : 'rgba(255,255,255,0.05)', border: `1.5px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s' }}>
-                                                            {isSel && <CheckCircle2 size={13} style={{ color: D.onGold }} />}
+                                                        <div style={{ width: 20, height: 20, borderRadius: 5, flexShrink: 0, background: isSel ? D.gold : 'rgba(255,255,255,0.05)', border: `1.5px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s' }}>
+                                                            {isSel && <CheckCircle2 size={12} style={{ color: D.onGold }} />}
                                                         </div>
                                                     </button>
                                                 );
@@ -908,52 +868,52 @@ export default function ReceptionSearch() {
                                     </div>
 
                                     {/* Emergency toggle (QR/Code mode) */}
-                                    <div style={{ padding: '0 24px 14px' }}>
+                                    <div style={{ padding: '0 18px 12px' }}>
                                         <button onClick={() => setIsEmergency(v => !v)} style={{
-                                            width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
+                                            width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                                             background: isEmergency ? 'rgba(228,1,35,0.1)' : 'rgba(255,255,255,0.02)',
                                             border: `1.5px solid ${isEmergency ? 'rgba(228,1,35,0.5)' : 'rgba(199,158,97,0.1)'}`,
-                                            borderRadius: 10, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                            borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
                                         }}>
                                             <div style={{
-                                                width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                                                width: 20, height: 20, borderRadius: 5, flexShrink: 0,
                                                 background: isEmergency ? D.red : 'rgba(255,255,255,0.05)',
                                                 border: `1.5px solid ${isEmergency ? D.red : 'rgba(199,158,97,0.15)'}`,
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s',
                                             }}>
-                                                {isEmergency && <CheckCircle2 size={13} style={{ color: '#fff' }} />}
+                                                {isEmergency && <CheckCircle2 size={11} style={{ color: '#fff' }} />}
                                             </div>
                                             <div>
-                                                <p style={{ fontSize: 12, fontWeight: 700, color: isEmergency ? '#ff7b8a' : D.muted, transition: 'color 0.18s' }}>Chamada de Emergência</p>
-                                                <p style={{ fontSize: 10, color: D.muted, marginTop: 2 }}>Marca a solicitação como prioridade crítica na sala</p>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: isEmergency ? '#ff7b8a' : D.muted, transition: 'color 0.18s' }}>Chamada de Emergência</p>
+                                                <p style={{ fontSize: 9, color: D.muted, marginTop: 1 }}>Marca como prioridade crítica na sala</p>
                                             </div>
                                         </button>
                                     </div>
 
                                     {/* Call button */}
-                                    <div style={{ padding: '0 24px 24px' }}>
+                                    <div style={{ padding: '0 18px 18px' }}>
                                         <button
                                             onClick={handleCallStudents}
                                             disabled={sending || selectedStudentIds.size === 0}
                                             style={{
-                                                width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                                width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                                                 background: selectedStudentIds.size > 0 ? `linear-gradient(135deg, ${D.gold} 0%, ${D.goldDark} 100%)` : 'rgba(255,255,255,0.05)',
-                                                border: 'none', borderRadius: 10, cursor: selectedStudentIds.size > 0 ? 'pointer' : 'not-allowed',
+                                                border: 'none', borderRadius: 9, cursor: selectedStudentIds.size > 0 ? 'pointer' : 'not-allowed',
                                                 color: selectedStudentIds.size > 0 ? D.onGold : D.muted,
-                                                fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 800, letterSpacing: '0.04em',
+                                                fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: '0.04em',
                                                 boxShadow: selectedStudentIds.size > 0 ? `0 6px 24px rgba(199,158,97,0.35)` : 'none',
                                                 transition: 'all 0.2s',
                                             }}>
                                             {sending
-                                                ? <div style={{ width: 20, height: 20, border: `2px solid ${D.onGold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
-                                                : <><Bell size={16} /> {selectedStudentIds.size > 1 ? `Chamar ${selectedStudentIds.size} Alunos` : 'Chamar Aluno'}</>}
+                                                ? <div style={{ width: 18, height: 18, border: `2px solid ${D.onGold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
+                                                : <><Bell size={15} /> {selectedStudentIds.size > 1 ? `Chamar ${selectedStudentIds.size} Alunos` : 'Chamar Aluno'}</>}
                                         </button>
                                     </div>
                                 </div>
 
                             ) : (
                                 /* ════ MANUAL MODE (from search) ════ */
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
                                     {/* Student hero card */}
                                     <div style={{
@@ -965,50 +925,50 @@ export default function ReceptionSearch() {
                                         boxShadow: `0 8px 40px rgba(0,0,0,0.4)`,
                                     }}>
                                         <div style={{ height: 3, background: `linear-gradient(90deg, ${D.gold}, transparent)` }} />
-                                        <div style={{ padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                                        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                                             {/* Photo */}
                                             <div style={{ position: 'relative', flexShrink: 0 }}>
-                                                <div style={{ width: 72, height: 72, borderRadius: 14, overflow: 'hidden', border: `3px solid ${D.gold}`, boxShadow: `0 0 0 5px rgba(199,158,97,0.12)`, background: D.panelBg, cursor: selectedStudent?.foto_url ? 'pointer' : 'default' }} onClick={() => selectedStudent?.foto_url && setIsPhotoZoomed(true)}>
-                                                    {selectedStudent?.foto_url ? <img src={selectedStudent.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={30} style={{ color: 'rgba(199,158,97,0.4)' }} /></div>}
+                                                <div style={{ width: 62, height: 62, borderRadius: 12, overflow: 'hidden', border: `3px solid ${D.gold}`, boxShadow: `0 0 0 4px rgba(199,158,97,0.12)`, background: D.panelBg, cursor: selectedStudent?.foto_url ? 'pointer' : 'default' }} onClick={() => selectedStudent?.foto_url && setIsPhotoZoomed(true)}>
+                                                    {selectedStudent?.foto_url ? <img src={selectedStudent.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={26} style={{ color: 'rgba(199,158,97,0.4)' }} /></div>}
                                                 </div>
-                                                {selectedStudent?.foto_url && <button onClick={() => setIsPhotoZoomed(true)} style={{ position: 'absolute', bottom: -4, right: -4, width: 22, height: 22, borderRadius: 6, background: D.gold, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Maximize2 size={10} style={{ color: D.onGold }} /></button>}
+                                                {selectedStudent?.foto_url && <button onClick={() => setIsPhotoZoomed(true)} style={{ position: 'absolute', bottom: -4, right: -4, width: 20, height: 20, borderRadius: 5, background: D.gold, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Maximize2 size={9} style={{ color: D.onGold }} /></button>}
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.6)' }}>Aluno Identificado</span>
-                                                <h2 style={{ fontSize: 20, fontWeight: 900, color: D.white, letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 2 }}>
+                                                <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.6)' }}>Aluno Identificado</span>
+                                                <h2 style={{ fontSize: 16, fontWeight: 900, color: D.white, letterSpacing: '-0.02em', lineHeight: 1.2, marginTop: 2 }}>
                                                     {selectedStudent?.nome_completo}
                                                 </h2>
-                                                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                                                    <span style={{ fontSize: 11, fontWeight: 700, color: D.gold, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{selectedStudent?.turma}</span>
-                                                    <span style={{ fontSize: 11, fontWeight: 600, color: D.muted }}>{selectedStudent?.sala}</span>
+                                                <div style={{ display: 'flex', gap: 8, marginTop: 3 }}>
+                                                    <span style={{ fontSize: 10, fontWeight: 700, color: D.gold, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{selectedStudent?.turma}</span>
+                                                    <span style={{ fontSize: 10, fontWeight: 600, color: D.muted }}>{selectedStudent?.sala}</span>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={handleClearSelection}
-                                                style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: 'rgba(228,1,35,0.12)', color: '#ff7b8a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', outline: '1px solid rgba(228,1,35,0.25)', flexShrink: 0, transition: 'all 0.18s' }}
+                                                style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: 'rgba(228,1,35,0.12)', color: '#ff7b8a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', outline: '1px solid rgba(228,1,35,0.25)', flexShrink: 0, transition: 'all 0.18s' }}
                                                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(228,1,35,0.3)'; el.style.color = '#fff'; }}
                                                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(228,1,35,0.12)'; el.style.color = '#ff7b8a'; }}
                                             >
-                                                <X size={15} />
+                                                <X size={13} />
                                             </button>
                                         </div>
 
                                         {/* Extra students chips */}
                                         {multiStudents.length > 0 && (
-                                            <div style={{ padding: '0 22px 14px' }}>
-                                                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.6)', marginBottom: 8 }}>
+                                            <div style={{ padding: '0 16px 12px' }}>
+                                                <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.6)', marginBottom: 6 }}>
                                                     Também serão chamados
                                                 </p>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                                     {multiStudents.map(s => (
-                                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px', background: 'rgba(199,158,97,0.08)', border: `1px solid ${D.panelBorderSub}`, borderRadius: 8 }}>
-                                                            <div style={{ width: 26, height: 26, borderRadius: 6, overflow: 'hidden', background: D.panelBg, border: `1px solid rgba(199,158,97,0.2)`, flexShrink: 0 }}>
-                                                                {s.foto_url ? <img src={s.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={12} style={{ color: 'rgba(199,158,97,0.4)' }} /></div>}
+                                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', background: 'rgba(199,158,97,0.08)', border: `1px solid ${D.panelBorderSub}`, borderRadius: 7 }}>
+                                                            <div style={{ width: 22, height: 22, borderRadius: 5, overflow: 'hidden', background: D.panelBg, border: `1px solid rgba(199,158,97,0.2)`, flexShrink: 0 }}>
+                                                                {s.foto_url ? <img src={s.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={10} style={{ color: 'rgba(199,158,97,0.4)' }} /></div>}
                                                             </div>
-                                                            <span style={{ fontSize: 12, fontWeight: 700, color: D.white }}>{s.nome_completo.split(' ')[0]}</span>
-                                                            <span style={{ fontSize: 10, color: D.muted }}>{s.turma}</span>
-                                                            <button onClick={() => handleRemoveMultiStudent(s.id)} style={{ width: 18, height: 18, borderRadius: 4, border: 'none', background: 'rgba(228,1,35,0.18)', color: '#ff7b8a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                                                                <X size={10} />
+                                                            <span style={{ fontSize: 11, fontWeight: 700, color: D.white }}>{s.nome_completo.split(' ')[0]}</span>
+                                                            <span style={{ fontSize: 9, color: D.muted }}>{s.turma}</span>
+                                                            <button onClick={() => handleRemoveMultiStudent(s.id)} style={{ width: 16, height: 16, borderRadius: 4, border: 'none', background: 'rgba(228,1,35,0.18)', color: '#ff7b8a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                                                                <X size={9} />
                                                             </button>
                                                         </div>
                                                     ))}
@@ -1017,24 +977,24 @@ export default function ReceptionSearch() {
                                         )}
 
                                         {/* Add more students button / search */}
-                                        <div style={{ padding: '0 22px 18px' }}>
+                                        <div style={{ padding: '0 16px 14px' }}>
                                             {!isAddingMore ? (
                                                 <button onClick={() => setIsAddingMore(true)} style={{
-                                                    display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px',
+                                                    display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px',
                                                     background: 'rgba(255,255,255,0.03)', border: `1px dashed rgba(199,158,97,0.2)`,
-                                                    borderRadius: 9, cursor: 'pointer', color: D.muted,
-                                                    fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+                                                    borderRadius: 8, cursor: 'pointer', color: D.muted,
+                                                    fontSize: 11, fontWeight: 600, fontFamily: "'Inter', sans-serif",
                                                     transition: 'all 0.18s',
                                                 }}
                                                     onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(199,158,97,0.08)'; el.style.borderColor = D.panelBorder; el.style.color = D.gold; }}
                                                     onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.03)'; el.style.borderColor = 'rgba(199,158,97,0.2)'; el.style.color = D.muted; }}
                                                 >
-                                                    <Plus size={13} /> Adicionar outro aluno a esta chamada
+                                                    <Plus size={12} /> Adicionar outro aluno a esta chamada
                                                 </button>
                                             ) : (
                                                 <div>
                                                     <div style={{ position: 'relative' }}>
-                                                        <SearchIcon size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: D.muted, pointerEvents: 'none' }} />
+                                                        <SearchIcon size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: D.muted, pointerEvents: 'none' }} />
                                                         <input
                                                             ref={addMoreInputRef}
                                                             type="text"
@@ -1042,35 +1002,35 @@ export default function ReceptionSearch() {
                                                             value={addMoreQuery}
                                                             onChange={e => setAddMoreQuery(e.target.value)}
                                                             style={{
-                                                                width: '100%', padding: '9px 36px 9px 35px', boxSizing: 'border-box',
+                                                                width: '100%', padding: '8px 32px 8px 32px', boxSizing: 'border-box',
                                                                 background: 'rgba(0,0,0,0.25)', border: `1.5px solid ${D.panelBorder}`,
-                                                                borderRadius: 9, fontSize: 13, fontWeight: 600, color: D.white, outline: 'none',
+                                                                borderRadius: 8, fontSize: 12, fontWeight: 600, color: D.white, outline: 'none',
                                                                 fontFamily: "'Inter', sans-serif",
                                                             }}
                                                         />
-                                                        <button onClick={() => { setIsAddingMore(false); setAddMoreQuery(''); setAddMoreResults([]); }} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, borderRadius: 5, border: 'none', background: 'rgba(255,255,255,0.06)', color: D.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <X size={11} />
+                                                        <button onClick={() => { setIsAddingMore(false); setAddMoreQuery(''); setAddMoreResults([]); }} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(255,255,255,0.06)', color: D.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <X size={10} />
                                                         </button>
                                                     </div>
                                                     {addMoreResults.length > 0 && (
-                                                        <div style={{ background: 'rgba(11,16,29,0.9)', backdropFilter: 'blur(12px)', border: `1px solid ${D.panelBorderSub}`, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}>
+                                                        <div style={{ background: 'rgba(11,16,29,0.9)', backdropFilter: 'blur(12px)', border: `1px solid ${D.panelBorderSub}`, borderRadius: 9, marginTop: 5, overflow: 'hidden' }}>
                                                             {addMoreResults.map((s, idx) => (
                                                                 <button key={s.id} onClick={() => handleAddMoreStudent(s)} style={{
-                                                                    width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+                                                                    width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                                                                     background: 'transparent', border: 'none', borderBottom: idx < addMoreResults.length - 1 ? `1px solid rgba(199,158,97,0.08)` : 'none',
                                                                     cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s',
                                                                 }}
                                                                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(199,158,97,0.06)'; }}
                                                                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                                                                 >
-                                                                    <div style={{ width: 36, height: 36, borderRadius: 7, overflow: 'hidden', background: D.panelBg, border: `1px solid rgba(199,158,97,0.15)`, flexShrink: 0 }}>
-                                                                        {s.foto_url ? <img src={s.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={16} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
+                                                                    <div style={{ width: 32, height: 32, borderRadius: 6, overflow: 'hidden', background: D.panelBg, border: `1px solid rgba(199,158,97,0.15)`, flexShrink: 0 }}>
+                                                                        {s.foto_url ? <img src={s.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={14} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
                                                                     </div>
                                                                     <div>
-                                                                        <p style={{ fontSize: 13, fontWeight: 700, color: D.white }}>{s.nome_completo}</p>
-                                                                        <p style={{ fontSize: 10, color: D.muted }}>{s.turma} · {s.sala}</p>
+                                                                        <p style={{ fontSize: 12, fontWeight: 700, color: D.white }}>{s.nome_completo}</p>
+                                                                        <p style={{ fontSize: 9, color: D.muted }}>{s.turma} · {s.sala}</p>
                                                                     </div>
-                                                                    <Plus size={12} style={{ color: D.gold, marginLeft: 'auto' }} />
+                                                                    <Plus size={11} style={{ color: D.gold, marginLeft: 'auto' }} />
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -1086,61 +1046,61 @@ export default function ReceptionSearch() {
                                             background: D.panelBg,
                                             backdropFilter: 'blur(20px)',
                                             borderRadius: 12,
-                                            padding: '18px 22px',
+                                            padding: '14px 16px',
                                             border: `1px solid ${D.panelBorder}`,
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                                                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.6)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                                <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.6)' }}>
                                                     Responsável Autorizado
                                                 </p>
                                                 {guardians.length === 0 && (
-                                                    <span style={{ fontSize: 10, fontWeight: 600, color: D.muted, letterSpacing: '0.1em' }}>Nenhum cadastrado</span>
+                                                    <span style={{ fontSize: 9, fontWeight: 600, color: D.muted, letterSpacing: '0.1em' }}>Nenhum cadastrado</span>
                                                 )}
                                             </div>
 
                                             {guardians.length > 0 ? (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                                     {guardians.map(g => {
                                                         const isSel = g.id === selectedGuardianId;
                                                         return (
                                                             <button key={g.id} onClick={() => setSelectedGuardianId(isSel ? null : g.id)} style={{
-                                                                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                                                                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                                                                 background: isSel ? 'rgba(199,158,97,0.12)' : 'rgba(255,255,255,0.02)',
                                                                 border: `1.5px solid ${isSel ? D.panelBorder : 'rgba(199,158,97,0.1)'}`,
-                                                                borderRadius: 10, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                                                borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
                                                             }}>
-                                                                <div style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, flexShrink: 0, background: D.panelBg }}>
-                                                                    {g.foto_url ? <img src={g.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={18} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
+                                                                <div style={{ width: 36, height: 36, borderRadius: 8, overflow: 'hidden', border: `2px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, flexShrink: 0, background: D.panelBg }}>
+                                                                    {g.foto_url ? <img src={g.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={16} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
                                                                 </div>
                                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                                    <p style={{ fontSize: 12, fontWeight: 700, color: isSel ? D.white : D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: 2 }}>{g.nome_completo}</p>
-                                                                    <span style={{ fontSize: 9, fontWeight: 700, color: isSel ? D.gold : D.muted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{g.parentesco || 'Autorizado'}</span>
+                                                                    <p style={{ fontSize: 11, fontWeight: 700, color: isSel ? D.white : D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: 1 }}>{g.nome_completo}</p>
+                                                                    <span style={{ fontSize: 8, fontWeight: 700, color: isSel ? D.gold : D.muted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{g.parentesco || 'Autorizado'}</span>
                                                                 </div>
-                                                                <div style={{ width: 20, height: 20, borderRadius: 5, flexShrink: 0, background: isSel ? D.gold : 'rgba(255,255,255,0.05)', border: `1.5px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s' }}>
-                                                                    {isSel && <CheckCircle2 size={12} style={{ color: D.onGold }} />}
+                                                                <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, background: isSel ? D.gold : 'rgba(255,255,255,0.05)', border: `1.5px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s' }}>
+                                                                    {isSel && <CheckCircle2 size={11} style={{ color: D.onGold }} />}
                                                                 </div>
                                                             </button>
                                                         );
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', background: 'rgba(228,1,35,0.06)', border: '1px solid rgba(228,1,35,0.2)', borderRadius: 10, marginBottom: 4 }}>
-                                                    <UserX size={16} style={{ color: '#ff7b8a', flexShrink: 0 }} />
-                                                    <p style={{ fontSize: 13, color: '#ff7b8a', fontWeight: 600 }}>Aluno sem responsável cadastrado no sistema</p>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'rgba(228,1,35,0.06)', border: '1px solid rgba(228,1,35,0.2)', borderRadius: 9, marginBottom: 4 }}>
+                                                    <UserX size={15} style={{ color: '#ff7b8a', flexShrink: 0 }} />
+                                                    <p style={{ fontSize: 12, color: '#ff7b8a', fontWeight: 600 }}>Sem responsável cadastrado no sistema</p>
                                                 </div>
                                             )}
 
                                             {/* Switch to manual */}
                                             <button onClick={() => { setUseManualPickup(true); setSelectedGuardianId(null); }} style={{
-                                                display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, padding: '8px 12px',
-                                                background: 'transparent', border: '1px dashed rgba(228,1,35,0.3)', borderRadius: 9,
-                                                cursor: 'pointer', color: '#ff7b8a', fontSize: 12, fontWeight: 600,
+                                                display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '7px 10px',
+                                                background: 'transparent', border: '1px dashed rgba(228,1,35,0.3)', borderRadius: 8,
+                                                cursor: 'pointer', color: '#ff7b8a', fontSize: 11, fontWeight: 600,
                                                 fontFamily: "'Inter', sans-serif", transition: 'all 0.18s',
                                             }}
                                                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(228,1,35,0.08)'; el.style.borderColor = 'rgba(228,1,35,0.5)'; }}
                                                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.borderColor = 'rgba(228,1,35,0.3)'; }}
                                             >
-                                                <PenLine size={12} /> Responsável não cadastrado — inserir nome manualmente
+                                                <PenLine size={11} /> Responsável não cadastrado — inserir nome manualmente
                                             </button>
                                         </div>
                                     )}
@@ -1151,26 +1111,26 @@ export default function ReceptionSearch() {
                                             background: D.panelBg,
                                             backdropFilter: 'blur(20px)',
                                             borderRadius: 12,
-                                            padding: '18px 22px',
+                                            padding: '14px 16px',
                                             border: '1.5px solid rgba(228,1,35,0.35)',
                                             boxShadow: '0 4px 20px rgba(228,1,35,0.1)',
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                                                    <div style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(228,1,35,0.12)', border: '1px solid rgba(228,1,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <PenLine size={13} style={{ color: '#ff7b8a' }} />
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(228,1,35,0.12)', border: '1px solid rgba(228,1,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <PenLine size={12} style={{ color: '#ff7b8a' }} />
                                                     </div>
                                                     <div>
-                                                        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: '#ff7b8a' }}>Retirada Avulsa</p>
-                                                        <p style={{ fontSize: 11, fontWeight: 600, color: D.muted, marginTop: 1 }}>Responsável não cadastrado no sistema</p>
+                                                        <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: '#ff7b8a' }}>Retirada Avulsa</p>
+                                                        <p style={{ fontSize: 10, fontWeight: 600, color: D.muted, marginTop: 1 }}>Responsável não cadastrado</p>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => { setUseManualPickup(false); setManualPickupName(''); }} style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'rgba(255,255,255,0.05)', color: D.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <X size={12} />
+                                                <button onClick={() => { setUseManualPickup(false); setManualPickupName(''); }} style={{ width: 24, height: 24, borderRadius: 5, border: 'none', background: 'rgba(255,255,255,0.05)', color: D.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <X size={11} />
                                                 </button>
                                             </div>
 
-                                            <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.65)', display: 'block', marginBottom: 8 }}>
+                                            <label style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(199,158,97,0.65)', display: 'block', marginBottom: 7 }}>
                                                 Nome de quem está retirando *
                                             </label>
                                             <input
@@ -1180,155 +1140,96 @@ export default function ReceptionSearch() {
                                                 onChange={e => setManualPickupName(e.target.value)}
                                                 autoFocus
                                                 style={{
-                                                    width: '100%', padding: '12px 15px', boxSizing: 'border-box',
+                                                    width: '100%', padding: '10px 13px', boxSizing: 'border-box',
                                                     background: 'rgba(0,0,0,0.25)',
                                                     border: `1.5px solid ${manualPickupName.length >= 2 ? D.panelBorder : 'rgba(255,255,255,0.1)'}`,
-                                                    borderRadius: 10, fontSize: 14, fontWeight: 600, color: D.white, outline: 'none',
+                                                    borderRadius: 9, fontSize: 13, fontWeight: 600, color: D.white, outline: 'none',
                                                     fontFamily: "'Inter', sans-serif", transition: 'border-color 0.18s',
                                                 }}
                                                 onFocus={e => (e.target as HTMLInputElement).style.borderColor = D.panelBorder}
                                                 onBlur={e => (e.target as HTMLInputElement).style.borderColor = manualPickupName.length >= 2 ? D.panelBorder : 'rgba(255,255,255,0.1)'}
                                             />
-                                            <p style={{ fontSize: 11, color: D.muted, marginTop: 8, lineHeight: 1.5 }}>
-                                                Este nome ficará registrado na solicitação como <span style={{ color: '#ff7b8a', fontWeight: 700 }}>Retirada Avulsa</span> para fins de auditoria.
+                                            <p style={{ fontSize: 10, color: D.muted, marginTop: 6, lineHeight: 1.5 }}>
+                                                Registrado como <span style={{ color: '#ff7b8a', fontWeight: 700 }}>Retirada Avulsa</span> para fins de auditoria.
                                             </p>
                                         </div>
                                     )}
 
                                     {/* Status feedback */}
-                                    <div style={{ padding: '10px 16px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, background: canCall ? 'rgba(52,211,153,0.06)' : 'rgba(199,158,97,0.06)', border: `1px solid ${canCall ? 'rgba(52,211,153,0.25)' : 'rgba(199,158,97,0.2)'}` }}>
+                                    <div style={{ padding: '9px 14px', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 9, background: canCall ? 'rgba(52,211,153,0.06)' : 'rgba(199,158,97,0.06)', border: `1px solid ${canCall ? 'rgba(52,211,153,0.25)' : 'rgba(199,158,97,0.2)'}` }}>
                                         {canCall
-                                            ? <><CheckCircle2 size={16} style={{ color: D.green, flexShrink: 0 }} /><div><p style={{ fontSize: 12, fontWeight: 700, color: D.green }}>Pronto para chamar</p><p style={{ fontSize: 10, color: D.muted }}>{totalManualCount} aluno{totalManualCount > 1 ? 's' : ''} · {useManualPickup ? manualPickupName.trim() : selectedGuardian?.nome_completo}</p></div></>
-                                            : <><AlertCircle size={16} style={{ color: D.gold, flexShrink: 0 }} /><p style={{ fontSize: 12, fontWeight: 600, color: D.gold }}>{useManualPickup ? 'Digite o nome de quem está retirando' : 'Selecione um responsável ou use retirada avulsa'}</p></>
+                                            ? <><CheckCircle2 size={15} style={{ color: D.green, flexShrink: 0 }} /><div><p style={{ fontSize: 11, fontWeight: 700, color: D.green }}>Pronto para chamar</p><p style={{ fontSize: 9, color: D.muted }}>{totalManualCount} aluno{totalManualCount > 1 ? 's' : ''} · {useManualPickup ? manualPickupName.trim() : selectedGuardian?.nome_completo}</p></div></>
+                                            : <><AlertCircle size={15} style={{ color: D.gold, flexShrink: 0 }} /><p style={{ fontSize: 11, fontWeight: 600, color: D.gold }}>{useManualPickup ? 'Digite o nome de quem está retirando' : 'Selecione um responsável ou use retirada avulsa'}</p></>
                                         }
                                     </div>
 
                                     {/* Emergency toggle (manual mode) */}
                                     <button onClick={() => setIsEmergency(v => !v)} style={{
-                                        width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
+                                        width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                                         background: isEmergency ? 'rgba(228,1,35,0.1)' : 'rgba(255,255,255,0.02)',
                                         border: `1.5px solid ${isEmergency ? 'rgba(228,1,35,0.5)' : 'rgba(199,158,97,0.1)'}`,
-                                        borderRadius: 10, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                        borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
                                     }}>
                                         <div style={{
-                                            width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                                            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
                                             background: isEmergency ? D.red : 'rgba(255,255,255,0.05)',
                                             border: `1.5px solid ${isEmergency ? D.red : 'rgba(199,158,97,0.15)'}`,
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s',
                                         }}>
-                                            {isEmergency && <CheckCircle2 size={13} style={{ color: '#fff' }} />}
+                                            {isEmergency && <CheckCircle2 size={12} style={{ color: '#fff' }} />}
                                         </div>
                                         <div>
-                                            <p style={{ fontSize: 12, fontWeight: 700, color: isEmergency ? '#ff7b8a' : D.muted, transition: 'color 0.18s' }}>Chamada de Emergência</p>
-                                            <p style={{ fontSize: 10, color: D.muted, marginTop: 2 }}>Marca a solicitação como prioridade crítica na sala</p>
+                                            <p style={{ fontSize: 11, fontWeight: 700, color: isEmergency ? '#ff7b8a' : D.muted, transition: 'color 0.18s' }}>Chamada de Emergência</p>
+                                            <p style={{ fontSize: 9, color: D.muted, marginTop: 1 }}>Marca como prioridade crítica na sala</p>
                                         </div>
                                     </button>
 
                                     {/* Call button (manual mode) */}
                                     <button onClick={handleCallStudents} disabled={sending || !canCall} style={{
-                                        width: '100%', padding: '17px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                        width: '100%', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                                         background: canCall ? `linear-gradient(135deg, ${D.gold} 0%, ${D.goldDark} 100%)` : 'rgba(255,255,255,0.05)',
-                                        border: 'none', borderRadius: 12, cursor: canCall ? 'pointer' : 'not-allowed',
+                                        border: 'none', borderRadius: 11, cursor: canCall ? 'pointer' : 'not-allowed',
                                         color: canCall ? D.onGold : D.muted,
-                                        fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 800, letterSpacing: '0.02em',
+                                        fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: '0.02em',
                                         boxShadow: canCall ? `0 6px 24px rgba(199,158,97,0.35)` : 'none',
                                         transition: 'all 0.2s',
                                     }}>
                                         {sending
-                                            ? <div style={{ width: 20, height: 20, border: `2px solid ${D.onGold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
-                                            : <><Bell size={17} /> {totalManualCount > 1 ? `Chamar ${totalManualCount} Alunos` : 'Chamar Aluno'}</>}
+                                            ? <div style={{ width: 18, height: 18, border: `2px solid ${D.onGold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'rec-spin 0.7s linear infinite' }} />
+                                            : <><Bell size={16} /> {totalManualCount > 1 ? `Chamar ${totalManualCount} Alunos` : 'Chamar Aluno'}</>}
                                     </button>
                                 </div>
                             )}
                         </div>
                     ) : results.length === 0 ? (
-                        /* ════ EMPTY STATE ════ */
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginTop: 60, opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease 0.15s', position: 'relative' }}>
-                            {/* Decorative rings */}
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, height: 460, borderRadius: '50%', border: '1px solid rgba(199,158,97,0.05)', animation: 'rec-ring 4s ease-in-out infinite', pointerEvents: 'none' }} />
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 340, height: 340, borderRadius: '50%', border: '1px solid rgba(199,158,97,0.07)', animation: 'rec-ring 4s ease-in-out infinite 0.5s', pointerEvents: 'none' }} />
-
-                            <div style={{ width: '100%', maxWidth: 300, marginBottom: 40 }}>
-                                <svg viewBox="0 0 100 100" fill="none" strokeWidth="2" style={{ width: '100%', height: 'auto', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }}>
-                                    <circle cx="50" cy="50" r="48" stroke="white" strokeOpacity="0.1" />
-                                    <circle cx="50" cy="50" r="35" stroke="white" strokeOpacity="0.1" />
-                                    <path d="M50 15 A35 35 0 0 1 85 50 M15 50 A35 35 0 0 1 50 85" stroke="#C79E61" strokeWidth="3" strokeLinecap="round" />
-                                    <path d="M50 15 A35 35 0 0 0 15 50 M85 50 A35 35 0 0 0 50 85" stroke="#E6E6E6" strokeWidth="3" strokeLinecap="round" />
-                                    <circle cx="50" cy="50" r="12" stroke="#C79E61" strokeWidth="2" fill="rgba(199,158,97,0.2)" />
-                                    <path d="M48 46 v8 h4 v-8 Z M50 44 L46 48 L54 48 Z" fill="#C79E61" />
-                                </svg>
+                        /* ════ COMPACT EMPTY STATE ════ */
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 16px', opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease 0.15s' }}>
+                            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(199,158,97,0.08)', border: `1px solid rgba(199,158,97,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                                <SearchIcon size={22} style={{ color: D.gold }} />
                             </div>
-
-                            <div style={{ textAlign: 'center', marginBottom: 50 }}>
-                                <h1 style={{ fontSize: 32, fontWeight: 700, color: D.gold, marginBottom: 12 }}>Identificação Pendente</h1>
-                                <p style={{ fontSize: 16, color: D.white, lineHeight: 1.6, maxWidth: 500, margin: '0 auto' }}>Busque um aluno pelo nome, ou escaneie o QR / código do responsável para vinculação rápida.</p>
-                            </div>
-
-                            <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 30, color: '#A3E6D0', padding: '12px 28px', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, textTransform: 'uppercase', letterSpacing: 1, boxShadow: '0 0 20px rgba(52,211,153,0.6)' }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#52D399', animation: 'rec-pulse 2s infinite ease-in-out', boxShadow: '0 0 10px #52D399' }} />
-                                MONITORAMENTO ATIVO
+                            <p style={{ fontSize: 14, fontWeight: 700, color: D.white, marginBottom: 6 }}>Identificação Pendente</p>
+                            <p style={{ fontSize: 12, color: D.muted, lineHeight: 1.6, maxWidth: 240 }}>Pesquise por nome, CPF ou RA para localizar o aluno ou responsável</p>
+                            <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 20 }}>
+                                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#52D399', animation: 'rec-pulse 2s infinite ease-in-out', boxShadow: '0 0 8px #52D399' }} />
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#A3E6D0', textTransform: 'uppercase', letterSpacing: 1 }}>Monitoramento Ativo</span>
                             </div>
                         </div>
                     ) : null}
-                </main>
+                </aside>
 
-                {/* RIGHT PANEL - 320px */}
-                <aside
-                    className="rec-right-panel"
+                {/* ══ MAIN PANEL: Withdrawal Queue (expanded) ══ */}
+                <main
+                    className="rec-queue-main"
                     style={{
-                        width: 320,
-                        flexShrink: 0,
+                        flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        padding: '40px 24px',
-                        gap: 32,
-                        borderLeft: '1px solid rgba(199,158,97,0.05)',
-                        background: 'rgba(7,10,20,0.8)',
-                        backdropFilter: 'blur(10px)',
-                        overflowY: 'auto',
+                        overflow: 'hidden',
+                        padding: '32px 40px',
                     }}
                 >
-                    {/* Queue section */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <h3 style={{ fontSize: 14, fontWeight: 600, color: D.gold, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>FILA DE RETIRADA</h3>
-                                <p style={{ fontSize: 12, fontWeight: 500, color: D.muted, textTransform: 'uppercase', margin: '2px 0 0' }}>SISTEMA ATIVO</p>
-                            </div>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(199,158,97,0.1)', border: `1px solid ${D.panelBorder}`, display: 'grid', placeItems: 'center', fontSize: 16, fontWeight: 700, color: D.gold, boxShadow: '0 0 15px rgba(199,158,97,0.6)' }}>
-                                {queueCount}
-                            </div>
-                        </div>
-
-                        {/* Pulse graph decorative SVG */}
-                        <div style={{ height: 80, position: 'relative' }}>
-                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" fill="none" stroke="rgba(199,158,97,0.2)" strokeWidth="1" style={{ width: '100%', height: '100%' }}>
-                                <path d="M0 50 L10 50 L15 40 L20 60 L25 50 L30 50 L35 20 L40 80 L45 50 L50 50 L55 50 L60 50 L65 40 L70 60 L75 50 L80 50 L85 20 L90 80 L95 50 L100 50" />
-                            </svg>
-                            {queueCount === 0 && (
-                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center' }}>
-                                    <p style={{ fontSize: 14, fontWeight: 700, color: D.gold, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>FILA VAZIA</p>
-                                    <p style={{ fontSize: 11, fontWeight: 500, color: D.muted, textTransform: 'uppercase', letterSpacing: 0.5, margin: '2px 0 0' }}>ZERO ATIVOS</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Actual queue cards */}
-                        <WithdrawalQueue />
-                    </div>
-
-                    {/* System status at bottom */}
-                    <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                        <div>
-                            <p style={{ fontSize: 11, fontWeight: 500, color: D.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>STATUS DO SISTEMA</p>
-                            <p style={{ fontSize: 22, fontWeight: 700, color: D.gold }}>SEGURO</p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <p style={{ fontSize: 11, fontWeight: 500, color: D.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>TOTAL ATIVO</p>
-                            <p style={{ fontSize: 22, fontWeight: 700, color: D.white }}>{queueCount}</p>
-                        </div>
-                    </div>
-                </aside>
+                    <WithdrawalQueue />
+                </main>
             </div>
 
             {/* ══════════ MODALS ══════════ */}
