@@ -6,21 +6,11 @@ import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 import { logAudit } from '../../lib/audit';
 
-const MORNING_SCHEDULE = [
-    { day: 'Segunda-feira', enabled: true, start: '11:50', end: '13:20' },
-    { day: 'Terça-feira', enabled: true, start: '11:50', end: '13:20' },
-    { day: 'Quarta-feira', enabled: true, start: '11:50', end: '13:20' },
-    { day: 'Quinta-feira', enabled: true, start: '11:50', end: '13:20' },
-    { day: 'Sexta-feira', enabled: true, start: '11:50', end: '13:20' },
-];
+const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
 
-const AFTERNOON_SCHEDULE = [
-    { day: 'Segunda-feira', enabled: true, start: '17:50', end: '19:00' },
-    { day: 'Terça-feira', enabled: true, start: '17:50', end: '19:00' },
-    { day: 'Quarta-feira', enabled: true, start: '17:50', end: '19:00' },
-    { day: 'Quinta-feira', enabled: true, start: '17:50', end: '19:00' },
-    { day: 'Sexta-feira', enabled: true, start: '17:50', end: '19:00' },
-];
+function buildSchedule(start: string, end: string) {
+    return DAYS.map(day => ({ day, enabled: true, start, end }));
+}
 
 /** Extrai o código de seção do campo turma, ex: "1º Ano - EF I (111M)" → "111M" */
 function getSectionCode(turma: string): string {
@@ -54,6 +44,16 @@ export default function MassScheduleUpdate() {
     const [done, setDone] = useState(false);
     const [results, setResults] = useState<{ updated: number; skipped: number; errors: number } | null>(null);
 
+    // Editable time windows
+    const [morningStart, setMorningStart] = useState('11:50');
+    const [morningEnd, setMorningEnd] = useState('13:20');
+    const [afternoonStart, setAfternoonStart] = useState('17:50');
+    const [afternoonEnd, setAfternoonEnd] = useState('19:00');
+
+    const morningConflict = morningStart >= morningEnd;
+    const afternoonConflict = afternoonStart >= afternoonEnd;
+    const anyConflict = morningConflict || afternoonConflict;
+
     useEffect(() => {
         loadStudents();
     }, []);
@@ -86,23 +86,23 @@ export default function MassScheduleUpdate() {
     const unknown = students.filter(s => s.period === 'desconhecido');
 
     const handleRunUpdate = async () => {
-        if (running) return;
+        if (running || anyConflict) return;
         setRunning(true);
 
         let updated = 0;
         let errors = 0;
 
+        const morningSchedule = buildSchedule(morningStart, morningEnd);
+        const afternoonSchedule = buildSchedule(afternoonStart, afternoonEnd);
+
         const toUpdate = [
-            ...morning.map(s => ({ ...s, newSchedule: MORNING_SCHEDULE })),
-            ...afternoon.map(s => ({ ...s, newSchedule: AFTERNOON_SCHEDULE })),
+            ...morning.map(s => ({ ...s, newSchedule: morningSchedule })),
+            ...afternoon.map(s => ({ ...s, newSchedule: afternoonSchedule })),
         ];
 
         for (const student of toUpdate) {
             const currentCfg = student.config_seguranca || {};
-            const newCfg = {
-                ...currentCfg,
-                schedule: student.newSchedule,
-            };
+            const newCfg = { ...currentCfg, schedule: student.newSchedule };
 
             const { error } = await supabase
                 .from('alunos')
@@ -123,8 +123,8 @@ export default function MassScheduleUpdate() {
             erros: errors,
             turmas_manha: morning.length,
             turmas_tarde: afternoon.length,
-            horario_manha: '11:50 – 13:20',
-            horario_tarde: '17:50 – 19:00',
+            horario_manha: `${morningStart} – ${morningEnd}`,
+            horario_tarde: `${afternoonStart} – ${afternoonEnd}`,
         });
 
         setResults({ updated, skipped: unknown.length, errors });
@@ -144,14 +144,15 @@ export default function MassScheduleUpdate() {
                 <NavigationControls />
 
                 <div className="mb-10">
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Atualização em Massa — Horário de Retirada</h1>
-                    <p className="text-slate-500">Define a janela semanal de retirada para todos os alunos com base no período (Manhã / Tarde).</p>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Manutenção — Horário de Retirada em Massa</h1>
+                    <p className="text-slate-500">Define a janela semanal de retirada para todos os alunos com base no período (Manhã / Tarde). Edite os horários abaixo antes de executar.</p>
                 </div>
 
-                {/* Schedule preview cards */}
+                {/* Editable schedule cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
+                    {/* Morning */}
+                    <div className={`bg-white rounded-3xl border p-6 shadow-sm transition-all ${morningConflict ? 'border-red-300' : 'border-slate-200'}`}>
+                        <div className="flex items-center gap-3 mb-5">
                             <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
                                 <Sun className="w-5 h-5" />
                             </div>
@@ -160,17 +161,41 @@ export default function MassScheduleUpdate() {
                                 <p className="text-xs text-slate-400">Turmas com código terminando em M</p>
                             </div>
                         </div>
-                        <div className="bg-amber-50 rounded-2xl px-5 py-4 text-center">
-                            <p className="text-3xl font-black text-amber-600">11:50 – 13:20</p>
-                            <p className="text-xs text-amber-500 mt-1">Segunda a Sexta</p>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Início</label>
+                                <input
+                                    type="time"
+                                    value={morningStart}
+                                    onChange={e => setMorningStart(e.target.value)}
+                                    className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-sm font-bold outline-none focus:ring-2 transition-all ${morningConflict ? 'border-red-300 focus:ring-red-200' : 'border-amber-200 focus:ring-amber-200 focus:border-amber-400'}`}
+                                />
+                            </div>
+                            <span className="text-slate-300 font-bold mt-5">–</span>
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Fim</label>
+                                <input
+                                    type="time"
+                                    value={morningEnd}
+                                    onChange={e => setMorningEnd(e.target.value)}
+                                    className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-sm font-bold outline-none focus:ring-2 transition-all ${morningConflict ? 'border-red-300 focus:ring-red-200' : 'border-amber-200 focus:ring-amber-200 focus:border-amber-400'}`}
+                                />
+                            </div>
                         </div>
-                        <p className="text-sm font-semibold text-slate-700 mt-4 text-center">
-                            {loading ? '...' : <>{morning.length} alunos</>}
+
+                        {morningConflict && (
+                            <p className="text-xs text-red-500 font-medium mt-2">⚠ O horário de Fim deve ser posterior ao Início.</p>
+                        )}
+
+                        <p className="text-sm font-semibold text-slate-500 mt-4 text-center">
+                            {loading ? '...' : <>{morning.length} aluno{morning.length !== 1 ? 's' : ''}</>}
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
+                    {/* Afternoon */}
+                    <div className={`bg-white rounded-3xl border p-6 shadow-sm transition-all ${afternoonConflict ? 'border-red-300' : 'border-slate-200'}`}>
+                        <div className="flex items-center gap-3 mb-5">
                             <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
                                 <Moon className="w-5 h-5" />
                             </div>
@@ -179,12 +204,35 @@ export default function MassScheduleUpdate() {
                                 <p className="text-xs text-slate-400">Turmas com código terminando em T</p>
                             </div>
                         </div>
-                        <div className="bg-blue-50 rounded-2xl px-5 py-4 text-center">
-                            <p className="text-3xl font-black text-blue-600">17:50 – 19:00</p>
-                            <p className="text-xs text-blue-500 mt-1">Segunda a Sexta</p>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Início</label>
+                                <input
+                                    type="time"
+                                    value={afternoonStart}
+                                    onChange={e => setAfternoonStart(e.target.value)}
+                                    className={`w-full px-4 py-3 bg-blue-50 border rounded-xl text-sm font-bold outline-none focus:ring-2 transition-all ${afternoonConflict ? 'border-red-300 focus:ring-red-200' : 'border-blue-200 focus:ring-blue-200 focus:border-blue-400'}`}
+                                />
+                            </div>
+                            <span className="text-slate-300 font-bold mt-5">–</span>
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Fim</label>
+                                <input
+                                    type="time"
+                                    value={afternoonEnd}
+                                    onChange={e => setAfternoonEnd(e.target.value)}
+                                    className={`w-full px-4 py-3 bg-blue-50 border rounded-xl text-sm font-bold outline-none focus:ring-2 transition-all ${afternoonConflict ? 'border-red-300 focus:ring-red-200' : 'border-blue-200 focus:ring-blue-200 focus:border-blue-400'}`}
+                                />
+                            </div>
                         </div>
-                        <p className="text-sm font-semibold text-slate-700 mt-4 text-center">
-                            {loading ? '...' : <>{afternoon.length} alunos</>}
+
+                        {afternoonConflict && (
+                            <p className="text-xs text-red-500 font-medium mt-2">⚠ O horário de Fim deve ser posterior ao Início.</p>
+                        )}
+
+                        <p className="text-sm font-semibold text-slate-500 mt-4 text-center">
+                            {loading ? '...' : <>{afternoon.length} aluno{afternoon.length !== 1 ? 's' : ''}</>}
                         </p>
                     </div>
                 </div>
@@ -238,11 +286,11 @@ export default function MassScheduleUpdate() {
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                     {!done ? (
                         <button
                             onClick={handleRunUpdate}
-                            disabled={loading || running || (morning.length + afternoon.length === 0)}
+                            disabled={loading || running || anyConflict || (morning.length + afternoon.length === 0)}
                             className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center gap-3 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {running ? (
@@ -256,21 +304,21 @@ export default function MassScheduleUpdate() {
                             onClick={loadStudents}
                             className="px-8 py-4 bg-slate-200 text-slate-700 rounded-2xl font-bold flex items-center gap-3 hover:bg-slate-300 transition-all"
                         >
-                            <RefreshCw className="w-4 h-4" /> Recarregar
+                            <RefreshCw className="w-4 h-4" /> Nova Atualização
                         </button>
                     )}
                     <button
-                        onClick={() => navigate('/admin/alunos')}
+                        onClick={() => navigate('/admin')}
                         className="px-8 py-4 text-slate-500 hover:text-slate-700 font-bold transition-colors"
                     >
-                        Voltar aos Alunos
+                        Voltar ao Dashboard
                     </button>
                 </div>
 
                 <div className="mt-10 bg-slate-100 rounded-3xl p-6 flex gap-4 items-start">
                     <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <p className="text-sm text-slate-600 leading-relaxed">
-                        Esta operação sobrescreve o horário semanal de <strong>todos</strong> os alunos com código de turma identificado. Os outros dados de segurança (PIN, restrições, etc.) são preservados. A ação é registrada no log de auditoria.
+                        Esta operação sobrescreve o horário semanal de <strong>todos</strong> os alunos com código de turma identificado (sufixo M ou T). As demais configurações de segurança (PIN, restrições de custódia, etc.) são preservadas. A ação é registrada no log de auditoria.
                     </p>
                 </div>
             </div>

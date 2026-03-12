@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     LogOut, Users, TrendingUp, Clock, UserPlus,
     AlertCircle, Activity, FileText, QrCode, Search, ShieldCheck,
-    UserCheck, LayoutGrid, Settings, ArrowUpRight
+    UserCheck, LayoutGrid, Settings, ArrowUpRight, CalendarClock
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
 import { logAudit } from '../../lib/audit';
@@ -37,6 +37,7 @@ const MODULES = [
     { to: '/admin/turmas',              Icon: LayoutGrid,  label: 'Gestão de Turmas',        accent: '#1E6359' },
     { to: '/admin/cartoes-qr',          Icon: QrCode,      label: 'Gerar Cartões QR',        accent: '#C24B2A' },
     { to: '/admin/configuracoes',       Icon: Settings,    label: 'Configurações Gerais',    accent: '#7A6F65' },
+    { to: '/admin/manutencao/horarios', Icon: CalendarClock, label: 'Manutenção de Horários', accent: '#1E6359' },
 ] as const;
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
