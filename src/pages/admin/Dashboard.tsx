@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     LogOut, Users, School, Activity, TrendingUp, QrCode,
     BarChart2, Shield, Settings, ChevronRight,
-    FileText, UserCheck, LayoutGrid, ArrowLeft, Home,
+    FileText, UserCheck, LayoutGrid, ArrowLeft, Home, CalendarClock,
 } from 'lucide-react';
 import { logAudit } from '../../lib/audit';
 
@@ -400,8 +400,9 @@ export default function AdminDashboard() {
                             <DeckItem icon={QrCode}      label="Central de Cartões QR"  path="/admin/cartoes-qr" />
                             <DeckItem icon={Shield}      label="Controle de Acessos"    path="/admin/usuarios" />
                             <DeckItem icon={Shield}      label="Auditoria de Segurança" path="/admin/auditoria-seguranca" />
-                            <DeckItem icon={LayoutGrid}  label="Estrutura de Turmas"    path="/admin/turmas" />
-                            <DeckItem icon={Settings}    label="Configurações Globais"  path="/admin/configuracoes" />
+                            <DeckItem icon={LayoutGrid}      label="Estrutura de Turmas"    path="/admin/turmas" />
+                            <DeckItem icon={Settings}        label="Configurações Globais"  path="/admin/configuracoes" />
+                            <DeckItem icon={CalendarClock}   label="Manutenção de Horários" path="/admin/manutencao/horarios" />
                         </ul>
                     </div>
                 </section>
