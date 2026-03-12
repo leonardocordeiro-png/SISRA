@@ -23,6 +23,7 @@ interface RequestItem {
         foto_url: string | null;
     } | null;
     mensagem_recepcao: string | null;
+    mensagem_sala: string | null;
     status_geofence: string | null;
     distancia_estimada_metros: number | null;
 }
@@ -71,6 +72,7 @@ export default function PriorityPipeline({
                     foto_url
                 ),
                 mensagem_recepcao,
+                mensagem_sala,
                 status_geofence,
                 distancia_estimada_metros
             `)

@@ -25,6 +25,7 @@ type PickupRequest = {
     };
     responsavel?: { nome_completo: string; foto_url: string | null } | null;
     mensagem_recepcao: string | null;
+    mensagem_sala: string | null;
     status_geofence: string | null;
     distancia_estimada_metros: number | null;
 };
@@ -562,14 +563,52 @@ export default function ClassroomDashboard() {
                             <div style={{ background: D.glassBg, backdropFilter: 'blur(10px)', borderRadius: 16, padding: '18px 20px', border: `1px solid ${D.borderLight}` }}>
                                 <p style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: D.gold, marginBottom: 2 }}>Mensagem para Recepção</p>
                                 <p style={{ fontSize: 11, color: D.textMuted, marginBottom: 13 }}>Informe o status atual do aluno</p>
+
+                                {/* Active message indicator */}
+                                {activeRequest.mensagem_sala && (
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        marginBottom: 10, padding: '8px 12px',
+                                        background: `${D.gold}10`, border: `1px solid ${D.gold}35`,
+                                        borderLeft: `3px solid ${D.gold}`, borderRadius: 9,
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <MessageSquare size={11} style={{ color: D.gold, flexShrink: 0 }} />
+                                            <div>
+                                                <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: `${D.gold}90`, marginBottom: 2 }}>Sinalizado</p>
+                                                <p style={{ fontSize: 12, fontWeight: 600, color: D.gold }}>{activeRequest.mensagem_sala}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => sendQuickNote(activeRequest.id, '')}
+                                            disabled={sendingNote}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: D.textMutedDark, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6 }}
+                                            title="Limpar mensagem"
+                                        >
+                                            <X size={13} />
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 13 }}>
-                                    {QUICK_NOTES.map(note => (
-                                        <button key={note} onClick={() => sendQuickNote(activeRequest.id, note)} disabled={sendingNote}
-                                            style={{ padding: '6px 13px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${D.borderLight}`, borderRadius: 18, fontSize: 11.5, fontWeight: 600, color: D.textMuted, cursor: 'pointer', transition: 'all 0.17s', fontFamily: 'Montserrat, sans-serif' }}
-                                            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = `${D.gold}12`; el.style.borderColor = `${D.gold}40`; el.style.color = D.gold; }}
-                                            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.03)'; el.style.borderColor = D.borderLight; el.style.color = D.textMuted; }}
-                                        >{note}</button>
-                                    ))}
+                                    {QUICK_NOTES.map(note => {
+                                        const isActive = activeRequest.mensagem_sala === note;
+                                        return (
+                                            <button key={note} onClick={() => sendQuickNote(activeRequest.id, isActive ? '' : note)} disabled={sendingNote}
+                                                style={{
+                                                    padding: '6px 13px',
+                                                    background: isActive ? `${D.gold}18` : 'rgba(255,255,255,0.03)',
+                                                    border: `1px solid ${isActive ? `${D.gold}60` : D.borderLight}`,
+                                                    borderRadius: 18, fontSize: 11.5, fontWeight: isActive ? 700 : 600,
+                                                    color: isActive ? D.gold : D.textMuted,
+                                                    cursor: 'pointer', transition: 'all 0.17s', fontFamily: 'Montserrat, sans-serif',
+                                                    boxShadow: isActive ? `0 0 10px ${D.gold}20` : 'none',
+                                                }}
+                                                onMouseEnter={e => { if (!isActive) { const el = e.currentTarget as HTMLElement; el.style.background = `${D.gold}12`; el.style.borderColor = `${D.gold}40`; el.style.color = D.gold; } }}
+                                                onMouseLeave={e => { if (!isActive) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.03)'; el.style.borderColor = D.borderLight; el.style.color = D.textMuted; } }}
+                                            >{note}</button>
+                                        );
+                                    })}
                                 </div>
                                 <div style={{ position: 'relative' }}>
                                     <input

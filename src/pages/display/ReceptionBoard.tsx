@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
     Activity, CheckCircle2, Clock, AlertTriangle,
-    User as UserIcon, MapPin, School,
+    User as UserIcon, MapPin, School, MessageSquare,
 } from 'lucide-react';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ type ActiveRequest = {
     tipo_solicitacao: string;
     horario_solicitacao: string;
     status_geofence: string | null;
+    mensagem_sala: string | null;
     aluno: { id: string; nome_completo: string; turma: string; sala: string; foto_url: string | null };
     responsavel: { nome_completo: string; foto_url: string | null } | null;
 };
@@ -151,6 +152,18 @@ function StudentCard({ req, large = false }: { req: ActiveRequest; large?: boole
                         {req.responsavel.nome_completo}
                     </p>
                 )}
+                {req.mensagem_sala && (
+                    <div style={{
+                        marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 5,
+                        padding: '5px 8px', borderRadius: 7,
+                        background: `${D.gold}12`, border: `1px solid ${D.gold}30`,
+                    }}>
+                        <MessageSquare size={9} style={{ color: D.gold, flexShrink: 0, marginTop: 1 }} />
+                        <p style={{ fontSize: 9, color: `${D.gold}dd`, lineHeight: 1.4, wordBreak: 'break-word' }}>
+                            {req.mensagem_sala}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Elapsed */}
@@ -251,7 +264,7 @@ export default function ReceptionBoard() {
             let q = supabase
                 .from('solicitacoes_retirada')
                 .select(`
-                    id, status, tipo_solicitacao, horario_solicitacao, status_geofence,
+                    id, status, tipo_solicitacao, horario_solicitacao, status_geofence, mensagem_sala,
                     aluno:alunos(id, nome_completo, turma, sala, foto_url),
                     responsavel:responsaveis(nome_completo, foto_url)
                 `)
