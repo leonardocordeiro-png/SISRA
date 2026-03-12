@@ -1,12 +1,17 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import {
     BarChart2, Calendar, Clock, User, Shield, CheckCircle2,
     AlertCircle, Search, Download, TrendingUp,
     TrendingDown, Minus, Filter, Eye, X, AlertTriangle,
-    Activity, FileText, Users, RefreshCw, ArrowLeft, ArrowRight, Printer
+    Activity, FileText, Users, RefreshCw, ArrowLeft, ArrowRight, Printer,
+    Table2, ChevronDown
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -266,6 +271,7 @@ export default function PickupHistoryView() {
     const [detailRecord, setDetailRecord] = useState<PickupRecord | null>(null);
     const [activeView, setActiveView] = useState<'list' | 'analytics'>('list');
     const [page, setPage] = useState(0);
+    const [exportMenuOpen, setExportMenuOpen] = useState(false);
     const PAGE_SIZE = 20;
 
     const { from, to } = useMemo(
@@ -321,7 +327,7 @@ export default function PickupHistoryView() {
             );
         }
         return r;
-    }, [records, statusFilter, searchTerm]);
+    }, [records, statusFilter, methodFilter, searchTerm]);
 
     const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -408,6 +414,146 @@ export default function PickupHistoryView() {
         const a = document.createElement('a'); a.href = url;
         a.download = `retiradas_${period}_${new Date().toISOString().split('T')[0]}.csv`;
         a.click(); URL.revokeObjectURL(url);
+
+        logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
+            formato: 'CSV',
+            periodo: period,
+            de: from,
+            ate: to,
+            registros: filtered.length,
+        });
+    };
+
+    // ── Export Excel (XLSX) ──
+    const exportXLSX = () => {
+        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Método', 'Tempo Espera (seg)', 'Observações'];
+        const rows = filtered.map(r => [
+            fmtDate(r.horario_solicitacao),
+            fmtTime(r.horario_solicitacao),
+            fmtTime(r.horario_liberacao),
+            r.aluno?.nome_completo || '',
+            r.aluno?.matricula || '',
+            r.aluno?.turma || '',
+            r.aluno?.sala || '',
+            r.responsavel?.nome_completo || '',
+            r.responsavel?.cpf || '',
+            STATUS_PT[r.status] || r.status,
+            r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
+            r.tempo_espera_segundos ?? '',
+            r.observacoes || '',
+        ]);
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+
+        // Column widths
+        ws['!cols'] = [12,10,10,30,12,22,8,30,14,12,12,14,40].map(w => ({ wch: w }));
+
+        // Summary sheet
+        const summaryData = [
+            ['Relatório de Retiradas — La Salle, Cheguei!'],
+            ['Período:', `${fmtDate(from)} até ${fmtDate(to)}`],
+            ['Gerado em:', new Date().toLocaleString('pt-BR')],
+            [],
+            ['Total de Registros', analytics.total],
+            ['Liberados', analytics.liberados],
+            ['Cancelados / Alertas', analytics.cancelados],
+            ['Tempo Médio de Espera', waitLabel(analytics.avgWait)],
+        ];
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        wsSummary['!cols'] = [{ wch: 30 }, { wch: 30 }];
+
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
+        XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+
+        XLSX.writeFile(wb, `retiradas_${period}_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+        logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
+            formato: 'XLSX',
+            periodo: period,
+            de: from,
+            ate: to,
+            registros: filtered.length,
+        });
+    };
+
+    // ── Export PDF ──
+    const exportPDF = () => {
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        // Header
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('La Salle, Cheguei! — Relatório de Retiradas', 14, 18);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        doc.text(`Período: ${fmtDate(from)} até ${fmtDate(to)}`, 14, 26);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 31);
+
+        // KPI summary row
+        doc.setFontSize(9);
+        doc.setTextColor(50);
+        const kpis = [
+            `Total: ${analytics.total}`,
+            `Liberados: ${analytics.liberados}`,
+            `Cancelados: ${analytics.cancelados}`,
+            `Tempo Médio: ${waitLabel(analytics.avgWait)}`,
+        ];
+        kpis.forEach((k, i) => doc.text(k, 14 + i * 65, 38));
+
+        // Table
+        autoTable(doc, {
+            startY: 44,
+            head: [['Data', 'Hora', 'Aluno', 'Turma', 'Responsável', 'Método', 'Status', 'Espera', 'Observações']],
+            body: filtered.map(r => [
+                fmtDate(r.horario_solicitacao),
+                fmtTime(r.horario_solicitacao),
+                r.aluno?.nome_completo || '—',
+                r.aluno?.turma || '—',
+                r.responsavel?.nome_completo || '—',
+                r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
+                STATUS_PT[r.status] || r.status,
+                waitLabel(r.tempo_espera_segundos),
+                r.observacoes || '',
+            ]),
+            styles: { fontSize: 7, cellPadding: 2 },
+            headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            columnStyles: {
+                0: { cellWidth: 22 },
+                1: { cellWidth: 14 },
+                2: { cellWidth: 44 },
+                3: { cellWidth: 32 },
+                4: { cellWidth: 44 },
+                5: { cellWidth: 18 },
+                6: { cellWidth: 20 },
+                7: { cellWidth: 14 },
+                8: { cellWidth: 'auto' },
+            },
+            didDrawPage: (data: any) => {
+                const pageCount = (doc as any).internal.getNumberOfPages();
+                doc.setFontSize(7);
+                doc.setTextColor(150);
+                doc.text(
+                    `Página ${data.pageNumber} de ${pageCount}`,
+                    doc.internal.pageSize.getWidth() - 14,
+                    doc.internal.pageSize.getHeight() - 8,
+                    { align: 'right' }
+                );
+            },
+        });
+
+        doc.save(`retiradas_${period}_${new Date().toISOString().split('T')[0]}.pdf`);
+
+        logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
+            formato: 'PDF',
+            periodo: period,
+            de: from,
+            ate: to,
+            registros: filtered.length,
+        });
     };
 
     const PERIOD_LABELS: Record<Period, string> = {
@@ -460,9 +606,49 @@ export default function PickupHistoryView() {
                         <button onClick={() => window.print()} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200 active:scale-95">
                             <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Imprimir</span>
                         </button>
-                        <button onClick={exportCSV} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
-                            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Exportar CSV</span>
-                        </button>
+
+                        {/* Export dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setExportMenuOpen(o => !o)}
+                                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">Exportar</span>
+                                <ChevronDown className="w-3 h-3" />
+                            </button>
+
+                            {exportMenuOpen && (
+                                <>
+                                    {/* Backdrop */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
+                                    <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/60 overflow-hidden min-w-[160px]">
+                                        <button
+                                            onClick={() => { exportPDF(); setExportMenuOpen(false); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                                        >
+                                            <FileText className="w-4 h-4 text-red-500" />
+                                            Exportar PDF
+                                        </button>
+                                        <button
+                                            onClick={() => { exportXLSX(); setExportMenuOpen(false); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors text-left"
+                                        >
+                                            <Table2 className="w-4 h-4 text-emerald-500" />
+                                            Exportar Planilha
+                                        </button>
+                                        <div className="border-t border-slate-100" />
+                                        <button
+                                            onClick={() => { exportCSV(); setExportMenuOpen(false); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left"
+                                        >
+                                            <Download className="w-4 h-4 text-slate-400" />
+                                            Exportar CSV
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </header>
