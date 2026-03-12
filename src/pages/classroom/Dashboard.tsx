@@ -310,7 +310,7 @@ export default function ClassroomDashboard() {
                         <School size={17} style={{ color: '#0A0F1F' }} />
                     </div>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: 17, fontWeight: 600, lineHeight: 1.1 }}>A LA SALLE, CHEGUEI! — SCT</h1>
+                        <h1 style={{ margin: 0, fontSize: 17, fontWeight: 600, lineHeight: 1.1 }}>LA SALLE, CHEGUEI! — SCT</h1>
                         <p style={{ margin: 0, fontSize: 12, color: D.textMuted }}>Portal da Sala</p>
                     </div>
                 </div>
