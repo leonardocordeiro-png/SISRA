@@ -93,6 +93,8 @@ export default function SelfRegistration() {
 
             if (tokenError || !data) {
                 setError('Link de acesso inválido ou expirado.');
+            } else if (data.expira_em && new Date(data.expira_em) < new Date()) {
+                setError('Este link de acesso expirou. Solicite um novo link ao administrador da escola.');
             } else {
                 setStudent(data.alunos);
             }
@@ -369,7 +371,10 @@ export default function SelfRegistration() {
                 aluno_id: studentId,
                 parentesco: formData.parentesco,
                 metodo: 'AUTO_CADASTRO'
-            }, undefined, 'e6328325-1845-420a-b333-87a747953259');
+            }, undefined, student?.escola_id || undefined);
+
+            // 6. Invalidate token after successful registration
+            await supabase.from('tokens_acesso').delete().eq('token', token);
 
             setLastRegisteredGuardian({
                 ...guardianData,
