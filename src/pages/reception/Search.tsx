@@ -1059,7 +1059,7 @@ export default function ReceptionSearch() {
                                             </div>
 
                                             {guardians.length > 0 ? (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                     {guardians.map(g => {
                                                         const isSel = g.id === selectedGuardianId;
                                                         return (
