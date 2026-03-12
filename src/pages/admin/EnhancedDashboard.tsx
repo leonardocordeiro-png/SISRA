@@ -113,13 +113,13 @@ export default function EnhancedAdminDashboard() {
             });
             const { data: logs } = await supabase
                 .from('logs_auditoria').select('*')
-                .order('timestamp', { ascending: false }).limit(5);
+                .order('criado_em', { ascending: false }).limit(5);
             setRecentActivity(
                 logs?.map(log => ({
                     id: log.id,
-                    type: log.tipo_evento,
+                    type: log.acao,
                     description: log.descricao,
-                    timestamp: log.timestamp,
+                    timestamp: log.criado_em,
                 })) || []
             );
         } catch (err) {

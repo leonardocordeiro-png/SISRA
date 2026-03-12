@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../lib/audit';
 import { useAuth } from '../../context/AuthContext';
 import { AlertTriangle, X, Bell } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
@@ -65,13 +66,11 @@ export default function EmergencyAlert() {
             });
 
             // Log audit trail
-            await supabase.from('logs_auditoria').insert({
-                escola_id: userData?.escola_id,
-                usuario_id: user?.id,
-                tipo_evento: 'EMERGENCY_ALERT',
-                descricao: `Alerta de emergência enviado: ${alert.title}`,
-                ip_address: '0.0.0.0'
-            });
+            await logAudit('MANUTENCAO', 'system_announcements', undefined, {
+                tipo: 'EMERGENCY_ALERT',
+                titulo: alert.title,
+                message: `Alerta de emergência enviado: ${alert.title}`,
+            }, user?.id, userData?.escola_id);
 
             // TODO: Send real-time notification via Supabase Realtime
             // This would trigger push notifications to all connected clients
