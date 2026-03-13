@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Navigation, MapPin, Wifi, WifiOff, Loader2, AlertTriangle, ShieldOff, SatelliteDish } from 'lucide-react';
+import { Navigation, MapPin, Wifi, WifiOff, Loader2, AlertTriangle, ShieldOff, SatelliteDish, RefreshCw } from 'lucide-react';
 
 // ── Geofence thresholds (meters) ──────────────────────────────────────────────
 const RADIUS_CHEGOU = 150;
@@ -27,48 +27,72 @@ function classifyDistance(meters: number): 'CHEGOU' | 'PERTO' | 'LONGE' {
     return 'LONGE';
 }
 
-// ── Error diagnosis ────────────────────────────────────────────────────────────
-type GeoErrorInfo = { title: string; message: string; hint: string };
+// ── Error diagnosis ─────────────────────────────────────────────────────────
+type GeoErrorInfo = {
+    title: string;
+    message: string;
+    hint: string;
+    /** true = server-side block (Permissions-Policy header), can't be fixed by user in browser */
+    serverBlock?: boolean;
+};
+
+// Detects if the GeolocationPositionError is caused by a Permissions-Policy
+// HTTP header on the server (as opposed to the user manually denying the prompt).
+function isPermissionsPolicyBlock(err: GeolocationPositionError): boolean {
+    const msg = err.message.toLowerCase();
+    return (
+        msg.includes('permissions policy') ||
+        msg.includes('permission policy') ||
+        msg.includes('permissions-policy') ||
+        msg.includes('disallowed by permissions') ||
+        // Chrome/Edge specific wording
+        msg.includes('has been blocked by permissions policy') ||
+        msg.includes('geolocation has been disabled') ||
+        // Firefox
+        msg.includes('disabled by feature policy')
+    );
+}
 
 function diagnoseGeoError(err: GeolocationPositionError): GeoErrorInfo {
-    // Code 1 = PERMISSION_DENIED — can be user denial OR Permissions-Policy header
     if (err.code === err.PERMISSION_DENIED) {
-        if (err.message.toLowerCase().includes('permissions policy') ||
-            err.message.toLowerCase().includes('permission policy')) {
+        // First check for server-level Permissions-Policy block
+        if (isPermissionsPolicyBlock(err)) {
             return {
                 title: 'GPS bloqueado pelo servidor',
-                message: 'A localização foi desativada por uma configuração do servidor. Contate o suporte da escola.',
+                message: 'A geolocalização foi desativada por uma configuração do servidor. Contate o suporte da escola.',
                 hint: 'Use o botão "Confirmar Chegada" abaixo como alternativa.',
+                serverBlock: true,
             };
         }
+        // User-denied permission
         return {
             title: 'Permissão de localização negada',
-            message: 'Você recusou o acesso à localização. Para ativar: Configurações do navegador → Privacidade → Localização → Permitir para este site.',
-            hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
+            message: 'Você negou o acesso à localização. Para ativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois toque em "Tentar novamente".',
+            hint: 'Ou use o botão "Confirmar Chegada" abaixo.',
         };
     }
     if (err.code === err.POSITION_UNAVAILABLE) {
         return {
             title: 'Sinal de GPS indisponível',
-            message: 'Não foi possível obter sua posição. Verifique se o GPS/Localização está ativo no dispositivo.',
+            message: 'Não foi possível obter sua posição. Verifique se o GPS/Localização está ativo no dispositivo e se você está em área com sinal.',
             hint: 'Tente em área aberta ou use o botão "Confirmar Chegada".',
         };
     }
     if (err.code === err.TIMEOUT) {
         return {
             title: 'GPS sem resposta',
-            message: 'O sinal de localização demorou muito para responder. Verifique sua conexão e as permissões de localização.',
-            hint: 'Tente novamente ou use o botão "Confirmar Chegada".',
+            message: 'O sinal de localização demorou muito para responder. Verifique a conexão e as permissões de localização.',
+            hint: 'Toque em "Tentar novamente" ou use o botão "Confirmar Chegada".',
         };
     }
     return {
         title: 'Erro de localização',
-        message: err.message,
+        message: err.message || 'Ocorreu um erro inesperado ao acessar o GPS.',
         hint: 'Use o botão "Confirmar Chegada" como alternativa.',
     };
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 interface SchoolCoords {
     latitude: number;
     longitude: number;
@@ -81,19 +105,19 @@ interface Props {
     guardianId?: string;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
+// ── Component ────────────────────────────────────────────────────────────────
 export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
-    const [tracking, setTracking]       = useState(false);
-    const [distance, setDistance]       = useState<number | null>(null);
-    const [geofence, setGeofence]       = useState<string | null>(null);
-    const [geoError, setGeoError]       = useState<GeoErrorInfo | null>(null);
-    const [school, setSchool]           = useState<SchoolCoords | null>(null);
+    const [tracking, setTracking]           = useState(false);
+    const [distance, setDistance]           = useState<number | null>(null);
+    const [geofence, setGeofence]           = useState<string | null>(null);
+    const [geoError, setGeoError]           = useState<GeoErrorInfo | null>(null);
+    const [school, setSchool]               = useState<SchoolCoords | null>(null);
     const [loadingSchool, setLoadingSchool] = useState(false);
 
     const lastWriteRef = useRef<number>(0);
     const watchIdRef   = useRef<number | null>(null);
 
-    // ── Load school coords ────────────────────────────────────────────────────
+    // ── Load school coords ─────────────────────────────────────────────────
     useEffect(() => {
         async function fetchSchool() {
             setLoadingSchool(true);
@@ -122,7 +146,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
         fetchSchool();
     }, [escolaId]);
 
-    // ── Debounced Supabase writer ─────────────────────────────────────────────
+    // ── Debounced Supabase writer ──────────────────────────────────────────
     const writeToSupabase = useCallback(async (
         dist: number, lat: number, lng: number, status: string
     ) => {
@@ -148,7 +172,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                 .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
                 .gte('horario_solicitacao', todayStart.toISOString());
 
-            // Only upgrade geofence status, never downgrade from CHEGOU
+            // Upgrade geofence status; never downgrade from CHEGOU
             if (status === 'CHEGOU') {
                 await supabase
                     .from('solicitacoes_retirada')
@@ -166,7 +190,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                     .gte('horario_solicitacao', todayStart.toISOString());
             }
         } else {
-            // Fallback: update the specific request, but never downgrade CHEGOU
+            // Fallback: update specific request, never downgrade CHEGOU
             const { data: current } = await supabase
                 .from('solicitacoes_retirada')
                 .select('status_geofence')
@@ -182,19 +206,23 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
         }
     }, [pickupId, guardianId]);
 
-    // ── Start / stop tracking ─────────────────────────────────────────────────
-    const startTracking = useCallback(async () => {
+    // ── Clear existing watch ───────────────────────────────────────────────
+    const clearWatch = useCallback(() => {
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+        }
+    }, []);
+
+    // ── Start tracking ─────────────────────────────────────────────────────
+    const startTracking = useCallback(() => {
         if (!school) return;
 
         setGeoError(null);
 
-        // Never pre-check navigator.permissions here — doing so would prevent
-        // the browser from showing its native permission dialog when state='prompt'.
-        // Always call watchPosition directly; diagnose errors in the error callback.
-
         if (!navigator.geolocation) {
             setGeoError({
-                title: 'GPS não disponível',
+                title: 'GPS não suportado',
                 message: 'Este dispositivo ou navegador não suporta geolocalização.',
                 hint: 'Use o botão "Confirmar Chegada" manualmente.',
             });
@@ -217,55 +245,66 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
             writeToSupabase(dist, latitude, longitude, status);
         };
 
-        const onError = async (err: GeolocationPositionError) => {
-            // Post-check permission state to refine the message shown to the user.
-            // We do this AFTER the error, not before, so watchPosition always runs
-            // and the browser can show its native permission dialog when needed.
+        const onError = (err: GeolocationPositionError) => {
+            // Synchronous diagnosis first (using err.message patterns)
             let info = diagnoseGeoError(err);
-            if (err.code === err.PERMISSION_DENIED && navigator.permissions) {
-                try {
-                    const perm = await navigator.permissions.query({ name: 'geolocation' });
-                    if (perm.state === 'denied') {
-                        info = {
-                            title: 'Permissão bloqueada no navegador',
-                            message: 'O acesso à localização está bloqueado para este site. Para reativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois recarregue a página.',
-                            hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
-                        };
-                    }
-                } catch { /* Permissions API indisponível — usar mensagem padrão */ }
+
+            // If PERMISSION_DENIED and message didn't match policy patterns,
+            // do a post-hoc permissions query to refine the message.
+            // We do this asynchronously but it's fire-and-forget for UI update.
+            if (err.code === err.PERMISSION_DENIED && !info.serverBlock && navigator.permissions) {
+                navigator.permissions
+                    .query({ name: 'geolocation' })
+                    .then((perm) => {
+                        if (perm.state === 'denied') {
+                            // Permissions API returns 'denied' both when user denies AND
+                            // when a Permissions-Policy header blocks it. We already
+                            // checked the error message above; if we're here the message
+                            // didn't match known policy strings. Show the user-facing msg.
+                            setGeoError({
+                                title: 'Permissão de localização negada',
+                                message: 'O acesso à localização está bloqueado para este site. Para reativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois toque em "Tentar novamente".',
+                                hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
+                            });
+                        }
+                    })
+                    .catch(() => { /* Permissions API unavailable — use initial diagnosis */ });
             }
+
             setGeoError(info);
             setTracking(false);
-            if (watchIdRef.current !== null) {
-                navigator.geolocation.clearWatch(watchIdRef.current);
-                watchIdRef.current = null;
-            }
+            clearWatch();
         };
 
         watchIdRef.current = navigator.geolocation.watchPosition(onSuccess, onError, options);
         setTracking(true);
-    }, [school, writeToSupabase]);
+    }, [school, writeToSupabase, clearWatch]);
 
+    // ── Stop tracking ──────────────────────────────────────────────────────
     const stopTracking = useCallback(() => {
-        if (watchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(watchIdRef.current);
-            watchIdRef.current = null;
-        }
+        clearWatch();
         setTracking(false);
         setDistance(null);
         setGeofence(null);
-    }, []);
+    }, [clearWatch]);
 
-    // Cleanup on unmount
+    // ── Retry after error ──────────────────────────────────────────────────
+    const retryTracking = useCallback(() => {
+        clearWatch();
+        setTracking(false);
+        setDistance(null);
+        setGeofence(null);
+        setGeoError(null);
+        // Small delay so state resets before re-attempting
+        setTimeout(() => startTracking(), 200);
+    }, [clearWatch, startTracking]);
+
+    // ── Cleanup on unmount ─────────────────────────────────────────────────
     useEffect(() => {
-        return () => {
-            if (watchIdRef.current !== null) {
-                navigator.geolocation.clearWatch(watchIdRef.current);
-            }
-        };
-    }, []);
+        return () => clearWatch();
+    }, [clearWatch]);
 
-    // ── Geofence label ────────────────────────────────────────────────────────
+    // ── Geofence display config ────────────────────────────────────────────
     const GEOFENCE_CFG = {
         CHEGOU: { text: 'Na Área do Colégio', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
         PERTO:  { text: 'Próximo ao Colégio', color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
@@ -274,18 +313,20 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
 
     const label = geofence ? GEOFENCE_CFG[geofence as keyof typeof GEOFENCE_CFG] : null;
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Render ─────────────────────────────────────────────────────────────
     return (
         <div className="bg-white/[0.02] border border-white/10 rounded-[2rem] overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${tracking ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' : 'bg-white/5 text-slate-500'}`}>
+            <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center transition-all ${
+                        tracking ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' : 'bg-white/5 text-slate-500'
+                    }`}>
                         <Navigation className="w-4 h-4" />
                     </div>
-                    <div>
-                        <p className="text-xs font-black text-white uppercase tracking-widest italic">Modo "Estou Chegando"</p>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                    <div className="min-w-0">
+                        <p className="text-xs font-black text-white uppercase tracking-widest italic truncate">Modo "Estou Chegando"</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest truncate">
                             {loadingSchool ? 'Carregando...' : school?.nome ?? 'GPS Geofencing'}
                         </p>
                     </div>
@@ -294,7 +335,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                 <button
                     onClick={tracking ? stopTracking : startTracking}
                     disabled={loadingSchool}
-                    className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 ${
+                    className={`shrink-0 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 ${
                         tracking
                             ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
                             : 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400'
@@ -309,9 +350,10 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
 
             {/* Body */}
             <div className="px-6 py-5 space-y-4">
-                {/* Distance display */}
+
+                {/* Distance display — shown when tracking */}
                 {tracking && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-3">
                             <MapPin className="w-4 h-4 text-blue-400" />
                             <span className="text-sm font-black text-white italic">
@@ -349,11 +391,11 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
 
                 {/* Error display */}
                 {geoError && (
-                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-2">
+                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-3">
                         <div className="flex items-center gap-2">
-                            {geoError.title.includes('bloqueado') || geoError.title.includes('servidor')
+                            {geoError.serverBlock
                                 ? <ShieldOff className="w-4 h-4 text-rose-400 shrink-0" />
-                                : geoError.title.includes('indisponível') || geoError.title.includes('sem sinal')
+                                : geoError.title.toLowerCase().includes('indisponível')
                                     ? <SatelliteDish className="w-4 h-4 text-rose-400 shrink-0" />
                                     : <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                             }
@@ -361,16 +403,27 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                         </div>
                         <p className="text-[11px] text-rose-300/80 leading-relaxed">{geoError.message}</p>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{geoError.hint}</p>
+
+                        {/* Retry button — only if not a server-side block */}
+                        {!geoError.serverBlock && (
+                            <button
+                                onClick={retryTracking}
+                                className="flex items-center gap-2 mt-1 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest transition-all active:scale-95"
+                            >
+                                <RefreshCw className="w-3 h-3" />
+                                Tentar novamente
+                            </button>
+                        )}
                     </div>
                 )}
 
-                {/* Geofence guide (when idle) */}
+                {/* Geofence guide — shown when idle and no error */}
                 {!tracking && !geoError && (
                     <div className="grid grid-cols-3 gap-2 pt-1">
                         {[
-                            { label: 'Na escola',  range: `< ${RADIUS_CHEGOU}m`,  color: 'text-emerald-400' },
-                            { label: 'Próximo',    range: `< ${RADIUS_PERTO}m`,   color: 'text-amber-400' },
-                            { label: 'Em trânsito', range: `> ${RADIUS_PERTO}m`, color: 'text-blue-400' },
+                            { label: 'Na escola',   range: `< ${RADIUS_CHEGOU}m`, color: 'text-emerald-400' },
+                            { label: 'Próximo',     range: `< ${RADIUS_PERTO}m`,  color: 'text-amber-400' },
+                            { label: 'Em trânsito', range: `> ${RADIUS_PERTO}m`,  color: 'text-blue-400' },
                         ].map(z => (
                             <div key={z.label} className="bg-white/[0.02] rounded-xl p-2.5 text-center border border-white/5">
                                 <p className={`text-[8px] font-black uppercase tracking-widest ${z.color}`}>{z.label}</p>
