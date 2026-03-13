@@ -144,12 +144,14 @@ export default function ParentLogin() {
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
 
-            // Check which students already have an active request today to avoid duplicates
+            // Check which students already have an OPEN (unconfirmed) request today.
+            // Must mirror fetchPickupStatus filters: horario_confirmacao IS NULL + not CANCELADO.
             const { data: existing } = await supabase
                 .from('solicitacoes_retirada')
                 .select('aluno_id')
                 .in('aluno_id', Array.from(selectedIds))
-                .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                .neq('status', 'CANCELADO')
+                .is('horario_confirmacao', null)
                 .gte('horario_solicitacao', todayStart.toISOString());
 
             const alreadyRequested = new Set((existing ?? []).map((r: any) => r.aluno_id));

@@ -182,14 +182,17 @@ export default function ParentPickupStatus() {
             const session = localStorage.getItem('sisra_parent_session');
             const sessionData = session ? JSON.parse(session) : null;
 
-            // Guard against duplicates: check if there's already an active request today
+            // Guard against duplicates: must mirror fetchPickupStatus filters exactly.
+            // Only treat a request as "already active" if it is open (horario_confirmacao IS NULL)
+            // and not cancelled — same conditions used to display the status screen.
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
             const { data: existing } = await supabase
                 .from('solicitacoes_retirada')
                 .select('id')
                 .eq('aluno_id', student.id)
-                .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                .neq('status', 'CANCELADO')
+                .is('horario_confirmacao', null)
                 .gte('horario_solicitacao', todayStart.toISOString())
                 .limit(1)
                 .maybeSingle();
