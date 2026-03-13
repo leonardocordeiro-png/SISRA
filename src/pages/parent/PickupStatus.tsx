@@ -24,6 +24,63 @@ type PickupData = {
     mensagem_recepcao?: string;
 };
 
+// ── Design tokens ─────────────────────────────────────────────────────────
+const token = {
+    bgDeep: '#070a13',
+    bgGlass: 'rgba(17, 24, 43, 0.65)',
+    bgBadge: 'rgba(17, 24, 43, 0.85)',
+    cyan: '#47b8ff',
+    gold: '#c79e61',
+    bluePrimary: '#3174f1',
+    blueHover: '#4e8eff',
+    textMain: '#FFFFFF',
+    textMuted: '#8491A2',
+    borderMuted: 'rgba(255,255,255,0.05)',
+    cyanBorder: 'rgba(71,184,255,0.55)',
+    goldBorder: 'rgba(199,158,97,0.55)',
+} as const;
+
+const glassPanel: React.CSSProperties = {
+    background: token.bgGlass,
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    boxShadow: 'inset 0 0 10px rgba(255,255,255,0.02), 0 4px 20px rgba(0,0,0,0.28)',
+};
+
+const badgeStyle: React.CSSProperties = {
+    background: token.bgBadge,
+    border: `1px solid ${token.borderMuted}`,
+    borderRadius: '30px',
+    padding: '8px 16px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontSize: '11px',
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.8px',
+    color: token.textMuted,
+};
+
+// Gradient-bordered wrapper
+function GlassCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+    return (
+        <div className="relative w-full" style={{ borderRadius: 14, ...style }}>
+            <div
+                className="absolute"
+                style={{
+                    inset: -2, borderRadius: 14,
+                    background: `linear-gradient(135deg, ${token.cyanBorder} 0%, ${token.goldBorder} 100%)`,
+                    filter: 'blur(4px)', opacity: 0.5, zIndex: 0,
+                }}
+            />
+            <div style={{ ...glassPanel, borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 1 }}>
+                {children}
+            </div>
+        </div>
+    );
+}
+
 export default function ParentPickupStatus() {
     const { id: studentId } = useParams();
     const navigate = useNavigate();
@@ -37,28 +94,17 @@ export default function ParentPickupStatus() {
     const [guardianId, setGuardianId]       = useState<string | undefined>(undefined);
     const [accessDenied, setAccessDenied]   = useState(false);
 
-    const requestingRef = useRef(false); // guard against double-submit
+    const requestingRef = useRef(false);
 
-    // ── Session validation ────────────────────────────────────────────────────
+    // ── Session validation ────────────────────────────────────────────────
     useEffect(() => {
         const session = localStorage.getItem('sisra_parent_session');
-        if (!session) {
-            navigate('/parent/login');
-            return;
-        }
+        if (!session) { navigate('/parent/login'); return; }
 
         let parsed: { id?: string; nome?: string };
-        try {
-            parsed = JSON.parse(session);
-        } catch {
-            navigate('/parent/login');
-            return;
-        }
+        try { parsed = JSON.parse(session); } catch { navigate('/parent/login'); return; }
 
-        if (!parsed.id || !parsed.nome) {
-            navigate('/parent/login');
-            return;
-        }
+        if (!parsed.id || !parsed.nome) { navigate('/parent/login'); return; }
 
         const firstName = parsed.nome.split(' ')[0];
         setGuardianName(`${firstName} (Responsável)`);
@@ -70,29 +116,20 @@ export default function ParentPickupStatus() {
             const channel = supabase
                 .channel(`pickup_status_${studentId}`)
                 .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
+                    event: '*', schema: 'public',
                     table: 'solicitacoes_retirada',
                     filter: `aluno_id=eq.${studentId}`,
                 }, fetchPickupStatus)
                 .subscribe();
 
-            // Poll every 5 s — realtime handles instant updates;
-            // polling is just a safety net.
             const interval = setInterval(fetchPickupStatus, 5000);
-
-            return () => {
-                supabase.removeChannel(channel);
-                clearInterval(interval);
-            };
+            return () => { supabase.removeChannel(channel); clearInterval(interval); };
         }
     }, [studentId]);
 
-    // ── Load student + verify ownership ──────────────────────────────────────
     const loadInitialData = async (gId: string) => {
         setLoading(true);
         try {
-            // 1. Verify that this guardian is actually linked to this student
             const { data: link, error: linkErr } = await supabase
                 .from('alunos_responsaveis')
                 .select('aluno_id')
@@ -100,12 +137,8 @@ export default function ParentPickupStatus() {
                 .eq('aluno_id', studentId)
                 .maybeSingle();
 
-            if (linkErr || !link) {
-                setAccessDenied(true);
-                return;
-            }
+            if (linkErr || !link) { setAccessDenied(true); return; }
 
-            // 2. Load student data (only after ownership confirmed)
             const { data: studentData, error: studentErr } = await supabase
                 .from('alunos')
                 .select('id, nome_completo, foto_url, turma, escola_id')
@@ -114,20 +147,17 @@ export default function ParentPickupStatus() {
 
             if (studentErr || !studentData) throw studentErr;
             setStudent(studentData);
-
             await fetchPickupStatus();
         } catch {
-            // fail silently — student will show as not found
+            // fail silently
         } finally {
             setLoading(false);
         }
     };
 
-    // ── Fetch active pickup ───────────────────────────────────────────────────
     const fetchPickupStatus = async () => {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-
         try {
             const { data, error } = await supabase
                 .from('solicitacoes_retirada')
@@ -144,16 +174,13 @@ export default function ParentPickupStatus() {
         } catch { /* ignore */ }
     };
 
-    // ── Request pickup ────────────────────────────────────────────────────────
     const handleRequestPickup = async () => {
         if (!student || requestingRef.current) return;
         requestingRef.current = true;
         setRequesting(true);
-
         try {
             const session = localStorage.getItem('sisra_parent_session');
             const sessionData = session ? JSON.parse(session) : null;
-
             const { error } = await supabase
                 .from('solicitacoes_retirada')
                 .insert({
@@ -164,11 +191,8 @@ export default function ParentPickupStatus() {
                     tipo_solicitacao: 'ROTINA',
                 });
 
-            if (error) {
-                toast.error('Erro ao solicitar', error.message);
-            } else {
-                await fetchPickupStatus();
-            }
+            if (error) { toast.error('Erro ao solicitar', error.message); }
+            else { await fetchPickupStatus(); }
         } catch {
             toast.error('Erro ao solicitar', 'Tente novamente.');
         } finally {
@@ -177,98 +201,163 @@ export default function ParentPickupStatus() {
         }
     };
 
-    // ── Access denied ─────────────────────────────────────────────────────────
+    // ── Common page shell ─────────────────────────────────────────────────
+    const Shell = ({ children }: { children: React.ReactNode }) => (
+        <div
+            className="min-h-screen w-full relative overflow-hidden"
+            style={{ backgroundColor: token.bgDeep, fontFamily: "'Inter', sans-serif" }}
+        >
+            <div className="fixed inset-0 pointer-events-none" style={{
+                backgroundImage: `radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%), radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%)`,
+                zIndex: 0,
+            }} />
+            <div className="fixed inset-0 pointer-events-none" style={{
+                backgroundImage: `repeating-linear-gradient(rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 15px)`,
+                backgroundSize: '15px 15px', zIndex: 0,
+            }} />
+            {children}
+        </div>
+    );
+
+    // ── Access denied ─────────────────────────────────────────────────────
     if (accessDenied) {
         return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
-                <div className="text-center space-y-4">
-                    <ShieldCheck className="w-12 h-12 text-rose-500 mx-auto" />
-                    <p className="text-white font-black text-lg uppercase italic tracking-tighter">Acesso não autorizado</p>
-                    <p className="text-slate-500 text-sm">Você não tem permissão para visualizar este aluno.</p>
-                    <button
-                        onClick={() => navigate('/parent/login')}
-                        className="mt-4 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
-                    >
-                        Voltar
-                    </button>
+            <Shell>
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+                    <GlassCard style={{ maxWidth: 360 }}>
+                        <div style={{ padding: '40px 32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+                            <div style={{ width: 64, height: 64, background: 'rgba(239,68,68,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(239,68,68,0.25)' }}>
+                                <ShieldCheck style={{ width: 30, height: 30, color: '#f87171' }} />
+                            </div>
+                            <div>
+                                <p style={{ color: token.textMain, fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>Acesso não autorizado</p>
+                                <p style={{ color: token.textMuted, fontSize: 13, marginTop: 8 }}>Você não tem permissão para visualizar este aluno.</p>
+                            </div>
+                            <button
+                                onClick={() => navigate('/parent/login')}
+                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 24px', color: token.textMuted, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', cursor: 'pointer' }}
+                            >
+                                Voltar ao Login
+                            </button>
+                        </div>
+                    </GlassCard>
                 </div>
-            </div>
+            </Shell>
         );
     }
 
+    // ── Loading ───────────────────────────────────────────────────────────
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
+            <Shell>
+                <div className="relative z-10 min-h-screen flex items-center justify-center">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                        <Loader2 style={{ width: 36, height: 36, color: token.cyan }} className="animate-spin" />
+                        <p style={{ color: token.textMuted, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px' }}>CARREGANDO PROTOCOLO...</p>
+                    </div>
+                </div>
+            </Shell>
         );
     }
 
+    // ── Student not found ─────────────────────────────────────────────────
     if (!student) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#020617]">
-                <p className="text-slate-500 font-black uppercase tracking-widest italic">Aluno não encontrado.</p>
-            </div>
+            <Shell>
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+                    <p style={{ color: token.textMuted, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px' }}>Aluno não encontrado.</p>
+                </div>
+            </Shell>
         );
     }
 
+    // ── No active pickup — request screen ─────────────────────────────────
     if (!pickup) {
         return (
-            <div className="min-h-screen bg-[#020617] p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                <div className="absolute top-[-10%] right-[-10%] w-[70%] h-[70%] bg-blue-500/[0.03] blur-[120px] rounded-full animate-pulse-slow pointer-events-none" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+            <Shell>
+                <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-5">
+                    <GlassCard style={{ maxWidth: 400 }}>
+                        <div style={{ padding: 'clamp(28px,6vw,44px) clamp(20px,5vw,36px)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, textAlign: 'center' }}>
 
-                <div className="bg-white/[0.03] border border-white/10 backdrop-blur-3xl p-10 rounded-[3rem] space-y-8 max-w-sm w-full relative z-10 shadow-2xl">
-                    <div className="relative inline-block">
-                        <div className="w-24 h-24 bg-slate-900 rounded-[2rem] flex items-center justify-center mx-auto overflow-hidden border-4 border-white/5 shadow-2xl relative z-10">
-                            {student.foto_url ? (
-                                <img src={student.foto_url} alt={student.nome_completo} className="w-full h-full object-cover" />
-                            ) : (
-                                <User className="w-10 h-10 text-slate-700" />
-                            )}
+                            {/* Badge */}
+                            <div style={badgeStyle}>
+                                <Activity style={{ width: 14, height: 14, color: token.cyan }} />
+                                PROTOCOLO DISPONÍVEL
+                            </div>
+
+                            {/* Student avatar */}
+                            <div style={{ position: 'relative', width: 96, height: 96 }}>
+                                <div style={{ position: 'absolute', inset: -12, background: `rgba(71,184,255,0.12)`, borderRadius: '50%', filter: 'blur(18px)' }} />
+                                <div style={{ position: 'relative', width: 96, height: 96, borderRadius: 20, overflow: 'hidden', border: `2px solid ${token.cyan}`, boxShadow: `0 0 20px rgba(71,184,255,0.2)` }}>
+                                    {student.foto_url ? (
+                                        <img src={student.foto_url} alt={student.nome_completo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <div style={{ width: '100%', height: '100%', background: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <User style={{ width: 36, height: 36, color: '#4b5563' }} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <p style={{ fontSize: 11, fontWeight: 700, color: token.cyan, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 6 }}>
+                                    IDENTIFICADO
+                                </p>
+                                <h2 style={{ fontSize: 'clamp(22px,5vw,28px)', fontWeight: 700, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.5px', marginBottom: 10 }}>
+                                    {student.nome_completo.split(' ')[0]}
+                                </h2>
+                                <div style={{ ...badgeStyle, justifyContent: 'center', borderRadius: 30, padding: '6px 14px' }}>
+                                    <Activity style={{ width: 12, height: 12, color: '#34d399' }} />
+                                    <span style={{ color: token.textMuted }}>Turma: {student.turma}</span>
+                                </div>
+                            </div>
+
+                            <p style={{ color: token.textMuted, fontSize: 13, lineHeight: 1.7 }}>
+                                Toque no botão abaixo para notificar que você está a caminho do colégio.
+                            </p>
+
+                            {/* Request button */}
+                            <button
+                                onClick={handleRequestPickup}
+                                disabled={requesting}
+                                className="w-full flex items-center justify-center transition-all"
+                                style={{
+                                    borderRadius: 30,
+                                    background: `linear-gradient(135deg, ${token.bluePrimary} 0%, ${token.blueHover} 100%)`,
+                                    border: 'none', padding: '18px 24px',
+                                    fontSize: 14, fontWeight: 700,
+                                    color: token.textMain, textTransform: 'uppercase',
+                                    letterSpacing: '1.2px', gap: 12,
+                                    cursor: requesting ? 'not-allowed' : 'pointer',
+                                    opacity: requesting ? 0.6 : 1,
+                                    boxShadow: '0 4px 18px rgba(49,116,241,0.32)',
+                                }}
+                            >
+                                {requesting
+                                    ? <><Loader2 style={{ width: 20, height: 20 }} className="animate-spin" /> ENVIANDO...</>
+                                    : <><Navigation style={{ width: 20, height: 20 }} /> SOLICITAR RETIRADA</>
+                                }
+                            </button>
+
+                            <button
+                                onClick={() => window.history.back()}
+                                style={{ background: 'none', border: 'none', color: token.textMuted, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
                         </div>
-                        <div className="absolute -inset-4 bg-blue-500/20 blur-2xl rounded-full animate-pulse z-0" />
+                    </GlassCard>
+
+                    {/* Footer */}
+                    <div style={{ marginTop: 32, fontSize: 10, fontWeight: 700, color: 'rgba(132,145,162,0.4)', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>
+                        SISRA // Sistema de Retirada Segura
                     </div>
-
-                    <div className="space-y-2">
-                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Protocolo Disponível</p>
-                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">{student.nome_completo.split(' ')[0]}</h2>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                            <Activity className="w-3 h-3 text-emerald-500 animate-pulse" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Turma: {student.turma}</span>
-                        </div>
-                    </div>
-
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                        Toque no botão abaixo para notificar que você está a caminho do colégio.
-                    </p>
-
-                    <button
-                        onClick={handleRequestPickup}
-                        disabled={requesting}
-                        className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black italic uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 active:scale-95 transition-all relative group overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                        <span className="relative z-10 flex items-center justify-center gap-3">
-                            {requesting
-                                ? <Loader2 className="w-5 h-5 animate-spin" />
-                                : <Navigation className="w-5 h-5 fill-white/20" />
-                            }
-                            {requesting ? 'Enviando...' : 'Solicitar Retirada'}
-                        </span>
-                    </button>
-
-                    <button
-                        onClick={() => window.history.back()}
-                        className="text-slate-600 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors"
-                    >
-                        Cancelar
-                    </button>
                 </div>
-            </div>
+            </Shell>
         );
     }
 
+    // ── Active pickup — live tracker ──────────────────────────────────────
     const getStatusStep = (s: string) => {
         switch (s) {
             case 'SOLICITADO': case 'AGUARDANDO': return 1;
@@ -281,147 +370,145 @@ export default function ParentPickupStatus() {
 
     const currentStep = getStatusStep(pickup.status);
 
-    return (
-        <div className="min-h-screen bg-[#020617] font-sans text-slate-200 antialiased selection:bg-blue-500/30 overflow-x-hidden relative">
-            {/* Ambient HUD Layer */}
-            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-blue-500/[0.04] blur-[120px] rounded-full animate-pulse-slow" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:60px_60px] opacity-30" />
-            </div>
+    const timelineSteps = [
+        { label: 'Solicitação Recebida', sub: new Date(pickup.horario_solicitacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), icon: CheckCircle, step: 1, activeColor: '#34d399' },
+        { label: 'Liberado — A Caminho', sub: 'Aluno encaminhado para a saída', icon: Activity, step: 2, activeColor: token.cyan },
+        { label: 'Na Recepção', sub: currentStep >= 3 ? 'Aguardando na Recepção' : 'Aguardando Liberação', icon: MapPin, step: 3, activeColor: '#34d399' },
+    ];
 
-            {/* Header */}
-            <header className="bg-[#020617]/80 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-50">
-                <div className="max-w-md mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <Activity className="w-5 h-5 text-blue-500 animate-pulse" />
-                            <div className="absolute -inset-1 bg-blue-500/20 blur-md rounded-full pointer-events-none" />
+    return (
+        <Shell>
+            {/* Sticky Header */}
+            <header
+                className="sticky top-0 z-50"
+                style={{ background: 'rgba(7,10,19,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+            >
+                <div style={{ maxWidth: 520, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ position: 'relative' }}>
+                            <Activity style={{ width: 20, height: 20, color: token.cyan }} className="animate-pulse" />
+                            <div style={{ position: 'absolute', inset: -4, background: `rgba(71,184,255,0.18)`, borderRadius: '50%', filter: 'blur(6px)' }} />
                         </div>
-                        <span className="font-black italic text-lg uppercase tracking-tighter text-white">Telemetria Live</span>
+                        <span style={{ fontWeight: 700, fontSize: 16, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
+                            Telemetria Live
+                        </span>
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                        <Wifi className="w-3 h-3 text-emerald-500 animate-pulse" />
-                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sinal Ativo</span>
+                    <div style={{ ...badgeStyle, padding: '6px 14px', gap: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                        <Wifi style={{ width: 12, height: 12, color: '#34d399' }} className="animate-pulse" />
+                        <span style={{ color: '#34d399', fontSize: 10 }}>SINAL ATIVO</span>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-md mx-auto px-4 py-8 space-y-8 relative z-10">
-                {/* School Status */}
-                <div className="flex items-center justify-between px-2">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-600/20 p-3 rounded-2xl border border-blue-500/30 shadow-2xl shadow-blue-500/10">
-                            <School className="text-blue-400 w-6 h-6" />
+            <main style={{ maxWidth: 520, margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: 20, position: 'relative', zIndex: 10 }}>
+
+                {/* School label */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ background: 'rgba(49,116,241,0.15)', padding: 12, borderRadius: 12, border: '1px solid rgba(49,116,241,0.25)' }}>
+                            <School style={{ color: token.cyan, width: 22, height: 22 }} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-white italic uppercase tracking-tighter leading-tight">La Salle, Cheguei!</h1>
-                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Acompanhamento em Tempo Real</p>
+                            <h1 style={{ fontSize: 18, fontWeight: 700, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>La Salle, Cheguei!</h1>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: 2 }}>Acompanhamento em Tempo Real</p>
                         </div>
                     </div>
-                    <button className="text-slate-600 hover:text-blue-400 transition-all p-3 hover:bg-white/5 rounded-2xl border border-transparent hover:border-white/5">
-                        <Bell className="w-6 h-6" />
+                    <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 10 }}>
+                        <Bell style={{ width: 22, height: 22, color: token.textMuted }} />
                     </button>
                 </div>
 
                 {/* Main Status Card */}
-                <section className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] backdrop-blur-3xl overflow-hidden shadow-2xl relative group">
-                    <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent top-0 animate-scan opacity-30" />
-
-                    <div className="p-8">
-                        <div className="flex items-center gap-6 mb-10">
-                            <div className="relative">
-                                <div className="absolute -inset-2 bg-blue-500/20 blur-xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                <GlassCard>
+                    <div style={{ padding: 'clamp(20px,5vw,32px)' }}>
+                        {/* Student info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28 }}>
+                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                                <div style={{ position: 'absolute', inset: -6, background: `rgba(71,184,255,0.15)`, borderRadius: 24, filter: 'blur(10px)' }} />
                                 {student.foto_url ? (
-                                    <img
-                                        src={student.foto_url}
-                                        alt="Estudante"
-                                        className="h-20 w-20 rounded-[2rem] object-cover border-2 border-white/20 shadow-2xl relative z-10"
-                                    />
+                                    <img src={student.foto_url} alt="Estudante" style={{ width: 72, height: 72, borderRadius: 16, objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)', position: 'relative', zIndex: 1 }} />
                                 ) : (
-                                    <div className="h-20 w-20 rounded-[2rem] bg-slate-900 flex items-center justify-center border-2 border-white/10 shadow-2xl relative z-10">
-                                        <User className="w-8 h-8 text-slate-700" />
+                                    <div style={{ width: 72, height: 72, borderRadius: 16, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid rgba(255,255,255,0.08)', position: 'relative', zIndex: 1 }}>
+                                        <User style={{ width: 28, height: 28, color: '#374151' }} />
                                     </div>
                                 )}
-                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-xl border-2 border-[#020617] shadow-xl z-20">
-                                    <CheckCircle className="w-4 h-4" />
+                                <div style={{ position: 'absolute', bottom: -6, right: -6, background: '#10b981', borderRadius: 8, padding: 5, border: '2px solid #070a13', zIndex: 2 }}>
+                                    <CheckCircle style={{ width: 14, height: 14, color: '#fff' }} />
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">{student.nome_completo.split(' ')[0]}</h2>
-                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{student.turma}</p>
-                                <div className="flex items-center gap-3 pt-2">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
-                                    <span className="text-xs font-black uppercase tracking-widest text-blue-400">Status: {pickup.status}</span>
+                            <div>
+                                <h2 style={{ fontSize: 'clamp(18px,5vw,22px)', fontWeight: 700, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
+                                    {student.nome_completo.split(' ')[0]}
+                                </h2>
+                                <p style={{ fontSize: 10, fontWeight: 700, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginTop: 3 }}>{student.turma}</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                                    <div style={{ width: 8, height: 8, background: token.cyan, borderRadius: '50%' }} className="animate-ping" />
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: token.cyan, textTransform: 'uppercase', letterSpacing: '1px' }}>STATUS: {pickup.status}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Alerts */}
+                        {/* Alert — sala message */}
                         {pickup.mensagem_sala && (
-                            <div className="mb-10 p-5 bg-amber-500/10 border border-amber-500/20 rounded-3xl flex items-start gap-4 animate-in zoom-in-95">
-                                <div className="bg-amber-500/20 p-2.5 rounded-xl">
-                                    <Bell className="w-5 h-5 text-amber-500" />
+                            <div style={{ marginBottom: 24, padding: '14px 18px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                                <div style={{ background: 'rgba(245,158,11,0.15)', borderRadius: 8, padding: 8, flexShrink: 0 }}>
+                                    <Bell style={{ width: 16, height: 16, color: '#f59e0b' }} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1.5 opacity-80">Mensagem da Sala</p>
-                                    <p className="text-sm font-bold text-amber-200 leading-tight italic">"{pickup.mensagem_sala}"</p>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5, opacity: 0.8 }}>Mensagem da Sala</p>
+                                    <p style={{ fontSize: 13, fontWeight: 600, color: '#fde68a', fontStyle: 'italic' }}>"{pickup.mensagem_sala}"</p>
                                 </div>
                             </div>
                         )}
 
                         {/* Timeline */}
-                        <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-white/[0.05] ml-1">
-                            <div className="flex items-start gap-6 relative">
-                                <div className={`z-10 h-6 w-6 rounded-lg flex items-center justify-center border-2 shadow-xl transition-all duration-700 ${currentStep >= 1 ? 'bg-emerald-500 border-emerald-400 rotate-45' : 'bg-slate-900 border-white/10'}`}>
-                                    <CheckCircle className={`text-white w-4 h-4 transition-all duration-700 ${currentStep >= 1 ? '-rotate-45' : ''}`} />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className={`text-xs font-black uppercase tracking-widest italic ${currentStep >= 1 ? 'text-white' : 'text-slate-700'}`}>Solicitação Recebida</p>
-                                    <p className="text-[10px] text-slate-500 font-mono">{new Date(pickup.horario_solicitacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
-                                </div>
-                            </div>
+                        <div style={{ position: 'relative', paddingLeft: 12 }}>
+                            {/* Vertical line */}
+                            <div style={{ position: 'absolute', left: 22, top: 12, bottom: 12, width: 2, background: 'rgba(255,255,255,0.05)' }} />
 
-                            <div className="flex items-start gap-6 relative">
-                                <div className={`z-10 h-6 w-6 rounded-lg flex items-center justify-center border-2 transition-all duration-700 ${currentStep >= 2 ? 'bg-blue-600 border-blue-400 rotate-45 animate-pulse' : 'bg-slate-900 border-white/10'}`}>
-                                    <Activity className={`text-white w-3 h-3 transition-all duration-700 ${currentStep >= 2 ? '-rotate-45' : ''}`} />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className={`text-xs font-black uppercase tracking-widest italic ${currentStep >= 2 ? 'text-blue-400' : 'text-slate-700'}`}>Liberado — A Caminho</p>
-                                    <p className="text-[10px] text-slate-500 uppercase tracking-tighter">Aluno encaminhado para a saída</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-6 relative">
-                                <div className={`z-10 h-6 w-6 rounded-lg flex items-center justify-center border-2 transition-all duration-700 ${currentStep >= 3 ? 'bg-emerald-500 border-emerald-400 rotate-45' : 'bg-slate-900 border-white/10'}`}>
-                                    <MapPin className={`text-white w-4 h-4 transition-all duration-700 ${currentStep >= 3 ? '-rotate-45' : ''}`} />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className={`text-xs font-black uppercase tracking-widest italic ${currentStep >= 3 ? 'text-emerald-400' : 'text-slate-700'}`}>Na Recepção</p>
-                                    <p className={`text-[10px] font-black uppercase tracking-widest ${currentStep >= 3 ? 'text-emerald-500' : 'text-slate-700'}`}>
-                                        {currentStep >= 3 ? 'Aguardando na Recepção' : 'Aguardando Liberação'}
-                                    </p>
-                                </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                                {timelineSteps.map(({ label, sub, icon: Icon, step, activeColor }) => {
+                                    const active = currentStep >= step;
+                                    return (
+                                        <div key={step} style={{ display: 'flex', alignItems: 'flex-start', gap: 20, position: 'relative' }}>
+                                            <div
+                                                style={{
+                                                    width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    background: active ? activeColor : '#0f172a',
+                                                    border: `2px solid ${active ? activeColor : 'rgba(255,255,255,0.08)'}`,
+                                                    transform: active ? 'rotate(45deg)' : 'none',
+                                                    boxShadow: active ? `0 0 12px ${activeColor}44` : 'none',
+                                                    transition: 'all 0.5s ease',
+                                                    zIndex: 1,
+                                                }}
+                                            >
+                                                <Icon style={{ width: 14, height: 14, color: active ? '#000' : '#374151', transform: active ? 'rotate(-45deg)' : 'none', transition: 'all 0.5s ease' }} />
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: 12, fontWeight: 700, color: active ? token.textMain : '#374151', textTransform: 'uppercase', letterSpacing: '0.8px', fontStyle: 'italic' }}>{label}</p>
+                                                <p style={{ fontSize: 10, fontWeight: 600, color: active ? activeColor : '#374151', marginTop: 3, fontFamily: 'monospace', letterSpacing: '0.5px' }}>{sub}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
-
                     </div>
-                </section>
+                </GlassCard>
 
                 {/* GeoTracker */}
-                <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 blur opacity-50 group-hover:opacity-100 transition duration-1000" />
-                    <div className="relative">
+                <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', inset: -1, borderRadius: 14, background: `linear-gradient(135deg, ${token.cyanBorder} 0%, ${token.goldBorder} 100%)`, filter: 'blur(3px)', opacity: 0.35 }} />
+                    <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden' }}>
                         <GeoTracker pickupId={pickup.id} escolaId={student.escola_id} guardianId={guardianId} />
                     </div>
                 </div>
 
-                {/* Manual checkpoint */}
-                <div className="px-2 space-y-4">
+                {/* Manual arrival confirmation */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <button
                         onClick={async () => {
-                            // Update ALL active pickups for this guardian today —
-                            // not just pickup.id, so multi-student requests are all
-                            // marked as CHEGOU at the same time.
                             const todayStart = new Date();
                             todayStart.setHours(0, 0, 0, 0);
 
@@ -443,52 +530,65 @@ export default function ParentPickupStatus() {
                                 fetchPickupStatus();
                             }
                         }}
-                        className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-3xl font-black text-[10px] italic uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-emerald-500/20 active:scale-95 group"
+                        className="w-full flex items-center justify-center transition-all"
+                        style={{
+                            borderRadius: 30,
+                            background: 'linear-gradient(135deg, #059669 0%, #34d399 100%)',
+                            border: 'none', padding: '18px 24px',
+                            fontSize: 13, fontWeight: 700,
+                            color: '#022c22', textTransform: 'uppercase',
+                            letterSpacing: '1.5px', gap: 12, cursor: 'pointer',
+                            boxShadow: '0 4px 18px rgba(52,211,153,0.25)',
+                        }}
                     >
-                        <CheckCircle className="w-5 h-5" />
+                        <CheckCircle style={{ width: 20, height: 20 }} />
                         Confirmar Chegada Manualmente
                     </button>
-                    <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest text-center px-8 leading-relaxed opacity-50">
+                    <p style={{ fontSize: 10, fontWeight: 600, color: 'rgba(132,145,162,0.45)', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center', lineHeight: 1.7 }}>
                         Use esta opção caso o GPS esteja indisponível ou você já esteja no local.
                     </p>
                 </div>
 
-                {/* Security info */}
-                <section className="bg-white/[0.01] border border-white/5 rounded-[2rem] p-6 space-y-6">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                            <ShieldCheck className="text-emerald-500 w-5 h-5" />
-                        </div>
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verificação de Segurança</h3>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-white/[0.03] p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
-                        <div className="flex items-center gap-5 relative z-10">
-                            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl bg-slate-900 flex items-center justify-center">
-                                <User className="w-6 h-6 text-slate-700" />
+                {/* Security verification */}
+                <GlassCard>
+                    <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 8, padding: 8, border: '1px solid rgba(52,211,153,0.2)' }}>
+                                <ShieldCheck style={{ width: 18, height: 18, color: '#34d399' }} />
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter italic opacity-80">Responsável Autorizado</p>
-                                <p className="text-sm font-black text-white uppercase italic tracking-tight">{guardianName}</p>
-                            </div>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '1.2px' }}>Verificação de Segurança</span>
                         </div>
-                        <CheckCircle className="w-6 h-6 text-emerald-500 relative z-10" />
-                    </div>
 
-                    <div className="flex items-start gap-4 px-2 opacity-50">
-                        <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter leading-relaxed italic">
-                            Apresente seu QR Code na recepção para concluir a retirada com segurança.
-                        </p>
+                        <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: 10, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                <div style={{ width: 48, height: 48, borderRadius: 12, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <User style={{ width: 22, height: 22, color: '#374151' }} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 3, opacity: 0.8 }}>Responsável Autorizado</p>
+                                    <p style={{ fontSize: 14, fontWeight: 700, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.2px' }}>{guardianName}</p>
+                                </div>
+                            </div>
+                            <CheckCircle style={{ width: 22, height: 22, color: '#34d399', flexShrink: 0 }} />
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, opacity: 0.5 }}>
+                            <Info style={{ width: 14, height: 14, color: token.cyan, flexShrink: 0, marginTop: 1 }} />
+                            <p style={{ fontSize: 10, fontWeight: 600, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px', lineHeight: 1.7, fontStyle: 'italic' }}>
+                                Apresente seu QR Code na recepção para concluir a retirada com segurança.
+                            </p>
+                        </div>
                     </div>
-                </section>
+                </GlassCard>
 
                 {/* Footer */}
-                <footer className="text-center pt-8 pb-20 space-y-4 opacity-30">
-                    <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent w-full" />
-                    <p className="text-[9px] text-slate-600 font-bold uppercase tracking-[0.4em]">SISRA // Sistema de Retirada Segura</p>
+                <footer style={{ textAlign: 'center', paddingTop: 16, paddingBottom: 32, opacity: 0.3 }}>
+                    <div style={{ height: 1, background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent)', marginBottom: 16 }} />
+                    <p style={{ fontSize: 10, fontWeight: 700, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '2px' }}>
+                        SISRA // Sistema de Retirada Segura
+                    </p>
                 </footer>
             </main>
-        </div>
+        </Shell>
     );
 }

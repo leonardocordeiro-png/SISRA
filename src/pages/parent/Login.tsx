@@ -5,6 +5,46 @@ import { useToast } from '../../components/ui/Toast';
 import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, Lock, CheckCircle2, Bell } from 'lucide-react';
 import { logAudit } from '../../lib/audit';
 
+// ── Design tokens matching the reference design ────────────────────────────
+const token = {
+    bgDeep: '#070a13',
+    bgGlass: 'rgba(17, 24, 43, 0.65)',
+    bgBadge: 'rgba(17, 24, 43, 0.85)',
+    cyan: '#47b8ff',
+    gold: '#c79e61',
+    bluePrimary: '#3174f1',
+    blueHover: '#4e8eff',
+    textMain: '#FFFFFF',
+    textMuted: '#8491A2',
+    borderMuted: 'rgba(255,255,255,0.05)',
+    cyanBorder: 'rgba(71,184,255,0.55)',
+    goldBorder: 'rgba(199,158,97,0.55)',
+} as const;
+
+// ── Shared style helpers ───────────────────────────────────────────────────
+const glassPanel: React.CSSProperties = {
+    background: token.bgGlass,
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    boxShadow: 'inset 0 0 10px rgba(255,255,255,0.02), 0 4px 15px rgba(0,0,0,0.25)',
+};
+
+const badgeStyle: React.CSSProperties = {
+    background: token.bgBadge,
+    border: `1px solid ${token.borderMuted}`,
+    borderRadius: '30px',
+    padding: '10px 20px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '13px',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+    color: token.textMuted,
+    boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
+};
+
 export default function ParentLogin() {
     const toast = useToast();
     const navigate = useNavigate();
@@ -63,13 +103,11 @@ export default function ParentLogin() {
             setSelectedIds(new Set(foundStudents.map((s: any) => s.id)));
             setStep('SELECT_STUDENT');
 
-            // Store only the guardian ID and name — never persist CPF
             localStorage.setItem('sisra_parent_session', JSON.stringify({
                 id: responsavel.id,
                 nome: responsavel.nome_completo,
             }));
 
-            // Audit Log: Identificação de Sucesso
             logAudit(
                 'LOGIN_SUCESSO',
                 'responsaveis',
@@ -123,7 +161,6 @@ export default function ParentLogin() {
 
             if (error) throw error;
 
-            // Audit Log: Solicitação de Retirada
             logAudit(
                 'SOLICITACAO_RETIRADA',
                 'solicitacoes_retirada',
@@ -152,206 +189,376 @@ export default function ParentLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 w-full max-w-full overflow-x-hidden relative selection:bg-blue-500/30 font-sans">
-            {/* Ambient HUD Layer */}
-            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] right-[-10%] w-[70%] h-[70%] bg-blue-500/[0.03] blur-[120px] rounded-full animate-pulse-slow" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/[0.03] blur-[120px] rounded-full animate-pulse-slow" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
-                <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent top-1/3 animate-scan opacity-30" />
-            </div>
+        <div
+            className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden"
+            style={{ backgroundColor: token.bgDeep, fontFamily: "'Inter', sans-serif" }}
+        >
+            {/* Radial gradient blobs */}
+            <div
+                className="fixed inset-0 pointer-events-none"
+                style={{
+                    backgroundImage: `
+                        radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%),
+                        radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%)
+                    `,
+                    zIndex: 0,
+                }}
+            />
+            {/* Micro-grid */}
+            <div
+                className="fixed inset-0 pointer-events-none"
+                style={{
+                    backgroundImage: `repeating-linear-gradient(rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 15px)`,
+                    backgroundSize: '15px 15px',
+                    zIndex: 0,
+                }}
+            />
 
-            <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-1000">
-                {/* Brand Header */}
-                <div className="text-center mb-10 space-y-4">
-                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-2">
-                        <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Portal do Guardião v{__APP_VERSION__}</span>
-                    </div>
-                    <div className="space-y-1">
-                        <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">Identificação de Acesso</h1>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                            Protocolo de Retirada Seguro
-                        </p>
-                    </div>
+            {/* Content wrapper */}
+            <div className="relative z-10 w-full flex flex-col items-center" style={{ padding: '32px 20px', gap: '32px', maxWidth: '520px', margin: '0 auto' }}>
+
+                {/* Header Badge */}
+                <header style={badgeStyle}>
+                    <Smartphone style={{ color: token.cyan, width: 18, height: 18 }} />
+                    <span>PORTAL DO GUARDIÃO&nbsp;<strong style={{ color: token.textMain }}>V{__APP_VERSION__}</strong></span>
+                </header>
+
+                {/* Title */}
+                <div style={{ textAlign: 'center' }}>
+                    <h1 style={{ fontSize: 'clamp(26px, 6vw, 40px)', fontWeight: 700, color: token.textMain, marginBottom: 8, letterSpacing: '-0.5px' }}>
+                        IDENTIFICAÇÃO DE ACESSO
+                    </h1>
+                    <p style={{ fontSize: 13, color: token.textMuted, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '1.5px' }}>
+                        • PROTOCOLO DE RETIRADA SEGURO
+                    </p>
                 </div>
 
-                {/* Glassmorphism Logic Card */}
-                <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group shadow-blue-900/40">
-                    <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent top-0 animate-scan opacity-30" />
+                {/* Auth Panel — gradient border trick */}
+                <div className="w-full relative" style={{ borderRadius: 14 }}>
+                    {/* Glowing gradient border layer */}
+                    <div
+                        className="absolute"
+                        style={{
+                            inset: -2,
+                            borderRadius: 14,
+                            background: `linear-gradient(135deg, ${token.cyanBorder} 0%, ${token.goldBorder} 100%)`,
+                            filter: 'blur(4px)',
+                            opacity: 0.65,
+                            zIndex: 0,
+                        }}
+                    />
+                    {/* Glass panel */}
+                    <div
+                        className="relative w-full flex flex-col items-center"
+                        style={{
+                            ...glassPanel,
+                            borderRadius: 12,
+                            border: '1px solid rgba(255,255,255,0.07)',
+                            zIndex: 1,
+                            padding: 'clamp(24px, 5vw, 44px) clamp(20px, 5vw, 36px)',
+                            gap: 28,
+                        }}
+                    >
+                        {/* ── STEP: CPF ── */}
+                        {step === 'CPF' && (
+                            <form onSubmit={handleSearch} className="w-full flex flex-col items-center" style={{ gap: 24 }}>
 
-                    {step === 'CPF' ? (
-                        <form onSubmit={handleSearch} className="space-y-8 relative z-10">
-                            <div className="space-y-6">
-                                <div className="space-y-3 group/input">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                                        <Lock className="w-3 h-3" />
-                                        CPF do Responsável
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            id="cpf-input"
-                                            type="text"
-                                            value={cpf}
-                                            onChange={(e) => setCpf(e.target.value)}
-                                            placeholder="000.000.000-00"
-                                            className="w-full bg-[#020617]/50 border border-white/5 rounded-2xl px-6 py-5 text-white font-mono text-xl placeholder:text-slate-700 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all duration-500 text-center tracking-[0.1em]"
-                                            required
-                                        />
+                                {/* Label */}
+                                <div className="w-full flex items-center" style={{ gap: 10 }}>
+                                    <Lock style={{ color: token.cyan, width: 16, height: 16 }} />
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                                        CPF DO RESPONSÁVEL
+                                    </span>
+                                </div>
+
+                                {/* CPF Input */}
+                                <div
+                                    className="w-full"
+                                    style={{
+                                        background: 'rgba(11,16,29,0.7)',
+                                        border: '1px solid rgba(199,158,97,0.22)',
+                                        borderRadius: 8,
+                                        padding: '16px 20px',
+                                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.12), 0 0 10px rgba(199,158,97,0.08)',
+                                    }}
+                                >
+                                    <input
+                                        id="cpf-input"
+                                        type="text"
+                                        value={cpf}
+                                        onChange={(e) => setCpf(e.target.value)}
+                                        placeholder="000.000.000-00"
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
+                                            fontSize: 'clamp(22px, 6vw, 32px)',
+                                            fontWeight: 700,
+                                            color: token.cyan,
+                                            letterSpacing: '3px',
+                                            textAlign: 'center',
+                                            fontFamily: "'Inter', monospace",
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Security badge */}
+                                <div style={{ ...badgeStyle, padding: '7px 16px', fontSize: 11 }}>
+                                    <ShieldCheck style={{ color: token.cyan, width: 15, height: 15 }} />
+                                    <span>PROTOCOLO DE SEGURANÇA SSL/TLS ATIVO</span>
+                                </div>
+
+                                {/* Error */}
+                                {error && (
+                                    <div
+                                        className="w-full"
+                                        style={{
+                                            background: 'rgba(239,68,68,0.08)',
+                                            border: '1px solid rgba(239,68,68,0.2)',
+                                            borderRadius: 8,
+                                            padding: '14px 18px',
+                                        }}
+                                    >
+                                        <p style={{ fontSize: 11, fontWeight: 700, color: '#f87171', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                            {error}
+                                        </p>
                                     </div>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center mt-2 flex items-center justify-center gap-2">
-                                        <ShieldCheck className="w-3 h-3 text-emerald-500/50" />
-                                        Protocolo de Segurança SSL/TLS Ativo
-                                    </p>
-                                </div>
-                            </div>
+                                )}
 
-                            {error && (
-                                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl animate-in fade-in slide-in-from-top-2">
-                                    <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest text-center">
-                                        {error}
-                                    </p>
-                                </div>
-                            )}
-
-                            <button
-                                id="verify-button"
-                                type="submit"
-                                disabled={loading}
-                                className="w-full relative group/btn overflow-hidden rounded-[2rem] py-5 px-8 bg-blue-600 border border-blue-400/30 hover:bg-blue-500 transition-all duration-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-blue-500/20"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
-                                <div className="relative z-10 flex items-center justify-center gap-4">
+                                {/* Submit button */}
+                                <button
+                                    id="verify-button"
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full flex items-center justify-center transition-all"
+                                    style={{
+                                        borderRadius: 30,
+                                        background: `linear-gradient(135deg, ${token.bluePrimary} 0%, ${token.blueHover} 100%)`,
+                                        border: 'none',
+                                        padding: '16px 24px',
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        color: token.textMain,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '1.2px',
+                                        gap: 12,
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        opacity: loading ? 0.6 : 1,
+                                        boxShadow: '0 4px 18px rgba(49,116,241,0.32)',
+                                    }}
+                                >
                                     {loading ? (
                                         <>
-                                            <Loader2 className="w-5 h-5 text-white animate-spin" />
-                                            <span className="text-sm font-black text-white uppercase italic tracking-[0.2em]">Verificando...</span>
+                                            <Loader2 style={{ width: 18, height: 18 }} className="animate-spin" />
+                                            VERIFICANDO...
                                         </>
                                     ) : (
                                         <>
-                                            <span className="text-sm font-black text-white uppercase italic tracking-[0.2em]">Verificar Identidade</span>
-                                            <ArrowRight className="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
+                                            VERIFICAR IDENTIDADE
+                                            <ArrowRight style={{ width: 18, height: 18 }} />
                                         </>
                                     )}
+                                </button>
+                            </form>
+                        )}
+
+                        {/* ── STEP: SELECT STUDENT ── */}
+                        {step === 'SELECT_STUDENT' && (
+                            <div className="w-full flex flex-col" style={{ gap: 24 }}>
+                                {/* Header */}
+                                <div style={{ textAlign: 'center' }}>
+                                    <p style={{ fontSize: 11, fontWeight: 700, color: token.cyan, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 6 }}>
+                                        IDENTIDADE CONFIRMADA
+                                    </p>
+                                    <h3 style={{ fontSize: 'clamp(18px, 5vw, 22px)', fontWeight: 700, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
+                                        {guardianName.split(' ')[0]}, quem você vai buscar?
+                                    </h3>
                                 </div>
-                            </button>
-                        </form>
-                    ) : step === 'SELECT_STUDENT' ? (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <div className="text-center space-y-2">
-                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Identidade Confirmada</p>
-                                <h3 className="text-xl font-black text-white italic uppercase tracking-tight">{guardianName.split(' ')[0]}, quem você vai buscar?</h3>
-                            </div>
 
-                            <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                                {students.map((student) => {
-                                    const isSelected = selectedIds.has(student.id);
-                                    return (
-                                        <button
-                                            id={`student-${student.id}`}
-                                            key={student.id}
-                                            onClick={() => toggleStudent(student.id)}
-                                            className={`w-full flex items-center gap-5 p-5 border-2 rounded-3xl transition-all duration-300 group relative overflow-hidden active:scale-[0.98] ${isSelected
-                                                ? 'bg-blue-500/10 border-blue-500 shadow-lg shadow-blue-500/10'
-                                                : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-blue-500/30'
-                                                }`}
-                                        >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                {/* Student list */}
+                                <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '38vh', overflowY: 'auto' }}>
+                                    {students.map((student) => {
+                                        const isSelected = selectedIds.has(student.id);
+                                        return (
+                                            <button
+                                                id={`student-${student.id}`}
+                                                key={student.id}
+                                                onClick={() => toggleStudent(student.id)}
+                                                className="w-full flex items-center text-left transition-all"
+                                                style={{
+                                                    gap: 16,
+                                                    padding: '16px 18px',
+                                                    borderRadius: 12,
+                                                    border: isSelected ? `2px solid ${token.cyan}` : '2px solid rgba(255,255,255,0.06)',
+                                                    background: isSelected ? 'rgba(71,184,255,0.08)' : 'rgba(255,255,255,0.02)',
+                                                    cursor: 'pointer',
+                                                    boxShadow: isSelected ? `0 0 12px rgba(71,184,255,0.12)` : 'none',
+                                                }}
+                                            >
+                                                {/* Avatar */}
+                                                <div
+                                                    style={{
+                                                        width: 52, height: 52, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+                                                        border: isSelected ? `2px solid ${token.cyan}` : '2px solid rgba(255,255,255,0.08)',
+                                                    }}
+                                                >
+                                                    {student.foto_url ? (
+                                                        <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', background: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <User style={{ width: 22, height: 22, color: '#4b5563' }} />
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                            <div className={`relative w-14 h-14 rounded-2xl overflow-hidden border-2 transition-colors shadow-2xl ${isSelected ? 'border-blue-500' : 'border-white/10'}`}>
-                                                {student.foto_url ? (
-                                                    <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                                                        <User className="w-6 h-6 text-slate-500" />
-                                                    </div>
-                                                )}
-                                            </div>
+                                                {/* Info */}
+                                                <div style={{ flex: 1 }}>
+                                                    <p style={{ fontWeight: 700, color: isSelected ? token.cyan : token.textMain, textTransform: 'uppercase', fontSize: 15, letterSpacing: '-0.3px' }}>
+                                                        {student.nome_completo}
+                                                    </p>
+                                                    <p style={{ fontSize: 10, fontWeight: 600, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginTop: 3 }}>
+                                                        Turma: {student.turma}
+                                                    </p>
+                                                </div>
 
-                                            <div className="flex-1 text-left relative z-10">
-                                                <p className={`font-black transition-colors uppercase italic tracking-tighter text-lg ${isSelected ? 'text-blue-400' : 'text-white'}`}>{student.nome_completo}</p>
-                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Unidade: {student.turma}</p>
-                                            </div>
+                                                {/* Checkbox */}
+                                                <div
+                                                    style={{
+                                                        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        background: isSelected ? token.cyan : 'transparent',
+                                                        border: isSelected ? `2px solid ${token.cyan}` : '2px solid rgba(255,255,255,0.1)',
+                                                        transition: 'all 0.25s ease',
+                                                    }}
+                                                >
+                                                    {isSelected && <CheckCircle2 style={{ width: 16, height: 16, color: '#000' }} />}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
 
-                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${isSelected ? 'bg-blue-500 border-blue-400 text-white animate-in zoom-in' : 'border-white/10 text-transparent'}`}>
-                                                <CheckCircle2 className="w-5 h-5 shadow-2xl" />
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                {/* Divider */}
+                                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
 
-                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                {/* Call button */}
                                 <button
                                     onClick={handleCallStudents}
                                     disabled={selectedIds.size === 0 || sending}
-                                    className="w-full relative group/btn overflow-hidden rounded-[2rem] py-6 px-8 bg-blue-600 border border-blue-400/30 hover:bg-blue-500 transition-all duration-500 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shadow-2xl shadow-blue-500/20"
+                                    className="w-full flex items-center justify-center transition-all"
+                                    style={{
+                                        borderRadius: 30,
+                                        background: `linear-gradient(135deg, ${token.bluePrimary} 0%, ${token.blueHover} 100%)`,
+                                        border: 'none',
+                                        padding: '18px 24px',
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        color: token.textMain,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '1.2px',
+                                        gap: 12,
+                                        cursor: (selectedIds.size === 0 || sending) ? 'not-allowed' : 'pointer',
+                                        opacity: (selectedIds.size === 0 || sending) ? 0.4 : 1,
+                                        boxShadow: '0 4px 18px rgba(49,116,241,0.32)',
+                                    }}
                                 >
-                                    <div className="relative z-10 flex items-center justify-center gap-4">
-                                        {sending ? (
-                                            <>
-                                                <Loader2 className="w-6 h-6 text-white animate-spin" />
-                                                <span className="text-base font-black text-white uppercase italic tracking-[0.2em]">Processando...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Bell className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
-                                                <span className="text-base font-black text-white uppercase italic tracking-[0.2em]">
-                                                    {selectedIds.size > 1 ? `Chamar ${selectedIds.size} Alunos` : 'Chamar Agora'}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
+                                    {sending ? (
+                                        <>
+                                            <Loader2 style={{ width: 20, height: 20 }} className="animate-spin" />
+                                            PROCESSANDO...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Bell style={{ width: 20, height: 20 }} />
+                                            {selectedIds.size > 1 ? `CHAMAR ${selectedIds.size} ALUNOS` : 'CHAMAR AGORA'}
+                                        </>
+                                    )}
                                 </button>
 
+                                {/* Back */}
                                 <button
                                     onClick={() => setStep('CPF')}
-                                    className="w-full py-4 text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] hover:text-blue-400 transition-colors"
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: token.textMuted,
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '2px',
+                                        cursor: 'pointer',
+                                        textAlign: 'center',
+                                        padding: '8px 0',
+                                    }}
                                 >
                                     Alterar Protocolo / Não sou eu
                                 </button>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-8 animate-in fade-in zoom-in-95 duration-700 py-6 text-center">
-                            <div className="relative mx-auto w-24 h-24 mb-6">
-                                <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse"></div>
-                                <div className="relative w-full h-full bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40">
-                                    <CheckCircle2 className="w-12 h-12 text-white" />
+                        )}
+
+                        {/* ── STEP: SUCCESS ── */}
+                        {step === 'SUCCESS' && (
+                            <div className="w-full flex flex-col items-center" style={{ gap: 24, padding: '16px 0', textAlign: 'center' }}>
+                                <div style={{ position: 'relative', width: 88, height: 88 }}>
+                                    <div style={{ position: 'absolute', inset: -8, background: 'rgba(52,211,153,0.18)', borderRadius: '50%', filter: 'blur(18px)' }} />
+                                    <div style={{ position: 'relative', width: 88, height: 88, background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 32px rgba(16,185,129,0.4)' }}>
+                                        <CheckCircle2 style={{ width: 44, height: 44, color: '#fff' }} />
+                                    </div>
                                 </div>
+                                <div>
+                                    <h3 style={{ fontSize: 28, fontWeight: 700, color: token.textMain, textTransform: 'uppercase', letterSpacing: '-0.5px', marginBottom: 8 }}>
+                                        Solicitação Concluída!
+                                    </h3>
+                                    <p style={{ color: token.textMuted, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', lineHeight: 1.7 }}>
+                                        Notificações enviadas.<br />Aguarde na área de saída.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setStep('CPF')}
+                                    style={{
+                                        marginTop: 8,
+                                        background: 'rgba(255,255,255,0.04)',
+                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        borderRadius: 12,
+                                        padding: '14px 28px',
+                                        color: token.textMuted,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '1.5px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Iniciar Nova Retirada
+                                </button>
                             </div>
-                            <div className="space-y-3">
-                                <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">Solicitação Concluída!</h3>
-                                <p className="text-slate-400 text-sm font-bold uppercase tracking-widest leading-relaxed">
-                                    Suas notificações foram enviadas.<br />
-                                    Por favor, aguarde na área de saída.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => setStep('CPF')}
-                                className="mt-8 px-10 py-4 bg-white/5 border border-white/10 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all active:scale-95"
-                            >
-                                Iniciar Nova Retirada
-                            </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
-                {/* Footer Telemetry */}
-                <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between opacity-50">
-                    <div className="space-y-1">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Sistema de Retirada</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter italic">SISRA // v{__APP_VERSION__}</span>
+                {/* Footer */}
+                <footer
+                    className="w-full flex flex-wrap items-center justify-between"
+                    style={{ gap: 16, fontSize: 11, fontWeight: 600, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ color: token.gold, fontSize: 15 }}>⚙</span>
+                        <span>SISTEMA DE RETIRADA SISRA // V{__APP_VERSION__}</span>
                     </div>
-                    <div className="text-right">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Status do Link</span>
-                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter flex items-center justify-end gap-1.5">
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                            Estável
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ color: token.gold, fontSize: 15 }}>⬡</span>
+                        <span>STATUS DO LINK:</span>
+                        <span style={{ color: '#34d399', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                                style={{ display: 'inline-block', width: 7, height: 7, background: '#34d399', borderRadius: '50%' }}
+                                className="animate-pulse"
+                            />
+                            ESTÁVEL
                         </span>
                     </div>
-                </div>
+                </footer>
             </div>
         </div>
     );
