@@ -181,6 +181,25 @@ export default function ParentPickupStatus() {
         try {
             const session = localStorage.getItem('sisra_parent_session');
             const sessionData = session ? JSON.parse(session) : null;
+
+            // Guard against duplicates: check if there's already an active request today
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const { data: existing } = await supabase
+                .from('solicitacoes_retirada')
+                .select('id')
+                .eq('aluno_id', student.id)
+                .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                .gte('horario_solicitacao', todayStart.toISOString())
+                .limit(1)
+                .maybeSingle();
+
+            if (existing) {
+                // Already has an active request — just refresh the status view
+                await fetchPickupStatus();
+                return;
+            }
+
             const { error } = await supabase
                 .from('solicitacoes_retirada')
                 .insert({

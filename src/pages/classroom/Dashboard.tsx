@@ -535,6 +535,11 @@ export default function ClassroomDashboard() {
                                                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: D.green, boxShadow: `0 0 0 3px ${D.green}30`, flexShrink: 0 }} />
                                                 <span style={{ fontSize: 12, fontWeight: 600, color: D.green }}>Na recepção</span>
                                             </div>
+                                        ) : activeRequest.status_geofence === 'PERTO' ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10 }}>
+                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', boxShadow: '0 0 0 3px rgba(245,158,11,0.25)', flexShrink: 0 }} className="animate-pulse" />
+                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#f59e0b' }}>Responsável próximo</span>
+                                            </div>
                                         ) : (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${D.borderLight}`, borderRadius: 10 }}>
                                                 <Clock size={12} style={{ color: D.textMuted }} />

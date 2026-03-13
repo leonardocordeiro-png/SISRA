@@ -141,43 +141,70 @@ export default function ParentLogin() {
         setSending(true);
 
         try {
-            const requests = Array.from(selectedIds).map((id: string) => {
-                const student = students.find((s: any) => s.id === id);
-                if (!student) throw new Error('Falha de segurança: Tentativa de retirar aluno não vinculado.');
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
 
-                return {
-                    escola_id: student.escola_id || 'e6328325-1845-420a-b333-87a747953259',
-                    aluno_id: id,
-                    responsavel_id: guardianId,
-                    recepcionista_id: null,
-                    status: 'SOLICITADO',
-                    tipo_solicitacao: 'ROTINA'
-                };
-            });
-
-            const { error } = await supabase
+            // Check which students already have an active request today to avoid duplicates
+            const { data: existing } = await supabase
                 .from('solicitacoes_retirada')
-                .insert(requests);
+                .select('aluno_id')
+                .in('aluno_id', Array.from(selectedIds))
+                .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
+                .gte('horario_solicitacao', todayStart.toISOString());
 
-            if (error) throw error;
+            const alreadyRequested = new Set((existing ?? []).map((r: any) => r.aluno_id));
 
-            logAudit(
-                'SOLICITACAO_RETIRADA',
-                'solicitacoes_retirada',
-                undefined,
-                {
-                    responsavel_id: guardianId,
-                    qtd_alunos: selectedIds.size,
-                    alunos_ids: Array.from(selectedIds),
-                    origem: 'PORTAL_GUARDIÃO'
-                },
-                guardianId
-            );
+            const requests = Array.from(selectedIds)
+                .filter((id: string) => !alreadyRequested.has(id))
+                .map((id: string) => {
+                    const student = students.find((s: any) => s.id === id);
+                    if (!student) throw new Error('Falha de segurança: Tentativa de retirar aluno não vinculado.');
+                    return {
+                        escola_id: student.escola_id || import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259',
+                        aluno_id: id,
+                        responsavel_id: guardianId,
+                        recepcionista_id: null,
+                        status: 'SOLICITADO',
+                        tipo_solicitacao: 'ROTINA'
+                    };
+                });
 
-            toast.success(
-                selectedIds.size === 1 ? 'Solicitação enviada!' : `${selectedIds.size} solicitações enviadas!`,
-                'Acompanhando sua chegada em tempo real.'
-            );
+            if (requests.length > 0) {
+                const { error } = await supabase
+                    .from('solicitacoes_retirada')
+                    .insert(requests);
+                if (error) throw error;
+            }
+
+            const totalCalled = requests.length;
+            const skipped = alreadyRequested.size;
+
+            if (totalCalled > 0) {
+                logAudit(
+                    'SOLICITACAO_RETIRADA',
+                    'solicitacoes_retirada',
+                    undefined,
+                    {
+                        responsavel_id: guardianId,
+                        qtd_alunos: totalCalled,
+                        alunos_ids: requests.map((r) => r.aluno_id),
+                        skipped_duplicates: skipped,
+                        origem: 'PORTAL_GUARDIÃO'
+                    },
+                    guardianId
+                );
+            }
+
+            const toastMsg = totalCalled === 0
+                ? 'Aluno(s) já chamado(s) hoje'
+                : totalCalled === 1
+                    ? 'Solicitação enviada!'
+                    : `${totalCalled} solicitações enviadas!`;
+            const toastSub = skipped > 0
+                ? `${skipped} já estavam em fila. Acompanhe abaixo.`
+                : 'Acompanhando sua chegada em tempo real.';
+
+            toast.success(toastMsg, toastSub);
 
             const firstId = Array.from(selectedIds)[0];
             navigate(`/parent/status/${firstId}`);

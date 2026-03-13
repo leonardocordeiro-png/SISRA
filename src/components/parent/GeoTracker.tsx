@@ -246,34 +246,35 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
         };
 
         const onError = (err: GeolocationPositionError) => {
-            // Synchronous diagnosis first (using err.message patterns)
-            let info = diagnoseGeoError(err);
+            const info = diagnoseGeoError(err);
 
-            // If PERMISSION_DENIED and message didn't match policy patterns,
-            // do a post-hoc permissions query to refine the message.
-            // We do this asynchronously but it's fire-and-forget for UI update.
-            if (err.code === err.PERMISSION_DENIED && !info.serverBlock && navigator.permissions) {
-                navigator.permissions
-                    .query({ name: 'geolocation' })
-                    .then((perm) => {
-                        if (perm.state === 'denied') {
-                            // Permissions API returns 'denied' both when user denies AND
-                            // when a Permissions-Policy header blocks it. We already
-                            // checked the error message above; if we're here the message
-                            // didn't match known policy strings. Show the user-facing msg.
-                            setGeoError({
-                                title: 'Permissão de localização negada',
-                                message: 'O acesso à localização está bloqueado para este site. Para reativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois toque em "Tentar novamente".',
-                                hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
-                            });
-                        }
-                    })
-                    .catch(() => { /* Permissions API unavailable — use initial diagnosis */ });
+            if (err.code === err.PERMISSION_DENIED) {
+                // PERMISSION_DENIED is unrecoverable without user action — stop tracking.
+                // Post-check with Permissions API to refine message (fire-and-forget).
+                if (!info.serverBlock && navigator.permissions) {
+                    navigator.permissions
+                        .query({ name: 'geolocation' })
+                        .then((perm) => {
+                            if (perm.state === 'denied') {
+                                setGeoError({
+                                    title: 'Permissão de localização negada',
+                                    message: 'O acesso à localização está bloqueado para este site. Para reativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois toque em "Tentar novamente".',
+                                    hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
+                                });
+                            }
+                        })
+                        .catch(() => { /* Permissions API unavailable */ });
+                }
+                setGeoError(info);
+                setTracking(false);
+                clearWatch();
+                return;
             }
 
+            // TIMEOUT and POSITION_UNAVAILABLE are transient — the watch continues.
+            // Show the error as a warning but DO NOT stop watchPosition or setTracking(false).
+            // The success callback will clear the error when GPS recovers.
             setGeoError(info);
-            setTracking(false);
-            clearWatch();
         };
 
         watchIdRef.current = navigator.geolocation.watchPosition(onSuccess, onError, options);
