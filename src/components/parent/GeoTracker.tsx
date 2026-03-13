@@ -108,14 +108,20 @@ interface Props {
 // ── Component ────────────────────────────────────────────────────────────────
 export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
     const [tracking, setTracking]           = useState(false);
+    // `starting`: true while waiting for first GPS fix after clicking ATIVAR.
+    // Prevents the ATIVAR→PARAR→ATIVAR flash by not committing to `tracking=true`
+    // until the first fix (or first timeout) is received.
+    const [starting, setStarting]           = useState(false);
     const [distance, setDistance]           = useState<number | null>(null);
     const [geofence, setGeofence]           = useState<string | null>(null);
     const [geoError, setGeoError]           = useState<GeoErrorInfo | null>(null);
     const [school, setSchool]               = useState<SchoolCoords | null>(null);
     const [loadingSchool, setLoadingSchool] = useState(false);
 
-    const lastWriteRef = useRef<number>(0);
-    const watchIdRef   = useRef<number | null>(null);
+    const lastWriteRef   = useRef<number>(0);
+    const watchIdRef     = useRef<number | null>(null);
+    // Ref (not state) so closures inside startTracking always see the live value.
+    const hasFirstFixRef = useRef(false);
 
     // ── Load school coords ─────────────────────────────────────────────────
     useEffect(() => {
@@ -216,7 +222,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
 
     // ── Start tracking ─────────────────────────────────────────────────────
     const startTracking = useCallback(async () => {
-        if (!school) return;
+        if (!school || starting) return;
 
         if (!navigator.geolocation) {
             setGeoError({
@@ -227,9 +233,9 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
             return;
         }
 
-        // ── Pre-check permission BEFORE calling watchPosition ──────────────
-        // This prevents the activate→deactivate flash caused by a cached
-        // PERMISSION_DENIED firing in < 1 second from watchPosition's error cb.
+        // ── Pre-check permission BEFORE entering loading state ─────────────
+        // Catches a cached PERMISSION_DENIED (from old Permissions-Policy header)
+        // synchronously so the button never transitions at all.
         if (navigator.permissions) {
             try {
                 const perm = await navigator.permissions.query({ name: 'geolocation' });
@@ -239,12 +245,17 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                         message: 'O acesso à localização está bloqueado para este site. Para reativar: toque no ícone de cadeado/info na barra de endereço → Permissões → Localização → Permitir. Depois toque em "Tentar novamente".',
                         hint: 'Ou use o botão "Confirmar Chegada" manualmente.',
                     });
-                    return; // Never sets tracking=true → no flash
+                    return;
                 }
-            } catch { /* Permissions API unavailable — proceed normally */ }
+            } catch { /* Permissions API unavailable — proceed */ }
         }
 
+        // Enter loading state: button shows spinner, NOT "Parar".
+        // `tracking` stays false until we have a confirmed first fix.
+        // This eliminates the ATIVAR→PARAR→ATIVAR flash on all browsers.
         setGeoError(null);
+        hasFirstFixRef.current = false;
+        setStarting(true);
 
         const options: PositionOptions = {
             enableHighAccuracy: true,
@@ -253,6 +264,12 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
         };
 
         const onSuccess = (pos: GeolocationPosition) => {
+            // Commit to active tracking on the first confirmed fix.
+            if (!hasFirstFixRef.current) {
+                hasFirstFixRef.current = true;
+                setStarting(false);
+                setTracking(true);
+            }
             const { latitude, longitude } = pos.coords;
             const dist = haversineMeters(latitude, longitude, school.latitude, school.longitude);
             const status = classifyDistance(dist);
@@ -266,27 +283,35 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
             const info = diagnoseGeoError(err);
 
             if (err.code === err.PERMISSION_DENIED) {
-                // PERMISSION_DENIED is unrecoverable without user action — stop tracking.
+                // Unrecoverable — abort entirely (no flash: tracking was never true).
                 setGeoError(info);
+                setStarting(false);
                 setTracking(false);
                 clearWatch();
                 return;
             }
 
-            // TIMEOUT and POSITION_UNAVAILABLE are transient — the watch continues.
-            // Show the error as a warning but DO NOT stop watchPosition or setTracking(false).
-            // The success callback will clear the error when GPS recovers.
+            // TIMEOUT / POSITION_UNAVAILABLE are transient — watch continues.
+            // If no first fix yet, commit to tracking so the user sees PARAR
+            // (can cancel) instead of being stuck in the loading state indefinitely.
+            if (!hasFirstFixRef.current) {
+                hasFirstFixRef.current = true;
+                setStarting(false);
+                setTracking(true);
+            }
             setGeoError(info);
         };
 
         watchIdRef.current = navigator.geolocation.watchPosition(onSuccess, onError, options);
-        setTracking(true);
-    }, [school, writeToSupabase, clearWatch]);
+        // NOTE: setTracking(true) is intentionally NOT called here.
+        // It is called inside onSuccess/onError to prevent any button flash.
+    }, [school, starting, writeToSupabase, clearWatch]);
 
     // ── Stop tracking ──────────────────────────────────────────────────────
     const stopTracking = useCallback(() => {
         clearWatch();
         setTracking(false);
+        setStarting(false);
         setDistance(null);
         setGeofence(null);
     }, [clearWatch]);
@@ -295,10 +320,10 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
     const retryTracking = useCallback(() => {
         clearWatch();
         setTracking(false);
+        setStarting(false);
         setDistance(null);
         setGeofence(null);
         setGeoError(null);
-        // Small delay so state resets before re-attempting
         setTimeout(() => { startTracking(); }, 200);
     }, [clearWatch, startTracking]);
 
@@ -336,17 +361,23 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                 </div>
 
                 <button
-                    onClick={tracking ? stopTracking : startTracking}
+                    onClick={tracking ? stopTracking : starting ? stopTracking : startTracking}
                     disabled={loadingSchool}
                     className={`shrink-0 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 ${
                         tracking
                             ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
-                            : 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400'
+                            : starting
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30'
+                                : 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400'
                     }`}
                 >
                     {loadingSchool
                         ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : tracking ? 'Parar' : 'Ativar'
+                        : tracking
+                            ? 'Parar'
+                            : starting
+                                ? <><Loader2 className="w-3 h-3 animate-spin inline-block mr-1" />GPS...</>
+                                : 'Ativar'
                     }
                 </button>
             </div>
@@ -380,14 +411,18 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                 <div className="flex items-center gap-2">
                     {tracking
                         ? <Wifi className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-                        : <WifiOff className="w-3.5 h-3.5 text-slate-600" />
+                        : starting
+                            ? <Wifi className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                            : <WifiOff className="w-3.5 h-3.5 text-slate-600" />
                     }
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
                         {tracking
                             ? distance !== null
                                 ? `Atualizando a cada ${DEBOUNCE_MS / 1000}s · Alta precisão`
                                 : 'Aguardando sinal de GPS...'
-                            : 'Ative para notificar sua chegada automaticamente'
+                            : starting
+                                ? 'Obtendo permissão e aguardando sinal GPS...'
+                                : 'Ative para notificar sua chegada automaticamente'
                         }
                     </p>
                 </div>
@@ -421,7 +456,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                 )}
 
                 {/* Geofence guide — shown when idle and no error */}
-                {!tracking && !geoError && (
+                {!tracking && !starting && !geoError && (
                     <div className="grid grid-cols-3 gap-2 pt-1">
                         {[
                             { label: 'Na escola',   range: `< ${RADIUS_CHEGOU}m`, color: 'text-emerald-400' },

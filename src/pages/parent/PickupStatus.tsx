@@ -62,6 +62,30 @@ const badgeStyle: React.CSSProperties = {
     color: token.textMuted,
 };
 
+// ── Page shell — defined OUTSIDE the component so its reference is stable.
+// If defined inside, every re-render creates a new function reference;
+// React treats it as a different component type and unmounts/remounts the
+// entire subtree (including GeoTracker), resetting all state on every
+// setPickup() call (every 5 s or realtime event).
+function Shell({ children }: { children: React.ReactNode }) {
+    return (
+        <div
+            className="min-h-screen w-full relative overflow-hidden"
+            style={{ backgroundColor: token.bgDeep, fontFamily: "'Inter', sans-serif" }}
+        >
+            <div className="fixed inset-0 pointer-events-none" style={{
+                backgroundImage: `radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%), radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%)`,
+                zIndex: 0,
+            }} />
+            <div className="fixed inset-0 pointer-events-none" style={{
+                backgroundImage: `repeating-linear-gradient(rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 15px)`,
+                backgroundSize: '15px 15px', zIndex: 0,
+            }} />
+            {children}
+        </div>
+    );
+}
+
 // Gradient-bordered wrapper
 function GlassCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
@@ -236,24 +260,6 @@ export default function ParentPickupStatus() {
             setRequesting(false);
         }
     };
-
-    // ── Common page shell ─────────────────────────────────────────────────
-    const Shell = ({ children }: { children: React.ReactNode }) => (
-        <div
-            className="min-h-screen w-full relative overflow-hidden"
-            style={{ backgroundColor: token.bgDeep, fontFamily: "'Inter', sans-serif" }}
-        >
-            <div className="fixed inset-0 pointer-events-none" style={{
-                backgroundImage: `radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%), radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%)`,
-                zIndex: 0,
-            }} />
-            <div className="fixed inset-0 pointer-events-none" style={{
-                backgroundImage: `repeating-linear-gradient(rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 15px)`,
-                backgroundSize: '15px 15px', zIndex: 0,
-            }} />
-            {children}
-        </div>
-    );
 
     // ── Access denied ─────────────────────────────────────────────────────
     if (accessDenied) {
