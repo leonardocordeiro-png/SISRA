@@ -94,7 +94,11 @@ export default function ParentPickupStatus() {
     const [guardianId, setGuardianId]       = useState<string | undefined>(undefined);
     const [accessDenied, setAccessDenied]   = useState(false);
 
-    const requestingRef = useRef(false);
+    const requestingRef  = useRef(false);
+    // Null-debounce: require 2 consecutive null results before tearing down
+    // GeoTracker. Prevents a transient DB miss (realtime event or 5s poll)
+    // from unmounting GeoTracker and resetting the tracking button to ATIVAR.
+    const nullCountRef   = useRef(0);
 
     // ── Session validation ────────────────────────────────────────────────
     useEffect(() => {
@@ -170,7 +174,17 @@ export default function ParentPickupStatus() {
                 .limit(1)
                 .maybeSingle();
 
-            if (!error) setPickup(data as PickupData | null);
+            if (!error) {
+                if (data) {
+                    nullCountRef.current = 0;
+                    setPickup(data as PickupData);
+                } else {
+                    nullCountRef.current += 1;
+                    // Only clear pickup (and unmount GeoTracker) after 2 consecutive
+                    // null results — guards against a single transient query miss.
+                    if (nullCountRef.current >= 2) setPickup(null);
+                }
+            }
         } catch { /* ignore */ }
     };
 
