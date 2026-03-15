@@ -2,16 +2,50 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader2, ChevronRight, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ChevronRight, AlertCircle, School, Settings, Wifi } from 'lucide-react';
+
+// ── Design tokens (mirrors the reference HTML) ────────────────────────────────
+const GOLD        = '#c79e61';
+const GREEN       = '#34d399';
+const GREEN_BTN   = '#10b981';
+const GREEN_DARK  = '#059669';
+const TEXT_MUTED  = '#8491A2';
+const GLASS_BG    = 'rgba(17,24,43,0.65)';
+
+// Gradient-border wrapper — approximates the ::after pseudo-element technique
+function GlassPanel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+    return (
+        <div style={{
+            background: 'linear-gradient(135deg, rgba(56,217,169,0.38) 0%, rgba(199,158,97,0.38) 100%)',
+            padding: 2,
+            borderRadius: 14,
+            width: '100%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            ...style,
+        }}>
+            <div style={{
+                background: GLASS_BG,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 12,
+                height: '100%',
+                boxShadow: 'inset 0 0 12px rgba(255,255,255,0.015)',
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 export default function ReceptionLogin() {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [email, setEmail]               = useState('');
+    const [password, setPassword]         = useState('');
+    const [loading, setLoading]           = useState(false);
+    const [error, setError]               = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
+    // ── Authentication logic — UNCHANGED ──────────────────────────────────────
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -54,136 +88,324 @@ export default function ReceptionLogin() {
         }
     };
 
+    // ── Visual ────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-8 overflow-hidden relative font-sans">
-            {/* Advanced Background with Animated Orbs */}
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/10 rounded-full blur-[160px] animate-pulse"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-600/10 rounded-full blur-[160px] animate-pulse delay-1000"></div>
+        <div style={{
+            minHeight: '100dvh',
+            background: '#070a13',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '24px 20px',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
+            {/* Scoped styles: background pattern + micro-grid + hover helpers */}
+            <style>{`
+                .sisra-recep-bg {
+                    background-image:
+                        radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%),
+                        radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%),
+                        repeating-linear-gradient(
+                            rgba(255,255,255,0.012) 0px,
+                            rgba(255,255,255,0.012) 1px,
+                            transparent 1px,
+                            transparent 15px
+                        );
+                    background-size: 100% 100%, 100% 100%, 15px 15px;
+                }
+                .sisra-recep-input { font-family: inherit !important; }
+                .sisra-recep-input::placeholder { color: ${TEXT_MUTED}; }
+                .sisra-recep-input:focus { outline: none !important; }
+                .sisra-recep-btn { transition: all 0.2s ease; }
+                .sisra-recep-btn:hover:not(:disabled) {
+                    opacity: 0.88;
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 22px rgba(16,185,129,0.45) !important;
+                }
+                .sisra-recep-btn:active:not(:disabled) { transform: scale(0.98); }
+                .sisra-recep-forgot { transition: color 0.2s; }
+                .sisra-recep-forgot:hover { color: #fff !important; }
+                @media (max-width: 768px) {
+                    .sisra-recep-grid { grid-template-columns: 1fr !important; }
+                    .sisra-recep-brand { display: none !important; }
+                    .sisra-recep-footer { flex-direction: column !important; gap: 12px !important; text-align: center; }
+                }
+            `}</style>
 
-            <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 bg-white/5 backdrop-blur-2xl rounded-[2.5rem] md:rounded-[4rem] shadow-[0_0_80px_rgba(0,0,0,0.4)] overflow-hidden relative z-10 border border-white/10 ring-1 ring-white/5">
+            {/* Background: radial gradients + micro-grid */}
+            <div className="sisra-recep-bg" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
 
-                {/* Left Side: Brand/Visual (40%) */}
-                <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-16 bg-gradient-to-br from-slate-950 via-[#0f172a] to-emerald-950 relative overflow-hidden">
-                    {/* Decorative Geometric Overlay */}
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <defs>
-                                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
-                                </pattern>
-                            </defs>
-                            <rect width="100" height="100" fill="url(#grid)" />
-                        </svg>
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="w-20 h-20 bg-emerald-500/10 backdrop-blur-xl border border-emerald-500/20 rounded-3xl flex items-center justify-center mb-10 shadow-inner group">
-                            <Lock className="w-10 h-10 text-emerald-400 group-hover:scale-110 transition-transform duration-500" />
+            {/* ── Layout grid ───────────────────────────────────────────────── */}
+            <div
+                className="sisra-recep-grid"
+                style={{
+                    position: 'relative', zIndex: 1,
+                    width: '100%', maxWidth: 992,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 40,
+                }}
+            >
+                {/* ── Brand panel (left) ──────────────────────────────────── */}
+                <div className="sisra-recep-brand" style={{ display: 'flex' }}>
+                    <GlassPanel>
+                        <div style={{
+                            padding: 32,
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', gap: 22,
+                            textAlign: 'center',
+                        }}>
+                            <School style={{
+                                width: 52, height: 52, color: GOLD,
+                                filter: `drop-shadow(0 0 18px rgba(199,158,97,0.55))`,
+                            }} />
+                            <div>
+                                <h1 style={{
+                                    fontSize: 30, fontWeight: 800, color: GREEN,
+                                    marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1,
+                                    fontStyle: 'italic',
+                                }}>
+                                    Terminal Recepção
+                                </h1>
+                                <p style={{
+                                    fontSize: 12, color: TEXT_MUTED,
+                                    textTransform: 'uppercase', fontWeight: 600, letterSpacing: 2,
+                                }}>
+                                    • Portal Administrativo Seguro
+                                </p>
+                            </div>
+                            <p style={{
+                                fontSize: 14, color: TEXT_MUTED,
+                                maxWidth: 230, lineHeight: 1.75, marginTop: 8,
+                            }}>
+                                Segurança inteligente para a rotina escolar de quem protege.
+                            </p>
                         </div>
-                        <h2 className="text-7xl font-black text-white italic tracking-tighter leading-[0.9] mb-8 uppercase">
-                            Terminal <br /> <span className="text-emerald-500">Recepção</span>
-                        </h2>
-                        <div className="flex gap-2">
-                            <div className="w-12 h-1.5 bg-emerald-500 rounded-full"></div>
-                            <div className="w-4 h-1.5 bg-emerald-500/30 rounded-full"></div>
-                        </div>
-                    </div>
-
-                    <div className="relative z-10">
-                        <p className="text-slate-400 font-medium text-xl leading-relaxed italic opacity-80 decoration-emerald-500/30 underline-offset-4 decoration-2">
-                            Segurança inteligente para a rotina escolar de quem protege.
-                        </p>
-                    </div>
+                    </GlassPanel>
                 </div>
 
-                {/* Right Side: Form (60%) */}
-                <div className="lg:col-span-7 p-8 sm:p-20 flex flex-col justify-center bg-[#050a18]/40 backdrop-blur-md">
-                    <div className="mb-12 text-center lg:text-left">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-4">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
-                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sistema Ativo</span>
-                        </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-4 uppercase leading-none">Acesso Seguro</h1>
-                        <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[11px] opacity-60">Autenticação de Operador</p>
-                    </div>
-
-                    <form onSubmit={handleLogin} className="space-y-8" autoComplete="off">
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2 flex items-center gap-2">
-                                <Mail className="w-3 h-3" />
-                                E-mail Corporativo
-                            </label>
-                            <div className="relative group">
-                                <input
-                                    type="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium shadow-2xl"
-                                    placeholder="recepcao@lasalle.org.br"
-                                    autoComplete="off"
-                                />
-                                <div className="absolute bottom-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
-                            </div>
+                {/* ── Login panel (right) ─────────────────────────────────── */}
+                <GlassPanel>
+                    <div style={{
+                        padding: '44px 36px',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 26,
+                    }}>
+                        {/* Status badge */}
+                        <div style={{
+                            background: 'rgba(17,24,43,0.85)',
+                            borderRadius: 30,
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            padding: '9px 20px',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            fontSize: 12, fontWeight: 700,
+                            textTransform: 'uppercase', letterSpacing: 1,
+                            color: TEXT_MUTED,
+                        }}>
+                            <span style={{
+                                display: 'inline-block', width: 8, height: 8,
+                                borderRadius: '50%', background: GREEN,
+                                boxShadow: `0 0 8px ${GREEN}`,
+                                flexShrink: 0,
+                            }} />
+                            Sistema Ativo&nbsp;
+                            <strong style={{ color: '#fff' }}>V{__APP_VERSION__}</strong>
                         </div>
 
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2 flex items-center gap-2">
-                                <Lock className="w-3 h-3" />
-                                Senha de Acesso
-                            </label>
-                            <div className="relative group">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-600 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium tracking-widest shadow-2xl"
-                                    placeholder="••••••••"
-                                    autoComplete="off"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 transition-colors"
-                                >
-                                    {showPassword ? <EyeOff className="w-7 h-7" /> : <Eye className="w-7 h-7" />}
-                                </button>
-                                <div className="absolute bottom-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
-                            </div>
+                        {/* Title */}
+                        <div style={{ textAlign: 'center' }}>
+                            <h2 style={{
+                                fontSize: 26, fontWeight: 800, color: '#fff',
+                                marginBottom: 6, textTransform: 'uppercase',
+                                fontStyle: 'italic', letterSpacing: 1,
+                            }}>
+                                Acesso Seguro
+                            </h2>
+                            <p style={{
+                                fontSize: 11, color: TEXT_MUTED,
+                                textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
+                            }}>
+                                • Autenticação de Operador
+                            </p>
                         </div>
 
-                        {error && (
-                            <div className="p-6 bg-red-500/10 text-red-400 font-bold text-sm rounded-[2rem] border border-red-500/20 flex items-center gap-4 animate-shake backdrop-blur-xl">
-                                <AlertCircle className="w-6 h-6 shrink-0" />
-                                {error}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-6 md:py-7 rounded-3xl transition-all transform hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 text-xl md:text-2xl uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(16,185,129,0.25)] group relative overflow-hidden"
+                        {/* Form */}
+                        <form
+                            onSubmit={handleLogin}
+                            style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}
+                            autoComplete="off"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                            {loading ? (
-                                <Loader2 className="w-8 h-8 animate-spin" />
-                            ) : (
-                                <>
-                                    <span>Entrar no Terminal</span>
-                                    <ChevronRight className="w-6 h-6 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
-                                </>
-                            )}
-                        </button>
-                    </form>
+                            {/* E-mail */}
+                            <div>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    marginBottom: 8, fontSize: 11, fontWeight: 700,
+                                    color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
+                                }}>
+                                    <Mail style={{ width: 13, height: 13, color: GREEN }} />
+                                    Identidade de Acesso
+                                </div>
+                                <div style={{
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    padding: '13px 16px',
+                                    background: 'rgba(11,16,29,0.75)',
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    backdropFilter: 'blur(2px)',
+                                }}>
+                                    <input
+                                        className="sisra-recep-input"
+                                        type="email"
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="recepcao@lasalle.org.br"
+                                        autoComplete="off"
+                                        style={{
+                                            width: '100%', background: 'none', border: 'none',
+                                            fontSize: 15, fontWeight: 500, color: '#fff',
+                                        }}
+                                    />
+                                </div>
+                            </div>
 
-                    <div className="mt-16 text-center lg:text-left flex flex-col sm:flex-row items-center justify-between gap-6 opacity-40 hover:opacity-100 transition-opacity duration-500">
-                        <a href="#" className="text-[11px] font-black text-slate-500 hover:text-emerald-500 uppercase tracking-widest transition-colors">
-                            Esqueceu sua senha?
-                        </a>
-                        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
-                            v{__APP_VERSION__} • La Salle, Cheguei!
-                        </p>
+                            {/* Senha */}
+                            <div>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    marginBottom: 8, fontSize: 11, fontWeight: 700,
+                                    color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
+                                }}>
+                                    <Lock style={{ width: 13, height: 13, color: GREEN }} />
+                                    Senha de Segurança
+                                </div>
+                                <div style={{
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    padding: '13px 16px',
+                                    background: 'rgba(11,16,29,0.75)',
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    backdropFilter: 'blur(2px)',
+                                }}>
+                                    <input
+                                        className="sisra-recep-input"
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        autoComplete="off"
+                                        style={{
+                                            width: '100%', background: 'none', border: 'none',
+                                            fontSize: 15, fontWeight: 500, color: '#fff',
+                                            letterSpacing: 2,
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            background: 'none', border: 'none',
+                                            cursor: 'pointer', color: TEXT_MUTED,
+                                            padding: 0, display: 'flex', flexShrink: 0,
+                                        }}
+                                    >
+                                        {showPassword
+                                            ? <EyeOff style={{ width: 17, height: 17 }} />
+                                            : <Eye style={{ width: 17, height: 17 }} />
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Error message */}
+                            {error && (
+                                <div style={{
+                                    background: 'rgba(239,68,68,0.06)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(239,68,68,0.14)',
+                                    padding: '11px 14px',
+                                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                                    fontSize: 12, fontWeight: 700, color: '#ef4444',
+                                    textTransform: 'uppercase', letterSpacing: 0.5,
+                                }}>
+                                    <AlertCircle style={{ width: 15, height: 15, flexShrink: 0, marginTop: 1 }} />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            {/* Submit */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="sisra-recep-btn"
+                                style={{
+                                    width: '100%', borderRadius: 30, marginTop: 4,
+                                    background: `linear-gradient(135deg, ${GREEN_BTN} 0%, ${GREEN_DARK} 100%)`,
+                                    color: '#fff', border: 'none',
+                                    padding: '15px 24px',
+                                    fontSize: 14, fontWeight: 800,
+                                    textTransform: 'uppercase', letterSpacing: 2,
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
+                                    opacity: loading ? 0.5 : 1,
+                                    boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
+                                    fontFamily: 'inherit',
+                                }}
+                            >
+                                {loading ? (
+                                    <Loader2 className="animate-spin" style={{ width: 20, height: 20 }} />
+                                ) : (
+                                    <>
+                                        <span>Iniciar Acesso</span>
+                                        <ChevronRight style={{ width: 17, height: 17 }} />
+                                    </>
+                                )}
+                            </button>
+                        </form>
+
+                        {/* Footer links */}
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+                        }}>
+                            <a
+                                href="#"
+                                className="sisra-recep-forgot"
+                                style={{ color: TEXT_MUTED, textDecoration: 'none' }}
+                            >
+                                Esqueceu sua senha?
+                            </a>
+                            <span>v{__APP_VERSION__} | La Salle, Cheguei!</span>
+                        </div>
+                    </div>
+                </GlassPanel>
+
+                {/* ── Global footer — spans both columns ──────────────────── */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                    <div
+                        className="sisra-recep-footer"
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+                            padding: '0 4px',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Settings style={{ width: 13, height: 13, color: GOLD }} />
+                            <span>Sistema de Retirada SISRA // V{__APP_VERSION__}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Wifi style={{ width: 13, height: 13, color: GOLD }} />
+                            <span>Status do Link:</span>
+                            <span style={{ color: GREEN }}>Estável</span>
+                        </div>
                     </div>
                 </div>
             </div>
