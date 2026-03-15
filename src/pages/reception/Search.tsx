@@ -119,7 +119,7 @@ function CodeModal({ onConfirm, onClose }: {
 
 export default function ReceptionSearch() {
     const toast = useToast();
-    const { user, signOut } = useAuth();
+    const { user, signOut, escolaId } = useAuth();
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [addMoreQuery, setAddMoreQuery] = useState('');
@@ -189,8 +189,9 @@ export default function ReceptionSearch() {
                 }
 
                 const safeQuery = query.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
-                const { data: directStudents } = await supabase
-                    .from('alunos').select('*').ilike('nome_completo', `%${safeQuery}%`).limit(5);
+                let studentsQ = supabase.from('alunos').select('*').ilike('nome_completo', `%${safeQuery}%`);
+                if (escolaId) studentsQ = studentsQ.eq('escola_id', escolaId);
+                const { data: directStudents } = await studentsQ.limit(5);
 
                 const { data: auths } = await supabase
                     .from('autorizacoes')
@@ -220,7 +221,9 @@ export default function ReceptionSearch() {
         if (addMoreQuery.length < 2) { setAddMoreResults([]); return; }
         const safeQ = addMoreQuery.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
         const t = setTimeout(async () => {
-            const { data } = await supabase.from('alunos').select('*').ilike('nome_completo', `%${safeQ}%`).limit(6);
+            let addQ = supabase.from('alunos').select('*').ilike('nome_completo', `%${safeQ}%`);
+            if (escolaId) addQ = addQ.eq('escola_id', escolaId);
+            const { data } = await addQ.limit(6);
             if (data) {
                 const excluded = new Set([selectedStudent?.id, ...multiStudents.map(s => s.id)].filter(Boolean));
                 setAddMoreResults(data.filter((s: Student) => !excluded.has(s.id)));
@@ -248,10 +251,14 @@ export default function ReceptionSearch() {
             .eq('ativa', true)
             .then(({ data, error }) => {
                 if (!error && data) {
-                    setGuardians(data.map((item: { responsaveis: any; parentesco: string | null; tipo_autorizacao: string }) => ({
-                        ...item.responsaveis,
-                        parentesco: item.parentesco || item.tipo_autorizacao
-                    })));
+                    setGuardians(
+                        data
+                            .filter((item: any) => item.responsaveis)
+                            .map((item: any) => ({
+                                ...item.responsaveis,
+                                parentesco: item.parentesco || item.tipo_autorizacao,
+                            }))
+                    );
                 }
             });
     }, [selectedStudent, relatedStudents]);
@@ -455,8 +462,9 @@ export default function ReceptionSearch() {
             throw new Error(`Nenhum aluno vinculado a este responsável.${authErr}`);
         }
 
-        const { data: alunosData, error: alunosError } = await supabase
-            .from('alunos').select('*').in('id', Array.from(alunoIds));
+        let alunosQ = supabase.from('alunos').select('*').in('id', Array.from(alunoIds));
+        if (escolaId) alunosQ = alunosQ.eq('escola_id', escolaId);
+        const { data: alunosData, error: alunosError } = await alunosQ;
 
         if (alunosError) throw new Error(`Erro ao buscar alunos: ${alunosError.message}`);
         if (!alunosData || alunosData.length === 0) throw new Error('Nenhum aluno encontrado para este responsável.');

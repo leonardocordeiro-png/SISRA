@@ -26,12 +26,13 @@ type PickupRequest = {
 };
 
 export default function WithdrawalQueue() {
-    const { user } = useAuth();
+    const { user, escolaId } = useAuth();
     const toast = useToast();
     const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>([]);
 
     const fetchPending = async () => {
-        const { data } = await supabase
+        if (!escolaId) return;
+        let q = supabase
             .from('solicitacoes_retirada')
             .select(`
                 id,
@@ -55,9 +56,11 @@ export default function WithdrawalQueue() {
                 distancia_estimada_metros,
                 status_geofence
             `)
+            .eq('escola_id', escolaId)
             .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
             .is('horario_confirmacao', null)
             .order('horario_solicitacao', { ascending: true });
+        const { data } = await q;
 
         if (data) {
             setPendingPickups(data.map((item: any) => ({
@@ -179,11 +182,10 @@ export default function WithdrawalQueue() {
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'solicitacoes_retirada'
+                    table: 'solicitacoes_retirada',
+                    ...(escolaId ? { filter: `escola_id=eq.${escolaId}` } : {}),
                 },
-                () => {
-                    fetchPending();
-                }
+                () => { fetchPending(); }
             )
             .subscribe();
 
@@ -191,7 +193,7 @@ export default function WithdrawalQueue() {
             clearInterval(interval);
             supabase.removeChannel(channel);
         };
-    }, [user?.id]);
+    }, [user?.id, escolaId]);
 
     return (
         <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] flex flex-col overflow-hidden backdrop-blur-3xl shadow-2xl relative">

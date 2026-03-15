@@ -361,6 +361,8 @@ function LoginScreen({ onLogin }: { onLogin: (guardian: Guardian, students: Stud
         setError('');
 
         try {
+            const escolaIdEnv = (import.meta.env.VITE_ESCOLA_ID as string | undefined)?.trim();
+
             const { data: responsavel, error: respErr } = await supabase
                 .from('responsaveis')
                 .select('id, nome_completo, foto_url, parentesco')
@@ -374,14 +376,19 @@ function LoginScreen({ onLogin }: { onLogin: (guardian: Guardian, students: Stud
                 return;
             }
 
-            const { data: links, error: linkErr } = await supabase
+            let linksQ = supabase
                 .from('alunos_responsaveis')
-                .select('aluno:alunos(id, nome_completo, turma, sala, foto_url)')
+                .select('aluno:alunos(id, nome_completo, turma, sala, foto_url, escola_id)')
                 .eq('responsavel_id', responsavel.id);
+            const { data: links, error: linkErr } = await linksQ;
 
             if (linkErr) throw linkErr;
 
-            const students = (links || []).map((l: any) => l.aluno).filter(Boolean);
+            const allStudents = (links || []).map((l: any) => l.aluno).filter(Boolean);
+            // Restrict to current school when VITE_ESCOLA_ID is configured
+            const students = escolaIdEnv
+                ? allStudents.filter((s: any) => s.escola_id === escolaIdEnv)
+                : allStudents;
             onLogin(responsavel, students);
         } catch (err: any) {
             setError('Erro ao verificar o código. Tente novamente.');
@@ -627,12 +634,20 @@ export default function FamilyPortal() {
     useEffect(() => {
         if (!guardian || students.length === 0) return;
 
+        const studentIds = students.map(s => s.id);
+        // Supabase Realtime filter supports a single column equality; we use
+        // aluno_id for the first student as a hint, and let fetchData scope the rest.
+        const realtimeFilter = studentIds.length === 1
+            ? { filter: `aluno_id=eq.${studentIds[0]}` }
+            : {};
+
         const channel = supabase
             .channel(`portal-${guardian.id}`)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'solicitacoes_retirada',
+                ...realtimeFilter,
             }, () => { fetchData(); })
             .subscribe(status => {
                 setOnline(status === 'SUBSCRIBED');

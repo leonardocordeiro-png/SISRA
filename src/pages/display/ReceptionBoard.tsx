@@ -295,7 +295,10 @@ export default function ReceptionBoard() {
         const interval = setInterval(fetchData, 2000);
         const channel = supabase
             .channel('board_realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitacoes_retirada' }, fetchData)
+            .on('postgres_changes', {
+                event: '*', schema: 'public', table: 'solicitacoes_retirada',
+                ...(escolaId ? { filter: `escola_id=eq.${escolaId}` } : {}),
+            }, fetchData)
             .subscribe(status => setConnected(status === 'SUBSCRIBED'));
         return () => { clearInterval(interval); supabase.removeChannel(channel); };
     }, [fetchData]);
