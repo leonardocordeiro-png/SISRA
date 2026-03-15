@@ -1,6 +1,51 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { School, QrCode, Search, Hash, Wifi } from 'lucide-react';
+import { School, QrCode, Search, Hash, Wifi, Settings } from 'lucide-react';
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const GOLD       = '#c79e61';
+const CYAN       = '#47b8ff';
+const PURPLE     = '#a78bfa';
+const GREEN      = '#34d399';
+const TEXT_MUTED = '#8491A2';
+const GLASS_BG   = 'rgba(17,24,43,0.65)';
+
+function GlassPanel({
+    children,
+    className,
+    outerStyle,
+    innerStyle,
+}: {
+    children: React.ReactNode;
+    className?: string;
+    outerStyle?: React.CSSProperties;
+    innerStyle?: React.CSSProperties;
+}) {
+    return (
+        <div
+            className={className}
+            style={{
+                background: 'linear-gradient(135deg, rgba(71,184,255,0.32) 0%, rgba(199,158,97,0.32) 100%)',
+                padding: 2,
+                borderRadius: 14,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                ...outerStyle,
+            }}
+        >
+            <div style={{
+                background: GLASS_BG,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 12,
+                height: '100%',
+                boxShadow: 'inset 0 0 12px rgba(255,255,255,0.015)',
+                ...innerStyle,
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 export default function TotemHome() {
     const navigate = useNavigate();
@@ -18,105 +63,294 @@ export default function TotemHome() {
     }, []);
 
     const formatTime = (d: Date) =>
-        d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const formatDate = (d: Date) =>
-        d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+        d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+    const methods = [
+        { icon: Search, label: 'Buscar por Nome',   num: '1', accent: CYAN,   glow: 'rgba(71,184,255,0.22)'   },
+        { icon: Hash,   label: 'Código de Acesso',  num: '2', accent: GOLD,   glow: 'rgba(199,158,97,0.22)'  },
+        { icon: QrCode, label: 'Escanear QR Code',  num: '3', accent: PURPLE, glow: 'rgba(167,139,250,0.22)' },
+    ];
 
     return (
         <div
-            className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col select-none cursor-pointer"
+            style={{
+                minHeight: '100dvh',
+                background: '#0A0F2B',
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                position: 'relative',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                userSelect: 'none',
+            }}
             onClick={() => navigate('/totem/identificar')}
         >
-            {/* Ambient Background */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-20%] left-[-10%] w-[55%] h-[80%] bg-emerald-500/[0.05] blur-[150px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[70%] bg-blue-500/[0.04] blur-[150px] rounded-full animate-pulse" />
-                {/* Grid */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:48px_48px]" />
-                {/* Scan line */}
-                <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent animate-[scan_4s_linear_infinite]" />
-            </div>
+            {/* Scoped styles */}
+            <style>{`
+                .totem-bg {
+                    background-image:
+                        radial-gradient(circle at 15% 20%, rgba(71,184,255,0.07) 0%, transparent 45%),
+                        radial-gradient(circle at 85% 80%, rgba(167,139,250,0.06) 0%, transparent 45%),
+                        repeating-linear-gradient(rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px, transparent 1px, transparent 40px),
+                        repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px, transparent 1px, transparent 40px);
+                }
+                .totem-action-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+                .totem-action-card:hover { transform: translateY(-6px); }
+                @keyframes totem-scan {
+                    0%   { top: -2px; opacity: 0; }
+                    10%  { opacity: 1; }
+                    90%  { opacity: 1; }
+                    100% { top: 100%; opacity: 0; }
+                }
+                .totem-scanline {
+                    animation: totem-scan 6s linear infinite;
+                }
+            `}</style>
 
-            {/* Header bar */}
-            <div className="relative z-10 flex items-center justify-between px-12 py-6 border-b border-white/5">
-                <div className="flex items-center gap-4">
-                    <div className={`w-2.5 h-2.5 rounded-full ${pulse ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]' : 'bg-emerald-500/30'} transition-all duration-700`} />
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-emerald-500/70">Sistema Ativo — SISRA</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                    <Wifi className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Online</span>
-                </div>
-            </div>
+            {/* Background layer */}
+            <div className="totem-bg" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
 
-            {/* Main Content */}
-            <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-0 px-16">
+            {/* Scan line */}
+            <div className="totem-scanline" style={{
+                position: 'absolute', left: 0, right: 0, height: 1, zIndex: 1,
+                background: 'linear-gradient(to right, transparent, rgba(71,184,255,0.18), transparent)',
+                pointerEvents: 'none',
+            }} />
 
-                {/* Logo Icon */}
-                <div className="relative mb-8 group">
-                    <div className="absolute -inset-8 bg-emerald-500/10 blur-3xl rounded-full animate-pulse" />
-                    <div className="relative w-32 h-32 bg-white/[0.04] border border-white/10 rounded-[2.5rem] flex items-center justify-center shadow-2xl">
-                        <School className="w-16 h-16 text-emerald-500" />
-                        {/* Orbiting dot */}
-                        <div className="absolute inset-0 animate-[spin_6s_linear_infinite]">
-                            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
+            {/* ── HEADER ──────────────────────────────────────────────────────── */}
+            <header style={{
+                position: 'relative', zIndex: 2,
+                padding: '20px 40px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 24,
+            }}>
+                {/* Left: logo + title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                    <div style={{
+                        width: 64, height: 64, borderRadius: '50%',
+                        background: 'radial-gradient(circle, rgba(22,28,44,0.4), rgba(10,15,31,0.9))',
+                        display: 'grid', placeItems: 'center',
+                        border: `1.5px solid ${GOLD}`,
+                        boxShadow: `0 0 24px rgba(199,158,97,0.28), inset 0 0 10px rgba(0,0,0,0.3)`,
+                        flexShrink: 0,
+                    }}>
+                        <School style={{ width: 28, height: 28, color: GOLD, filter: `drop-shadow(0 0 8px rgba(199,158,97,0.5))` }} />
+                    </div>
+                    <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>
+                            La Salle — SISRA
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>
+                            Terminal de Auto-Atendimento
                         </div>
                     </div>
                 </div>
 
+                {/* Right: 3 method status boxes */}
+                <div style={{ display: 'flex', gap: 12 }}>
+                    {methods.map(({ icon: Icon, label, num, accent, glow }) => (
+                        <GlassPanel key={num} outerStyle={{ boxShadow: `0 4px 16px rgba(0,0,0,0.35)` }}>
+                            <div style={{
+                                padding: '10px 16px',
+                                display: 'flex', alignItems: 'center', gap: 10,
+                            }}>
+                                <div style={{
+                                    width: 32, height: 32, borderRadius: '50%',
+                                    background: `radial-gradient(circle, rgba(22,28,44,0.3), rgba(10,15,31,0.9))`,
+                                    border: `1px solid ${accent}`,
+                                    boxShadow: `0 0 14px ${glow}`,
+                                    display: 'grid', placeItems: 'center', flexShrink: 0,
+                                }}>
+                                    <Icon style={{ width: 15, height: 15, color: accent }} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                        Opção {num}
+                                    </div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>
+                                        {label}
+                                    </div>
+                                </div>
+                            </div>
+                        </GlassPanel>
+                    ))}
+                </div>
+            </header>
+
+            {/* ── MAIN ────────────────────────────────────────────────────────── */}
+            <main style={{
+                position: 'relative', zIndex: 2,
+                flex: 1,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                padding: '32px 40px',
+                gap: 32,
+            }}>
+                {/* Divider */}
+                <div style={{
+                    width: '100%', maxWidth: 700, height: 1,
+                    background: 'linear-gradient(to right, transparent, rgba(71,184,255,0.3), rgba(199,158,97,0.3), transparent)',
+                }} />
+
                 {/* Title */}
-                <div className="text-center mb-2">
-                    <h1 className="text-7xl font-black italic tracking-tighter text-white uppercase leading-none mb-3">
-                        La Salle,{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-blue-400 to-violet-400">
-                            Cheguei!
-                        </span>
+                <div style={{ textAlign: 'center' }}>
+                    <h1 style={{
+                        fontSize: 'clamp(44px,8vw,80px)',
+                        fontWeight: 900, fontStyle: 'italic',
+                        margin: 0, lineHeight: 1,
+                        background: `linear-gradient(135deg, ${CYAN} 0%, ${PURPLE} 100%)`,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        letterSpacing: -2,
+                        textTransform: 'uppercase',
+                        filter: `drop-shadow(0 0 30px rgba(71,184,255,0.2))`,
+                    }}>
+                        La Salle, Cheguei!
                     </h1>
-                    <p className="text-slate-500 text-base font-bold uppercase tracking-[0.3em]">
-                        Terminal de Auto-Atendimento
+                    <p style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 3, marginTop: 10 }}>
+                        Sistema Inteligente de Segurança e Retirada de Alunos
                     </p>
                 </div>
 
                 {/* Clock */}
-                <div className="my-8 text-center">
-                    <div className="text-7xl font-black tabular-nums text-white/90 leading-none tracking-tight">
-                        {formatTime(time)}
-                    </div>
-                    <div className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-2 capitalize">
-                        {formatDate(time)}
-                    </div>
-                </div>
-
-                {/* Quick method hint pills */}
-                <div className="flex items-center gap-4 mb-10">
-                    {[
-                        { icon: Search, label: 'Buscar por Nome', color: 'emerald' },
-                        { icon: Hash, label: 'Código de Acesso', color: 'violet' },
-                        { icon: QrCode, label: 'Escanear QR Code', color: 'blue' },
-                    ].map(({ icon: Icon, label, color }) => (
-                        <div key={label} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-${color}-500/20 bg-${color}-500/10 text-${color}-400`}>
-                            <Icon className="w-4 h-4" />
-                            <span className="text-xs font-black uppercase tracking-widest">{label}</span>
+                <GlassPanel outerStyle={{ maxWidth: 420, width: '100%' }}>
+                    <div style={{ padding: '20px 32px', textAlign: 'center' }}>
+                        <div style={{
+                            fontSize: 'clamp(48px,10vw,72px)',
+                            fontWeight: 900, color: '#fff',
+                            lineHeight: 1, letterSpacing: -2,
+                            fontVariantNumeric: 'tabular-nums',
+                            filter: `drop-shadow(0 0 20px rgba(71,184,255,0.3))`,
+                        }}>
+                            {formatTime(time)}
                         </div>
+                        <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600, marginTop: 8, textTransform: 'capitalize', letterSpacing: 1 }}>
+                            {formatDate(time)}
+                        </div>
+                    </div>
+                </GlassPanel>
+
+                {/* Action panels */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: 20,
+                    width: '100%', maxWidth: 800,
+                }}>
+                    {methods.map(({ icon: Icon, label, num, accent, glow }) => (
+                        <GlassPanel
+                            key={num}
+                            className="totem-action-card"
+                            outerStyle={{ boxShadow: `0 8px 28px rgba(0,0,0,0.4), 0 0 20px ${glow}` }}
+                        >
+                            <div style={{
+                                padding: '28px 20px',
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', gap: 14, textAlign: 'center',
+                            }}>
+                                {/* Number badge */}
+                                <div style={{
+                                    fontSize: 10, fontWeight: 800, color: accent,
+                                    textTransform: 'uppercase', letterSpacing: 2,
+                                    opacity: 0.7,
+                                }}>
+                                    Opção {num}
+                                </div>
+
+                                {/* Icon circle */}
+                                <div style={{
+                                    width: 68, height: 68, borderRadius: '50%',
+                                    background: 'radial-gradient(circle, rgba(22,28,44,0.3), rgba(10,15,31,0.9))',
+                                    display: 'grid', placeItems: 'center',
+                                    border: `1.5px solid ${accent}`,
+                                    boxShadow: `0 0 28px ${glow}, inset 0 0 10px rgba(0,0,0,0.2)`,
+                                }}>
+                                    <Icon style={{ width: 28, height: 28, color: accent, filter: `drop-shadow(0 0 8px ${glow})` }} />
+                                </div>
+
+                                <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    {label}
+                                </div>
+                            </div>
+                        </GlassPanel>
                     ))}
                 </div>
 
-                {/* Touch prompt */}
-                <div className={`flex flex-col items-center gap-3 transition-opacity duration-700 ${pulse ? 'opacity-100' : 'opacity-40'}`}>
-                    <div className="w-16 h-16 rounded-3xl border-2 border-white/20 flex items-center justify-center">
-                        <span className="text-3xl">👆</span>
+                {/* Touch instruction */}
+                <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                    opacity: pulse ? 1 : 0.35,
+                    transition: 'opacity 0.7s ease',
+                }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: 18,
+                        border: '2px solid rgba(255,255,255,0.18)',
+                        display: 'grid', placeItems: 'center',
+                        fontSize: 26,
+                    }}>
+                        👆
                     </div>
-                    <p className="text-white/50 text-sm font-black uppercase tracking-[0.4em]">
-                        Toque para começar
+                    <p style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 4, margin: 0 }}>
+                        Toque em qualquer lugar para iniciar
                     </p>
                 </div>
-            </div>
 
-            {/* Footer */}
-            <div className="relative z-10 flex items-center justify-between px-12 py-5 border-t border-white/5">
-                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-widest">© La Salle — SISRA</span>
-                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-widest">Terminal Quiosque v1.0</span>
-            </div>
+                {/* Divider */}
+                <div style={{
+                    width: '100%', maxWidth: 700, height: 1,
+                    background: 'linear-gradient(to right, transparent, rgba(71,184,255,0.3), rgba(199,158,97,0.3), transparent)',
+                }} />
+            </main>
+
+            {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+            <footer style={{
+                position: 'relative', zIndex: 2,
+                padding: '14px 40px',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 16,
+            }}>
+                {/* Left: status */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: pulse ? GREEN : `${GREEN}44`,
+                        boxShadow: pulse ? `0 0 10px rgba(52,211,153,0.7)` : 'none',
+                        transition: 'all 0.7s ease',
+                    }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: GREEN, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                        Sistema Ativo
+                    </span>
+                </div>
+
+                {/* Center: date */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Settings style={{ width: 12, height: 12, color: GOLD }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Sistema de Retirada SISRA // V{__APP_VERSION__}
+                    </span>
+                </div>
+
+                {/* Right: online */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Wifi style={{ width: 12, height: 12, color: GOLD }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Status do Link:
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: GREEN, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Estável
+                    </span>
+                </div>
+            </footer>
         </div>
     );
 }
