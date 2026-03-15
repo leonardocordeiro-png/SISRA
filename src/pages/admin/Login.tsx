@@ -1,17 +1,62 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Loader2, Eye, EyeOff, Lock, Mail, Activity, ChevronRight, AlertCircle } from 'lucide-react';
+import { Shield, Loader2, Eye, EyeOff, Lock, Mail, AlertCircle, ChevronRight, Settings, Wifi, Menu } from 'lucide-react';
 import { logAudit } from '../../lib/audit';
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const GOLD       = '#c79e61';
+const CYAN       = '#47b8ff';
+const TEXT_MUTED = '#8491A2';
+const GLASS_BG   = 'rgba(17,24,43,0.65)';
+
+// Gradient-border glass panel (cyan→gold)
+function GlassPanel({
+    children,
+    className,
+    outerStyle,
+    innerStyle,
+}: {
+    children: React.ReactNode;
+    className?: string;
+    outerStyle?: React.CSSProperties;
+    innerStyle?: React.CSSProperties;
+}) {
+    return (
+        <div
+            className={className}
+            style={{
+                background: 'linear-gradient(135deg, rgba(71,184,255,0.32) 0%, rgba(199,158,97,0.32) 100%)',
+                padding: 2,
+                borderRadius: 14,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                ...outerStyle,
+            }}
+        >
+            <div style={{
+                background: GLASS_BG,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 12,
+                height: '100%',
+                boxShadow: 'inset 0 0 12px rgba(255,255,255,0.015)',
+                ...innerStyle,
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 export default function AdminLogin() {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [email, setEmail]               = useState('');
+    const [password, setPassword]         = useState('');
+    const [loading, setLoading]           = useState(false);
+    const [error, setError]               = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
+    // ── Authentication logic — UNCHANGED ──────────────────────────────────────
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -52,129 +97,321 @@ export default function AdminLogin() {
         }
     };
 
+    // ── Visual ────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 w-full max-w-full overflow-x-hidden relative selection:bg-slate-500/30">
-            {/* Ambient HUD Layer */}
-            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] right-[-10%] w-[70%] h-[70%] bg-slate-500/[0.03] blur-[120px] rounded-full animate-pulse-slow" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-emerald-500/[0.03] blur-[120px] rounded-full animate-pulse-slow" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
-            </div>
+        <div style={{
+            minHeight: '100dvh',
+            background: '#070a13',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '24px 20px',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
+            {/* Scoped styles */}
+            <style>{`
+                .sisra-adm-bg {
+                    background-image:
+                        radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%),
+                        radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%),
+                        repeating-linear-gradient(
+                            rgba(255,255,255,0.012) 0px,
+                            rgba(255,255,255,0.012) 1px,
+                            transparent 1px,
+                            transparent 15px
+                        );
+                    background-size: 100% 100%, 100% 100%, 15px 15px;
+                }
+                .sisra-adm-input { font-family: inherit !important; }
+                .sisra-adm-input::placeholder { color: ${TEXT_MUTED}; }
+                .sisra-adm-input:focus { outline: none !important; }
+                .sisra-adm-btn { transition: all 0.2s ease; }
+                .sisra-adm-btn:hover:not(:disabled) {
+                    background: rgba(255,255,255,0.08) !important;
+                    box-shadow: 0 6px 22px rgba(0,0,0,0.4) !important;
+                }
+                .sisra-adm-btn:active:not(:disabled) { transform: scale(0.98); }
+                .sisra-adm-forgot { transition: color 0.2s; }
+                .sisra-adm-forgot:hover { color: #fff !important; }
+                @keyframes sisra-adm-pulse {
+                    0%   { box-shadow: 0 0 0 0 rgba(71,184,255,0.7); }
+                    70%  { box-shadow: 0 0 0 6px rgba(71,184,255,0); }
+                    100% { box-shadow: 0 0 0 0 rgba(71,184,255,0); }
+                }
+                .sisra-adm-dot { animation: sisra-adm-pulse 1.5s infinite; }
+                @media (max-width: 768px) {
+                    .sisra-adm-header  { flex-direction: column !important; gap: 14px !important; text-align: center !important; }
+                    .sisra-adm-footer  { flex-direction: column !important; gap: 12px !important; }
+                }
+            `}</style>
 
-            <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-1000">
-                {/* Tactical Manifest Header */}
-                <div className="text-center mb-12 space-y-4">
-                    <div className="relative inline-block group">
-                        <div className="absolute -inset-4 bg-slate-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse"></div>
-                        <div className="relative w-20 h-20 bg-[#020617] rounded-3xl border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-xl group-hover:border-slate-500/40 transition-all duration-500">
-                            <Shield className="w-10 h-10 text-slate-400 group-hover:scale-110 transition-transform duration-500" />
-                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-slate-500 rounded-lg border-4 border-[#020617] flex items-center justify-center">
-                                <Activity className="w-3 h-3 text-[#020617] animate-pulse" />
+            {/* Background */}
+            <div className="sisra-adm-bg" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+
+            {/* ── Main container ───────────────────────────────────────────── */}
+            <div style={{
+                position: 'relative', zIndex: 1,
+                width: '100%', maxWidth: 992,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 32,
+            }}>
+
+                {/* ── Header ─────────────────────────────────────────────── */}
+                <GlassPanel
+                    outerStyle={{ width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
+                    innerStyle={{ padding: '14px 28px' }}
+                >
+                    <div
+                        className="sisra-adm-header"
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}
+                    >
+                        <div>
+                            <div style={{
+                                fontSize: 11, fontWeight: 600, color: GOLD,
+                                textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3,
+                            }}>
+                                Manifesto de Comando — Portal Administrativo Seguro
                             </div>
+                            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0, fontStyle: 'italic' }}>
+                                Manifesto de Comando
+                            </h1>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <Menu style={{ width: 18, height: 18, color: TEXT_MUTED, cursor: 'default', opacity: 0.6 }} />
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">Manifesto de Comando</h1>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-pulse"></span>
-                            Portal Administrativo Seguro
+                </GlassPanel>
+
+                {/* ── Auth panel (centered) ───────────────────────────────── */}
+                <GlassPanel
+                    outerStyle={{ width: '100%', maxWidth: 480 }}
+                    innerStyle={{
+                        padding: '44px 36px',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 26,
+                    }}
+                >
+                    {/* Badge */}
+                    <div style={{
+                        background: 'rgba(17,24,43,0.85)',
+                        borderRadius: 30,
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        padding: '9px 20px',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        fontSize: 12, fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: 1,
+                        color: TEXT_MUTED,
+                    }}>
+                        <Shield style={{
+                            width: 16, height: 16, color: CYAN,
+                            filter: `drop-shadow(0 0 6px rgba(71,184,255,0.5))`,
+                        }} />
+                        Manifesto de Comando&nbsp;
+                        <strong style={{ color: '#fff' }}>V{__APP_VERSION__}</strong>
+                    </div>
+
+                    {/* Title */}
+                    <div style={{ textAlign: 'center' }}>
+                        <h2 style={{
+                            fontSize: 22, fontWeight: 800, color: GOLD,
+                            marginBottom: 6, textTransform: 'uppercase',
+                            fontStyle: 'italic', letterSpacing: 1,
+                        }}>
+                            Manifesto de Comando
+                        </h2>
+                        <p style={{
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
+                        }}>
+                            • Portal Administrativo Seguro
                         </p>
                     </div>
-                </div>
 
-                {/* Glassmorphism Command Card */}
-                <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group/card shadow-slate-900/50">
-                    <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-slate-500/20 to-transparent top-0 animate-scan opacity-30" />
-
-                    <form onSubmit={handleLogin} className="space-y-8 relative z-10" autoComplete="off">
-                        <div className="space-y-6">
-                            {/* Email Field */}
-                            <div className="space-y-2 group/input">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                                    <Mail className="w-3 h-3" />
-                                    Identidade de Acesso
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-[#020617]/50 border border-white/5 rounded-2xl px-6 py-4 text-white font-mono placeholder:text-slate-700 focus:outline-none focus:border-slate-500/50 focus:ring-4 focus:ring-slate-500/10 transition-all duration-500"
-                                        placeholder="admin@lasalle.org.br"
-                                        autoComplete="off"
-                                    />
-                                </div>
+                    {/* Form */}
+                    <form
+                        onSubmit={handleLogin}
+                        style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}
+                        autoComplete="off"
+                    >
+                        {/* E-mail */}
+                        <div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                marginBottom: 8, fontSize: 11, fontWeight: 700,
+                                color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
+                            }}>
+                                <Mail style={{ width: 13, height: 13, color: CYAN }} />
+                                Identidade de Acesso
                             </div>
-
-                            {/* Password Field */}
-                            <div className="space-y-2 group/input">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                                    <Lock className="w-3 h-3" />
-                                    Senha de Segurança
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-[#020617]/50 border border-white/5 rounded-2xl px-6 py-4 text-white font-mono placeholder:text-slate-700 focus:outline-none focus:border-slate-500/50 focus:ring-4 focus:ring-slate-500/10 transition-all duration-500"
-                                        placeholder="••••••••••••"
-                                        autoComplete="off"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all"
-                                    >
-                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
+                            <div style={{
+                                borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)',
+                                padding: '13px 16px', background: 'rgba(11,16,29,0.75)',
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                backdropFilter: 'blur(2px)',
+                            }}>
+                                <input
+                                    className="sisra-adm-input"
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="admin@lasalle.org.br"
+                                    autoComplete="off"
+                                    style={{
+                                        width: '100%', background: 'none', border: 'none',
+                                        fontSize: 15, fontWeight: 500, color: '#fff',
+                                    }}
+                                />
                             </div>
                         </div>
 
+                        {/* Senha */}
+                        <div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                marginBottom: 8, fontSize: 11, fontWeight: 700,
+                                color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
+                            }}>
+                                <Lock style={{ width: 13, height: 13, color: CYAN }} />
+                                Senha de Segurança
+                            </div>
+                            <div style={{
+                                borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)',
+                                padding: '13px 16px', background: 'rgba(11,16,29,0.75)',
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                backdropFilter: 'blur(2px)',
+                            }}>
+                                <input
+                                    className="sisra-adm-input"
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••••••"
+                                    autoComplete="off"
+                                    style={{
+                                        width: '100%', background: 'none', border: 'none',
+                                        fontSize: 15, fontWeight: 500, color: '#fff',
+                                        letterSpacing: 2,
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        background: 'none', border: 'none',
+                                        cursor: 'pointer', color: TEXT_MUTED,
+                                        padding: 0, display: 'flex', flexShrink: 0,
+                                    }}
+                                >
+                                    {showPassword
+                                        ? <EyeOff style={{ width: 17, height: 17 }} />
+                                        : <Eye style={{ width: 17, height: 17 }} />
+                                    }
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Error */}
                         {error && (
-                            <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs font-bold flex items-start gap-4 animate-in slide-in-from-top-2">
-                                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                                <span className="uppercase tracking-tight leading-relaxed">{error}</span>
+                            <div style={{
+                                background: 'rgba(239,68,68,0.06)',
+                                borderRadius: 8,
+                                border: '1px solid rgba(239,68,68,0.14)',
+                                padding: '11px 14px',
+                                display: 'flex', alignItems: 'flex-start', gap: 10,
+                                fontSize: 12, fontWeight: 700, color: '#ef4444',
+                                textTransform: 'uppercase', letterSpacing: 0.5,
+                            }}>
+                                <AlertCircle style={{ width: 15, height: 15, flexShrink: 0, marginTop: 1 }} />
+                                <span>{error}</span>
                             </div>
                         )}
 
+                        {/* Submit — glass style with pulsing cyan dot */}
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full relative group/btn overflow-hidden rounded-[2rem] py-5 px-8 bg-white/5 border border-white/10 hover:border-slate-500/50 transition-all duration-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group/submit"
+                            className="sisra-adm-btn"
+                            style={{
+                                width: '100%', borderRadius: 30, marginTop: 4,
+                                background: 'rgba(255,255,255,0.04)',
+                                color: '#fff', border: '1px solid rgba(255,255,255,0.08)',
+                                padding: '15px 24px',
+                                fontSize: 14, fontWeight: 800,
+                                textTransform: 'uppercase', letterSpacing: 2,
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12,
+                                opacity: loading ? 0.5 : 1,
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                                fontFamily: 'inherit',
+                            }}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-slate-500/0 via-slate-500/20 to-slate-500/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
-
-                            <div className="relative z-10 flex items-center justify-center gap-4">
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-                                        <span className="text-sm font-black text-white uppercase italic tracking-[0.3em]">Autenticando...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="text-sm font-black text-white uppercase italic tracking-[0.3em]">Iniciar Acesso</span>
-                                        <ChevronRight className="w-5 h-5 text-slate-400 group-hover/submit:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </div>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="animate-spin" style={{ width: 18, height: 18, color: CYAN }} />
+                                    <span>Autenticando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span
+                                        className="sisra-adm-dot"
+                                        style={{
+                                            display: 'inline-block', width: 8, height: 8,
+                                            borderRadius: '50%', background: CYAN, flexShrink: 0,
+                                        }}
+                                    />
+                                    <span>Iniciar Acesso</span>
+                                    <ChevronRight style={{ width: 16, height: 16, color: CYAN }} />
+                                </>
+                            )}
                         </button>
                     </form>
-                </div>
+                </GlassPanel>
 
-                {/* Manifest Footer */}
-                <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between opacity-50">
-                    <div className="space-y-1">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Protocolo de Acesso</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">v{__APP_VERSION__} // CRIPTOGRAFADO</span>
-                    </div>
-                    <div className="flex flex-col items-end space-y-1">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Nó do Sistema</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">SISRA.ADM.NODE_07</span>
-                    </div>
+                {/* ── Footer — two glass badges ───────────────────────────── */}
+                <div
+                    className="sisra-adm-footer"
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 16, width: '100%',
+                    }}
+                >
+                    <GlassPanel
+                        outerStyle={{ flex: 1 }}
+                        innerStyle={{
+                            padding: '12px 20px',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+                        }}
+                    >
+                        <Settings style={{ width: 13, height: 13, color: GOLD, flexShrink: 0 }} />
+                        <div>
+                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Protocolo de Acesso</div>
+                            <div>V{__APP_VERSION__} // Criptografado</div>
+                        </div>
+                    </GlassPanel>
+
+                    <GlassPanel
+                        outerStyle={{ flex: 1 }}
+                        innerStyle={{
+                            padding: '12px 20px',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+                        }}
+                    >
+                        <Wifi style={{ width: 13, height: 13, color: GOLD, flexShrink: 0 }} />
+                        <div>
+                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Nó do Sistema</div>
+                            <div style={{ color: '#fff' }}>SISRA_ADMIN_NODE_01</div>
+                        </div>
+                    </GlassPanel>
                 </div>
             </div>
         </div>
