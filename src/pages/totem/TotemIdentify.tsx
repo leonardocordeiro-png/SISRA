@@ -216,14 +216,8 @@ export default function TotemIdentify() {
                 </div>
 
                 <h2 style={{ fontSize: 28, fontWeight: 800, color: '#fff', textTransform: 'uppercase', margin: 0, letterSpacing: 1 }}>
-                    Como deseja se identificar?
-                </h2>
-                <p style={{ fontSize: 14, color: TEXT_MUTED, fontWeight: 500, margin: 0 }}>
-                    Escolha uma das opções abaixo para autenticação.
-                </p>
-                <span style={{ fontSize: 10, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 2.5, fontWeight: 600 }}>
                     Selecione uma opção para iniciar a sequência
-                </span>
+                </h2>
             </div>
 
             {/* ── MODULE CARDS ────────────────────────────────────────────────── */}
