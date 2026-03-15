@@ -2,16 +2,55 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import { useNavigate } from 'react-router-dom';
-import { School, Loader2, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { School, Loader2, Eye, EyeOff, Mail, KeyRound, AlertCircle, ChevronRight, Shield, Settings, Wifi } from 'lucide-react';
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const GOLD       = '#c79e61';
+const CYAN       = '#47b8ff';
+const GREEN      = '#34d399';
+const TEXT_MUTED = '#8491A2';
+const GLASS_BG   = 'rgba(17,24,43,0.65)';
+
+// Gradient-border glass panel (cyan→gold)
+function GlassPanel({
+    children,
+    style,
+}: {
+    children: React.ReactNode;
+    style?: React.CSSProperties;
+}) {
+    return (
+        <div style={{
+            background: 'linear-gradient(135deg, rgba(71,184,255,0.35) 0%, rgba(199,158,97,0.35) 100%)',
+            padding: 2,
+            borderRadius: 14,
+            width: '100%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            ...style,
+        }}>
+            <div style={{
+                background: GLASS_BG,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 12,
+                height: '100%',
+                boxShadow: 'inset 0 0 12px rgba(255,255,255,0.015)',
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 export default function ClassroomLogin() {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [email, setEmail]               = useState('');
+    const [password, setPassword]         = useState('');
+    const [loading, setLoading]           = useState(false);
+    const [error, setError]               = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
+    // ── Authentication logic — UNCHANGED ──────────────────────────────────────
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -54,116 +93,339 @@ export default function ClassroomLogin() {
         }
     };
 
+    // ── Visual ────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-8 overflow-hidden relative font-sans">
-            {/* Ambient Background with Neon Accents */}
-            <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[180px] animate-pulse-slow"></div>
-            <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[180px] animate-pulse-slow delay-1000"></div>
+        <div style={{
+            minHeight: '100dvh',
+            background: '#070a13',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '24px 20px',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
+            {/* Scoped styles */}
+            <style>{`
+                .sisra-sala-bg {
+                    background-image:
+                        radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%),
+                        radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%),
+                        repeating-linear-gradient(
+                            rgba(255,255,255,0.012) 0px,
+                            rgba(255,255,255,0.012) 1px,
+                            transparent 1px,
+                            transparent 15px
+                        );
+                    background-size: 100% 100%, 100% 100%, 15px 15px;
+                }
+                .sisra-sala-input { font-family: inherit !important; }
+                .sisra-sala-input::placeholder { color: ${TEXT_MUTED}; }
+                .sisra-sala-input:focus { outline: none !important; }
+                .sisra-sala-btn { transition: all 0.2s ease; }
+                .sisra-sala-btn:hover:not(:disabled) {
+                    background: rgba(255,255,255,0.08) !important;
+                    box-shadow: 0 6px 22px rgba(0,0,0,0.4) !important;
+                }
+                .sisra-sala-btn:active:not(:disabled) { transform: scale(0.98); }
+                .sisra-sala-forgot { transition: color 0.2s; }
+                .sisra-sala-forgot:hover { color: #fff !important; }
+                @keyframes sisra-sala-pulse {
+                    0%   { box-shadow: 0 0 0 0 rgba(71,184,255,0.7); }
+                    70%  { box-shadow: 0 0 0 6px rgba(71,184,255,0); }
+                    100% { box-shadow: 0 0 0 0 rgba(71,184,255,0); }
+                }
+                .sisra-sala-dot { animation: sisra-sala-pulse 1.5s infinite; }
+                @media (max-width: 768px) {
+                    .sisra-sala-grid { grid-template-columns: 1fr !important; }
+                    .sisra-sala-brand { display: none !important; }
+                    .sisra-sala-footer { flex-direction: column !important; gap: 12px !important; text-align: center !important; }
+                }
+            `}</style>
 
-            <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 bg-slate-950/40 backdrop-blur-3xl rounded-[2.5rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 ring-1 ring-white/5">
+            {/* Background */}
+            <div className="sisra-sala-bg" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
 
-                {/* Left Side: Brand/Visual (40%) */}
-                <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-16 bg-gradient-to-br from-emerald-600 to-emerald-950 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-20 pointer-events-none">
-                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <path d="M0 100 C 20 0 80 0 100 100 Z" fill="rgba(255,255,255,0.1)" />
-                        </svg>
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="w-20 h-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl flex items-center justify-center mb-10 shadow-2xl">
-                            <School className="w-10 h-10 text-white" />
+            {/* ── Layout grid ───────────────────────────────────────────────── */}
+            <div
+                className="sisra-sala-grid"
+                style={{
+                    position: 'relative', zIndex: 1,
+                    width: '100%', maxWidth: 992,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 40,
+                }}
+            >
+                {/* ── Brand panel (left) ──────────────────────────────────── */}
+                <div className="sisra-sala-brand" style={{ display: 'flex' }}>
+                    <GlassPanel>
+                        <div style={{
+                            padding: 32,
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', gap: 22,
+                            textAlign: 'center',
+                        }}>
+                            <School style={{
+                                width: 52, height: 52, color: GOLD,
+                                filter: `drop-shadow(0 0 18px rgba(199,158,97,0.55))`,
+                            }} />
+                            <div>
+                                <h1 style={{
+                                    fontSize: 30, fontWeight: 800, color: CYAN,
+                                    marginBottom: 8, textTransform: 'uppercase',
+                                    fontStyle: 'italic', letterSpacing: 1,
+                                }}>
+                                    Sala de Aula
+                                </h1>
+                                <p style={{
+                                    fontSize: 12, color: TEXT_MUTED,
+                                    textTransform: 'uppercase', fontWeight: 600, letterSpacing: 2,
+                                }}>
+                                    • Acesso Seguro
+                                </p>
+                            </div>
+                            <p style={{
+                                fontSize: 14, color: TEXT_MUTED,
+                                maxWidth: 230, lineHeight: 1.75, marginTop: 8,
+                            }}>
+                                Gestão em tempo real para o sucesso do aluno.
+                            </p>
                         </div>
-                        <h2 className="text-7xl font-black text-white italic tracking-tighter leading-[0.9] mb-8 uppercase">
-                            SALA DE <br /> AULA
-                        </h2>
-                        <div className="w-24 h-2 bg-white/40 rounded-full"></div>
-                    </div>
-
-                    <div className="relative z-10">
-                        <p className="text-emerald-100 font-medium text-xl leading-relaxed italic opacity-80 border-l-4 border-white/20 pl-6">
-                            Gestão em tempo real <br /> para o sucesso do aluno.
-                        </p>
-                    </div>
+                    </GlassPanel>
                 </div>
 
-                {/* Right Side: Form (60%) */}
-                <div className="lg:col-span-7 p-8 sm:p-20 flex flex-col justify-center bg-[#050a18]/60 backdrop-blur-md">
-                    <div className="mb-12 text-center lg:text-left">
-                        <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
-                            <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                            <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Portal Administrativo</span>
-                        </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-4 uppercase leading-none">Portal do Professor</h1>
-                        <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[11px]">Ambiente de Gestão de Sala</p>
-                    </div>
-
-                    <form onSubmit={handleLogin} className="space-y-8">
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-emerald-500/70 uppercase tracking-[0.25em] ml-2">E-mail da Sala</label>
-                            <div className="relative group">
-                                <input
-                                    type="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-700 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium shadow-2xl"
-                                    placeholder="professor@lasalle.org.br"
-                                />
-                                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-emerald-500/70 uppercase tracking-[0.25em] ml-2">Senha Digital</label>
-                            <div className="relative group">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-8 py-5 rounded-3xl bg-white/[0.03] border-2 border-white/5 text-white placeholder-slate-700 focus:border-emerald-500/50 focus:bg-white/[0.05] focus:ring-0 outline-none transition-all text-lg md:text-xl font-medium pr-16 shadow-2xl tracking-widest"
-                                    placeholder="••••"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-600 hover:text-emerald-400 transition-colors"
-                                >
-                                    {showPassword ? <EyeOff className="w-8 h-8" /> : <Eye className="w-8 h-8" />}
-                                </button>
-                                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-focus-within:via-emerald-500/50 transition-all duration-700"></div>
-                            </div>
+                {/* ── Login panel (right) ─────────────────────────────────── */}
+                <GlassPanel>
+                    <div style={{
+                        padding: '44px 36px',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 26,
+                    }}>
+                        {/* Status badge */}
+                        <div style={{
+                            background: 'rgba(17,24,43,0.85)',
+                            borderRadius: 30,
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            padding: '9px 20px',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            fontSize: 12, fontWeight: 700,
+                            textTransform: 'uppercase', letterSpacing: 1,
+                            color: TEXT_MUTED,
+                        }}>
+                            <Shield style={{
+                                width: 14, height: 14, color: CYAN,
+                                filter: `drop-shadow(0 0 6px rgba(71,184,255,0.5))`,
+                                flexShrink: 0,
+                            }} />
+                            Sistema Ativo&nbsp;
+                            <strong style={{ color: '#fff' }}>V{__APP_VERSION__}</strong>
                         </div>
 
-                        {error && (
-                            <div className="p-6 bg-red-500/10 text-red-400 font-bold text-sm rounded-[2rem] border border-red-500/20 flex items-center gap-4 animate-shake backdrop-blur-xl">
-                                <div className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
-                                {error}
-                            </div>
-                        )}
+                        {/* Title */}
+                        <div style={{ textAlign: 'center' }}>
+                            <h2 style={{
+                                fontSize: 26, fontWeight: 800, color: '#fff',
+                                marginBottom: 6, textTransform: 'uppercase',
+                                fontStyle: 'italic', letterSpacing: 1,
+                            }}>
+                                Portal do Professor
+                            </h2>
+                            <p style={{
+                                fontSize: 11, color: TEXT_MUTED,
+                                textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
+                            }}>
+                                • Ambiente de Gestão de Sala
+                            </p>
+                        </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-6 md:py-7 rounded-3xl transition-all transform hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 text-xl md:text-2xl uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(16,185,129,0.3)] group relative overflow-hidden"
+                        {/* Form */}
+                        <form
+                            onSubmit={handleLogin}
+                            style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                            {loading ? (
-                                <Loader2 className="w-8 h-8 animate-spin" />
-                            ) : (
-                                <>
-                                    <span>Conectar Terminal</span>
-                                    <ChevronRight className="w-6 h-6 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
-                                </>
-                            )}
-                        </button>
-                    </form>
+                            {/* E-mail */}
+                            <div>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    marginBottom: 8, fontSize: 11, fontWeight: 700,
+                                    color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
+                                }}>
+                                    <Mail style={{ width: 13, height: 13, color: CYAN }} />
+                                    E-mail da Sala
+                                </div>
+                                <div style={{
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    padding: '13px 16px',
+                                    background: 'rgba(11,16,29,0.75)',
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    backdropFilter: 'blur(2px)',
+                                }}>
+                                    <input
+                                        className="sisra-sala-input"
+                                        type="email"
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="professor@lasalle.org.br"
+                                        autoComplete="off"
+                                        style={{
+                                            width: '100%', background: 'none', border: 'none',
+                                            fontSize: 15, fontWeight: 500, color: '#fff',
+                                        }}
+                                    />
+                                </div>
+                            </div>
 
-                    <div className="mt-16 text-center opacity-30 hover:opacity-100 transition-opacity duration-500">
-                        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-[0.4em]">
-                            Intelligent School Ecosystem • La Salle, Cheguei!
-                        </p>
+                            {/* Senha */}
+                            <div>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    marginBottom: 8, fontSize: 11, fontWeight: 700,
+                                    color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
+                                }}>
+                                    <KeyRound style={{ width: 13, height: 13, color: CYAN }} />
+                                    Senha Digital
+                                </div>
+                                <div style={{
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    padding: '13px 16px',
+                                    background: 'rgba(11,16,29,0.75)',
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    backdropFilter: 'blur(2px)',
+                                }}>
+                                    <input
+                                        className="sisra-sala-input"
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        autoComplete="off"
+                                        style={{
+                                            width: '100%', background: 'none', border: 'none',
+                                            fontSize: 15, fontWeight: 500, color: '#fff',
+                                            letterSpacing: 2,
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            background: 'none', border: 'none',
+                                            cursor: 'pointer', color: TEXT_MUTED,
+                                            padding: 0, display: 'flex', flexShrink: 0,
+                                        }}
+                                    >
+                                        {showPassword
+                                            ? <EyeOff style={{ width: 17, height: 17 }} />
+                                            : <Eye style={{ width: 17, height: 17 }} />
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Error */}
+                            {error && (
+                                <div style={{
+                                    background: 'rgba(239,68,68,0.06)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(239,68,68,0.14)',
+                                    padding: '11px 14px',
+                                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                                    fontSize: 12, fontWeight: 700, color: '#ef4444',
+                                    textTransform: 'uppercase', letterSpacing: 0.5,
+                                }}>
+                                    <AlertCircle style={{ width: 15, height: 15, flexShrink: 0, marginTop: 1 }} />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            {/* Submit — glass style with pulsing cyan dot */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="sisra-sala-btn"
+                                style={{
+                                    width: '100%', borderRadius: 30, marginTop: 4,
+                                    background: 'rgba(255,255,255,0.04)',
+                                    color: '#fff', border: '1px solid rgba(255,255,255,0.08)',
+                                    padding: '15px 24px',
+                                    fontSize: 14, fontWeight: 800,
+                                    textTransform: 'uppercase', letterSpacing: 2,
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12,
+                                    opacity: loading ? 0.5 : 1,
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                                    fontFamily: 'inherit',
+                                }}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="animate-spin" style={{ width: 18, height: 18, color: CYAN }} />
+                                        <span>Conectando...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span
+                                            className="sisra-sala-dot"
+                                            style={{
+                                                display: 'inline-block', width: 8, height: 8,
+                                                borderRadius: '50%', background: CYAN, flexShrink: 0,
+                                            }}
+                                        />
+                                        <span>Conectar Terminal</span>
+                                        <ChevronRight style={{ width: 16, height: 16, color: CYAN }} />
+                                    </>
+                                )}
+                            </button>
+                        </form>
+
+                        {/* Footer links */}
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+                        }}>
+                            <a
+                                href="#"
+                                className="sisra-sala-forgot"
+                                style={{ color: TEXT_MUTED, textDecoration: 'none' }}
+                            >
+                                Esqueceu sua senha?
+                            </a>
+                            <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                v{__APP_VERSION__} | La Salle, Cheguei! | Intelligent School Ecosystem
+                            </span>
+                        </div>
+                    </div>
+                </GlassPanel>
+
+                {/* ── Global footer — spans both columns ──────────────────── */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                    <div
+                        className="sisra-sala-footer"
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: 11, color: TEXT_MUTED,
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+                            padding: '0 4px',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Settings style={{ width: 13, height: 13, color: GOLD }} />
+                            <span>Sistema de Retirada SISRA // V{__APP_VERSION__}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Wifi style={{ width: 13, height: 13, color: GOLD }} />
+                            <span>Status do Link:</span>
+                            <span style={{ color: GREEN }}>Estável</span>
+                        </div>
                     </div>
                 </div>
             </div>
