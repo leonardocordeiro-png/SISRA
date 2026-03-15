@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { School, User, GraduationCap, Shield, ChevronRight, Settings, Wifi, QrCode, Hash, LogOut } from 'lucide-react';
+import { School, User, GraduationCap, Shield, ChevronRight, Settings, Wifi } from 'lucide-react';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const GOLD       = '#c79e61';
-const CYAN       = '#47b8ff';
+const CYAN       = '#47b8ff'; // usado nos cards de módulo
 const BLUE_COL   = '#2980B9';
 const GREEN      = '#34d399';
 const TEXT_MUTED = '#8491A2';
@@ -78,12 +78,8 @@ export default function Welcome() {
                 .sisra-w-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
                 .sisra-w-card:hover { transform: translateY(-5px); box-shadow: 0 12px 36px rgba(0,0,0,0.5) !important; }
                 .sisra-w-card:active { transform: scale(0.975); }
-                .sisra-w-hbtn { transition: background 0.2s ease; }
-                .sisra-w-hbtn:hover { background: rgba(255,255,255,0.06) !important; }
                 @media (max-width: 768px) {
                     .sisra-w-modules { grid-template-columns: 1fr !important; }
-                    .sisra-w-header  { flex-direction: column !important; gap: 14px !important; text-align: center !important; }
-                    .sisra-w-hctrl  { flex-direction: column !important; width: 100% !important; }
                     .sisra-w-footer  { flex-direction: column !important; gap: 10px !important; text-align: center !important; }
                 }
             `}</style>
@@ -104,15 +100,7 @@ export default function Welcome() {
                     innerStyle={{ padding: '14px 28px' }}
                     outerStyle={{ boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
                 >
-                    <div
-                        className="sisra-w-header"
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            width: '100%',
-                        }}
-                    >
+                    <div style={{ width: '100%' }}>
                         {/* Title block */}
                         <div>
                             <div style={{
@@ -126,49 +114,6 @@ export default function Welcome() {
                             </h1>
                         </div>
 
-                        {/* Controls: QR + Code + logout icon */}
-                        <div className="sisra-w-hctrl" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                            <div style={{
-                                display: 'flex', alignItems: 'center',
-                                background: 'rgba(255,255,255,0.02)',
-                                borderRadius: 8,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                overflow: 'hidden',
-                            }}>
-                                <Link
-                                    to="/totem/qr"
-                                    className="sisra-w-hbtn"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '9px 16px',
-                                        fontSize: 12, fontWeight: 700,
-                                        color: GOLD, textDecoration: 'none',
-                                        textTransform: 'uppercase', letterSpacing: 1,
-                                        background: 'transparent',
-                                    }}
-                                >
-                                    <QrCode style={{ width: 14, height: 14 }} />
-                                    Escanear QR
-                                </Link>
-                                <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
-                                <Link
-                                    to="/totem/codigo"
-                                    className="sisra-w-hbtn"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '9px 16px',
-                                        fontSize: 12, fontWeight: 700,
-                                        color: CYAN, textDecoration: 'none',
-                                        textTransform: 'uppercase', letterSpacing: 1,
-                                        background: 'transparent',
-                                    }}
-                                >
-                                    <Hash style={{ width: 14, height: 14 }} />
-                                    Código
-                                </Link>
-                            </div>
-                            <LogOut style={{ width: 18, height: 18, color: TEXT_MUTED, cursor: 'default', opacity: 0.6 }} />
-                        </div>
                     </div>
                 </GlassPanel>
 
