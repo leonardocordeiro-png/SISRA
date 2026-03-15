@@ -11,7 +11,9 @@
 -- =============================================================================
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- FUNÇÃO HELPER: retorna o escola_id do usuário autenticado (JWT → usuarios)
+-- FUNÇÕES HELPER: lêem dados do usuário autenticado (JWT → usuarios)
+-- SECURITY DEFINER = executam como dono (postgres) → bypassam RLS em usuarios,
+-- evitando recursão infinita quando as políticas precisam consultar a própria tabela.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION get_user_escola_id()
 RETURNS uuid
@@ -20,6 +22,19 @@ STABLE
 SECURITY DEFINER
 AS $$
   SELECT escola_id
+  FROM public.usuarios
+  WHERE id = auth.uid()
+  LIMIT 1;
+$$;
+
+-- Retorna o tipo_usuario do usuário autenticado (usado nas políticas de admin/coordenador)
+CREATE OR REPLACE FUNCTION get_user_tipo_usuario()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT tipo_usuario
   FROM public.usuarios
   WHERE id = auth.uid()
   LIMIT 1;
@@ -106,6 +121,8 @@ CREATE POLICY "usuarios_self"
   USING (id = auth.uid());
 
 -- Admin pode ver todos os usuários da sua escola
+-- ATENÇÃO: não use EXISTS (SELECT FROM usuarios) aqui — causa recursão infinita no RLS.
+-- Use get_user_tipo_usuario() que é SECURITY DEFINER e bypassa RLS.
 DROP POLICY IF EXISTS "usuarios_admin_escola" ON public.usuarios;
 CREATE POLICY "usuarios_admin_escola"
   ON public.usuarios
@@ -113,17 +130,11 @@ CREATE POLICY "usuarios_admin_escola"
   TO authenticated
   USING (
     escola_id = get_user_escola_id()
-    AND EXISTS (
-      SELECT 1 FROM public.usuarios
-      WHERE id = auth.uid() AND tipo_usuario = 'ADMIN'
-    )
+    AND get_user_tipo_usuario() = 'ADMIN'
   )
   WITH CHECK (
     escola_id = get_user_escola_id()
-    AND EXISTS (
-      SELECT 1 FROM public.usuarios
-      WHERE id = auth.uid() AND tipo_usuario = 'ADMIN'
-    )
+    AND get_user_tipo_usuario() = 'ADMIN'
   );
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -189,26 +200,14 @@ CREATE POLICY "responsaveis_auth_via_escola"
     )
   );
 
--- Admin pode criar/editar responsaveis da sua escola
+-- Admin/Coordenador pode criar/editar responsaveis da sua escola
 DROP POLICY IF EXISTS "responsaveis_admin_write" ON public.responsaveis;
 CREATE POLICY "responsaveis_admin_write"
   ON public.responsaveis
   FOR ALL
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios
-      WHERE id = auth.uid()
-        AND tipo_usuario IN ('ADMIN', 'COORDENADOR')
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.usuarios
-      WHERE id = auth.uid()
-        AND tipo_usuario IN ('ADMIN', 'COORDENADOR')
-    )
-  );
+  USING (get_user_tipo_usuario() IN ('ADMIN', 'COORDENADOR'))
+  WITH CHECK (get_user_tipo_usuario() IN ('ADMIN', 'COORDENADOR'));
 
 -- Anon: pode buscar por codigo_acesso (portal público) e CPF (recepção sem JWT)
 DROP POLICY IF EXISTS "responsaveis_anon_read" ON public.responsaveis;
@@ -249,21 +248,19 @@ CREATE POLICY "ar_admin_write"
   FOR ALL
   TO authenticated
   USING (
-    EXISTS (
+    get_user_tipo_usuario() IN ('ADMIN', 'COORDENADOR')
+    AND EXISTS (
       SELECT 1 FROM public.alunos
-      JOIN public.usuarios ON usuarios.id = auth.uid()
       WHERE alunos.id = alunos_responsaveis.aluno_id
-        AND alunos.escola_id = usuarios.escola_id
-        AND usuarios.tipo_usuario IN ('ADMIN', 'COORDENADOR')
+        AND alunos.escola_id = get_user_escola_id()
     )
   )
   WITH CHECK (
-    EXISTS (
+    get_user_tipo_usuario() IN ('ADMIN', 'COORDENADOR')
+    AND EXISTS (
       SELECT 1 FROM public.alunos
-      JOIN public.usuarios ON usuarios.id = auth.uid()
       WHERE alunos.id = alunos_responsaveis.aluno_id
-        AND alunos.escola_id = usuarios.escola_id
-        AND usuarios.tipo_usuario IN ('ADMIN', 'COORDENADOR')
+        AND alunos.escola_id = get_user_escola_id()
     )
   );
 
