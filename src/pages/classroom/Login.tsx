@@ -230,13 +230,13 @@ export default function ClassroomLogin() {
                                 marginBottom: 6, textTransform: 'uppercase',
                                 fontStyle: 'italic', letterSpacing: 1,
                             }}>
-                                Portal do Professor
+                                Portal SCT
                             </h2>
                             <p style={{
                                 fontSize: 11, color: TEXT_MUTED,
                                 textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
                             }}>
-                                • Ambiente de Gestão de Sala
+                                • Ambiente de Liberação
                             </p>
                         </div>
 
