@@ -68,7 +68,7 @@ export default function TotemHome() {
         d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
     const methods = [
-        { icon: Search, label: 'Buscar por Nome',   num: '1', accent: CYAN,   glow: 'rgba(71,184,255,0.22)'   },
+        { icon: Search, label: 'Busca por CPF',      num: '1', accent: CYAN,   glow: 'rgba(71,184,255,0.22)'   },
         { icon: Hash,   label: 'Código de Acesso',  num: '2', accent: GOLD,   glow: 'rgba(199,158,97,0.22)'  },
         { icon: QrCode, label: 'Escanear QR Code',  num: '3', accent: PURPLE, glow: 'rgba(167,139,250,0.22)' },
     ];
