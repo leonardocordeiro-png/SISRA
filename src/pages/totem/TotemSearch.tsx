@@ -1,10 +1,54 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User as UserIcon, Search as SearchIcon, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Search as SearchIcon, ChevronRight, Loader2, Settings, Wifi } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useInactivityTimer } from '../../components/totem/InactivityTimer';
 import TotemNumericPad from '../../components/totem/TotemNumericPad';
 import type { Student } from '../../types';
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const GOLD       = '#c79e61';
+const CYAN       = '#47b8ff';
+const GREEN      = '#34d399';
+const TEXT_MUTED = '#8491A2';
+const GLASS_BG   = 'rgba(17,24,43,0.65)';
+
+function GlassPanel({
+    children,
+    className,
+    outerStyle,
+    innerStyle,
+}: {
+    children: React.ReactNode;
+    className?: string;
+    outerStyle?: React.CSSProperties;
+    innerStyle?: React.CSSProperties;
+}) {
+    return (
+        <div
+            className={className}
+            style={{
+                background: 'linear-gradient(135deg, rgba(71,184,255,0.32) 0%, rgba(199,158,97,0.32) 100%)',
+                padding: 2,
+                borderRadius: 14,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                ...outerStyle,
+            }}
+        >
+            <div style={{
+                background: GLASS_BG,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 12,
+                height: '100%',
+                boxShadow: 'inset 0 0 12px rgba(255,255,255,0.015)',
+                ...innerStyle,
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 export default function TotemSearch() {
     const navigate = useNavigate();
@@ -103,59 +147,157 @@ export default function TotemSearch() {
     };
 
     return (
-        <div className="w-screen h-screen bg-[#020617] text-white overflow-hidden relative flex flex-col">
-            {/* Ambient */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-15%] left-[-5%] w-[55%] h-[70%] bg-emerald-500/[0.05] blur-[140px] rounded-full" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:48px_48px]" />
-            </div>
+        <div style={{
+            width: '100vw', height: '100vh',
+            background: '#070a13',
+            color: '#fff',
+            overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            position: 'relative',
+        }}>
+            {/* Scoped styles */}
+            <style>{`
+                .ts-bg {
+                    background-image:
+                        radial-gradient(circle at 10% 10%, #1a2540 0%, transparent 40%),
+                        radial-gradient(circle at 90% 90%, #0d121f 0%, transparent 40%),
+                        repeating-linear-gradient(
+                            rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px,
+                            transparent 1px, transparent 15px
+                        );
+                    background-size: 100% 100%, 100% 100%, 15px 15px;
+                }
+                .ts-back-btn {
+                    display: flex; align-items: center; gap: 10px;
+                    padding: 10px 18px;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 10px; cursor: pointer;
+                    color: ${TEXT_MUTED}; font-size: 13px; font-weight: 700;
+                    text-transform: uppercase; letter-spacing: 1px;
+                    transition: all 0.2s ease; font-family: inherit;
+                }
+                .ts-back-btn:hover { background: rgba(71,184,255,0.08); color: #fff; }
+                .ts-student-card {
+                    width: 100%; display: flex; align-items: center; gap: 16px;
+                    padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.07);
+                    background: rgba(17,24,43,0.5); cursor: pointer;
+                    transition: all 0.2s ease; text-align: left; font-family: inherit;
+                }
+                .ts-student-card:hover { background: rgba(71,184,255,0.06); border-color: rgba(71,184,255,0.25); }
+                .ts-student-card.selected { background: rgba(71,184,255,0.1); border-color: rgba(71,184,255,0.5); }
+                .ts-action-btn {
+                    display: flex; align-items: center; gap: 14px;
+                    padding: 20px 36px; border-radius: 16px; cursor: pointer;
+                    font-size: 18px; font-weight: 800; text-transform: uppercase;
+                    letter-spacing: 2px; border: none; font-family: inherit;
+                    background: ${CYAN}; color: #07111e;
+                    box-shadow: 0 12px 40px rgba(71,184,255,0.35);
+                    transition: all 0.2s ease;
+                }
+                .ts-action-btn:hover { background: #6dcaff; }
+                .ts-action-btn:active { transform: scale(0.97); }
+                @media (max-width: 768px) {
+                    .ts-main { flex-direction: column !important; }
+                    .ts-left { width: 100% !important; min-width: unset !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.06) !important; }
+                }
+            `}</style>
 
-            {/* Header */}
-            <div className="relative z-10 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3 md:py-5 border-b border-white/5">
-                <button
-                    onClick={() => navigate('/totem/identificar')}
-                    className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95 text-slate-400 hover:text-white"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                    <span className="text-sm font-black uppercase tracking-widest">Voltar</span>
-                </button>
-                <div className="text-center">
-                    <h1 className="text-lg sm:text-xl md:text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
-                        <div className="w-1.5 h-7 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
-                        Buscar Estudantes
-                    </h1>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
-                        Digite o CPF do responsável para localizar os alunos
-                    </p>
-                </div>
-                <div className="w-32 flex justify-end">
-                    {selectedStudents.length > 0 && (
-                        <div className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl font-black text-xs animate-bounce">
-                            {selectedStudents.length} SELECIONADO{selectedStudents.length > 1 ? 'S' : ''}
+            {/* Background */}
+            <div className="ts-bg" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+
+            {/* ── HEADER ──────────────────────────────────────────────────────── */}
+            <header style={{
+                position: 'relative', zIndex: 2,
+                padding: '14px 28px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', gap: 16,
+            }}>
+                {/* Left: back + title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                    <button
+                        className="ts-back-btn"
+                        onClick={() => navigate('/totem/identificar')}
+                    >
+                        <ArrowLeft style={{ width: 16, height: 16 }} />
+                        Voltar
+                    </button>
+
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: 18 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 2 }}>
+                            A La Salle, Cheguei! — Totem
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                                width: 4, height: 22, borderRadius: 2,
+                                background: CYAN,
+                                boxShadow: `0 0 8px rgba(71,184,255,0.6)`,
+                            }} />
+                            <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                Buscar Estudantes
+                            </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500, marginTop: 2 }}>
+                            Digite o CPF do responsável para localizar os alunos
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: selected badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {selectedStudents.length > 0 && (
+                        <GlassPanel outerStyle={{ boxShadow: `0 4px 16px rgba(71,184,255,0.25)` }}>
+                            <div style={{
+                                padding: '8px 18px',
+                                fontSize: 12, fontWeight: 800,
+                                color: CYAN, textTransform: 'uppercase', letterSpacing: 1,
+                            }}>
+                                {selectedStudents.length} selecionado{selectedStudents.length > 1 ? 's' : ''}
+                            </div>
+                        </GlassPanel>
                     )}
                 </div>
-            </div>
+            </header>
 
-            {/* Main: LEFT keyboard | RIGHT results */}
-            <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-0 overflow-hidden">
-
-                {/* Left: search input + keyboard */}
+            {/* ── MAIN: LEFT keyboard | RIGHT results ─────────────────────────── */}
+            <div
+                className="ts-main"
+                style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', overflow: 'hidden' }}
+            >
+                {/* LEFT: input display + keypad */}
                 <form
-                    className="flex flex-col w-full md:w-[45%] md:min-w-[400px] flex-shrink-0 px-4 sm:px-6 md:px-8 py-4 md:py-8 border-r border-white/5 gap-6"
+                    className="ts-left"
+                    style={{
+                        display: 'flex', flexDirection: 'column',
+                        width: '45%', minWidth: 400, flexShrink: 0,
+                        padding: '20px 24px',
+                        borderRight: '1px solid rgba(255,255,255,0.06)',
+                        gap: 16,
+                    }}
                     autoComplete="off"
                     onSubmit={e => e.preventDefault()}
                 >
-                    {/* Display */}
-                    <div className="bg-white/[0.04] border-2 border-white/10 rounded-3xl px-8 py-5 flex items-center gap-4 min-h-[80px]">
-                        <SearchIcon className="w-7 h-7 text-emerald-500 shrink-0" />
-                        <span className={`text-xl font-black tracking-tight text-white flex-1 line-clamp-2 ${!query && 'opacity-30'}`}>
-                            {query || 'Digite os 11 números do CPF...'}
-                        </span>
-                        {loading && <Loader2 className="w-6 h-6 text-emerald-500 animate-spin shrink-0" />}
-                    </div>
+                    {/* CPF Display */}
+                    <GlassPanel outerStyle={{ boxShadow: `0 4px 20px rgba(71,184,255,0.12)` }}>
+                        <div style={{
+                            padding: '18px 24px',
+                            display: 'flex', alignItems: 'center', gap: 14,
+                            minHeight: 72,
+                        }}>
+                            <SearchIcon style={{ width: 24, height: 24, color: CYAN, flexShrink: 0, filter: `drop-shadow(0 0 6px rgba(71,184,255,0.5))` }} />
+                            <span style={{
+                                fontSize: 18, fontWeight: 800, color: query ? '#fff' : `${TEXT_MUTED}60`,
+                                flex: 1, letterSpacing: 1,
+                            }}>
+                                {query || 'Digite os 11 números do CPF...'}
+                            </span>
+                            {loading && <Loader2 style={{ width: 22, height: 22, color: CYAN, flexShrink: 0 }} className="animate-spin" />}
+                        </div>
+                    </GlassPanel>
 
-                    {/* Keyboard */}
+                    {/* Numeric keypad */}
                     <TotemNumericPad
                         value={query}
                         onChange={setQuery}
@@ -163,76 +305,129 @@ export default function TotemSearch() {
                     />
                 </form>
 
-                {/* Right: results */}
-                <div className="flex-1 flex flex-col px-4 sm:px-6 md:px-10 py-4 md:py-8 gap-4 overflow-y-auto pb-60">
+                {/* RIGHT: results */}
+                <div style={{
+                    flex: 1, display: 'flex', flexDirection: 'column',
+                    padding: '20px 24px',
+                    gap: 12,
+                    overflowY: 'auto',
+                    paddingBottom: 120,
+                }}>
+                    {/* Empty state */}
                     {results.length === 0 && query.trim().length < 2 && selectedStudents.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
-                            <div className="w-24 h-24 bg-white/[0.04] border border-white/10 rounded-[2rem] flex items-center justify-center">
-                                <UserIcon className="w-12 h-12 text-slate-700" />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, textAlign: 'center' }}>
+                            <div style={{
+                                width: 88, height: 88, borderRadius: 24,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                display: 'grid', placeItems: 'center',
+                            }}>
+                                <UserIcon style={{ width: 40, height: 40, color: 'rgba(255,255,255,0.12)' }} />
                             </div>
                             <div>
-                                <p className="text-white/30 text-lg font-black uppercase italic tracking-tight">Digite para buscar</p>
-                                <p className="text-slate-700 text-xs font-bold uppercase tracking-widest mt-2">
+                                <p style={{ fontSize: 17, fontWeight: 800, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', fontStyle: 'italic' }}>
+                                    Digite para buscar
+                                </p>
+                                <p style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, marginTop: 8 }}>
                                     Insira os 11 dígitos do CPF
                                 </p>
                             </div>
                         </div>
                     )}
 
+                    {/* No results */}
                     {results.length === 0 && query.trim().length >= 2 && !loading && (
-                        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
-                            <p className="text-white/40 text-xl font-black uppercase italic">Nenhum aluno encontrado</p>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <p style={{ fontSize: 18, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', fontStyle: 'italic' }}>
+                                Nenhum aluno encontrado
+                            </p>
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-3">
-                        {results.map(student => {
-                            const isSelected = selectedStudents.some(s => s.id === student.id);
-                            return (
-                                <button
-                                    key={student.id}
-                                    onClick={() => toggleStudent(student)}
-                                    className={`w-full flex items-center gap-5 p-5 rounded-[1.5rem] border-2 transition-all duration-200 active:scale-98 group text-left
-                                        ${isSelected
-                                            ? 'bg-emerald-500/10 border-emerald-500'
-                                            : 'bg-white/[0.04] border-white/5 hover:bg-white/[0.08] hover:border-white/20'
-                                        }`}
-                                >
-                                    <div className={`w-16 h-16 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${isSelected ? 'border-emerald-500' : 'border-white/10'}`}>
-                                        {student.foto_url
-                                            ? <img src={student.foto_url} alt="" className="w-full h-full object-cover" />
-                                            : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><UserIcon className="w-8 h-8 text-slate-600" /></div>
-                                        }
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className={`text-xl font-black uppercase italic tracking-tight transition-colors ${isSelected ? 'text-emerald-400' : 'text-white'}`}>
-                                            {student.nome_completo}
-                                        </p>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <span className="text-xs font-black text-emerald-500/70 uppercase tracking-widest">{student.turma}</span>
-                                        </div>
-                                    </div>
-                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'border-white/10'}`}>
-                                        {isSelected && <ChevronRight className="w-5 h-5 text-slate-950" />}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    {/* Student cards */}
+                    {results.map(student => {
+                        const isSelected = selectedStudents.some(s => s.id === student.id);
+                        return (
+                            <button
+                                key={student.id}
+                                className={`ts-student-card${isSelected ? ' selected' : ''}`}
+                                onClick={() => toggleStudent(student)}
+                            >
+                                {/* Avatar */}
+                                <div style={{
+                                    width: 56, height: 56, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
+                                    border: `2px solid ${isSelected ? CYAN : 'rgba(255,255,255,0.1)'}`,
+                                    transition: 'border-color 0.2s ease',
+                                }}>
+                                    {student.foto_url
+                                        ? <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        : <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.05)', display: 'grid', placeItems: 'center' }}>
+                                            <UserIcon style={{ width: 28, height: 28, color: 'rgba(255,255,255,0.2)' }} />
+                                          </div>
+                                    }
+                                </div>
+
+                                {/* Info */}
+                                <div style={{ flex: 1 }}>
+                                    <p style={{ fontSize: 16, fontWeight: 800, textTransform: 'uppercase', fontStyle: 'italic', color: isSelected ? CYAN : '#fff', transition: 'color 0.2s ease' }}>
+                                        {student.nome_completo}
+                                    </p>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: `${CYAN}99`, textTransform: 'uppercase', letterSpacing: 2 }}>
+                                        {student.turma}
+                                    </span>
+                                </div>
+
+                                {/* Check circle */}
+                                <div style={{
+                                    width: 30, height: 30, borderRadius: '50%',
+                                    border: `2px solid ${isSelected ? CYAN : 'rgba(255,255,255,0.1)'}`,
+                                    background: isSelected ? CYAN : 'transparent',
+                                    display: 'grid', placeItems: 'center',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: isSelected ? `0 0 10px rgba(71,184,255,0.5)` : 'none',
+                                    flexShrink: 0,
+                                }}>
+                                    {isSelected && <ChevronRight style={{ width: 16, height: 16, color: '#07111e' }} />}
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {/* Fixed Action Button - Positioned to the right to avoid keypad overlap */}
+                {/* Fixed Action Button */}
                 {selectedStudents.length > 0 && (
-                    <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-12 md:right-12 z-50 pointer-events-none">
-                        <button
-                            onClick={handleNext}
-                            className="pointer-events-auto px-6 py-4 sm:px-8 sm:py-6 md:px-12 md:py-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-[2.5rem] font-black text-xl sm:text-2xl md:text-3xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_30px_60px_rgba(16,185,129,0.4)] flex items-center gap-6 border-4 border-[#020617]"
-                        >
-                            <SearchIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" /> CHAMAR AGORA ({selectedStudents.length}) <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
+                    <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 50 }}>
+                        <button className="ts-action-btn" onClick={handleNext}>
+                            <SearchIcon style={{ width: 22, height: 22 }} />
+                            CHAMAR AGORA ({selectedStudents.length})
+                            <ChevronRight style={{ width: 22, height: 22 }} />
                         </button>
                     </div>
                 )}
             </div>
+
+            {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+            <footer style={{
+                position: 'relative', zIndex: 2,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 28px',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                fontSize: 11, color: TEXT_MUTED,
+                textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Settings style={{ width: 13, height: 13, color: GOLD }} />
+                    <span>Tela do Totem — SISRA</span>
+                </div>
+                <span style={{ color: `${TEXT_MUTED}70`, fontSize: 10 }}>
+                    Terminal retornará ao início automaticamente em caso de inatividade
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Wifi style={{ width: 13, height: 13, color: GOLD }} />
+                    <span>Status do Link:</span>
+                    <span style={{ color: GREEN }}>Estável</span>
+                </div>
+            </footer>
         </div>
     );
 }
