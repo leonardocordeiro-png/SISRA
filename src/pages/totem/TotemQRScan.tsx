@@ -77,7 +77,7 @@ export default function TotemQRScan() {
 
         const startCamera = async () => {
             try {
-                // ── Permission pre-check (avoids showing a blocked camera) ────────
+                // ── Permission pre-check (skip getUserMedia if already denied) ─────
                 if ('permissions' in navigator) {
                     try {
                         const perm = await navigator.permissions.query({ name: 'camera' as PermissionName });
@@ -86,30 +86,55 @@ export default function TotemQRScan() {
                             return;
                         }
                     } catch {
-                        // Permissions API not supported on this browser — proceed normally
+                        // Permissions API not supported — proceed normally
                     }
                 }
 
                 // ── Request camera stream ──────────────────────────────────────────
+                // Use string form of facingMode for maximum device compatibility
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: { ideal: 'environment' },
+                        facingMode: 'environment',
                         width:  { ideal: 1280 },
                         height: { ideal: 720 },
                     }
                 });
 
-                // Mark on this device that camera was granted (persists across sessions)
+                // Mark that camera was granted on this device (persists across sessions)
                 try { localStorage.setItem(CAM_GRANTED_KEY, '1'); } catch {}
 
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    await videoRef.current.play().catch(() => {}); // some browsers need explicit play
-                    videoRef.current.onloadeddata = () => {
-                        setCameraReady(true);
-                        animId = requestAnimationFrame(scan);
-                    };
-                }
+                if (!videoRef.current) return;
+                const video = videoRef.current;
+                video.srcObject = stream;
+
+                // ── Register ALL listeners BEFORE play() ──────────────────────────
+                // Critical: loadeddata / canplay / playing may fire during or before
+                // the play() promise resolves on many mobile/kiosk browsers.
+                let started = false;
+                const markReady = () => {
+                    if (started) return;
+                    started = true;
+                    setCameraReady(true);
+                    animId = requestAnimationFrame(scan);
+                };
+
+                // Multiple events for cross-browser compatibility
+                video.addEventListener('loadeddata', markReady, { once: true });
+                video.addEventListener('canplay',    markReady, { once: true });
+                video.addEventListener('playing',    markReady, { once: true });
+
+                // Safety net: if none of the events fire within 4 s but the video
+                // has data (readyState ≥ 2), start scanning anyway
+                const safetyTimer = setTimeout(() => {
+                    if (!started) markReady();
+                }, 4000);
+
+                video.play().catch(() => {
+                    // Autoplay blocked — clear the timer and show error
+                    clearTimeout(safetyTimer);
+                    if (!started) setError('Reprodução automática bloqueada. Recarregue a página.');
+                });
+
             } catch (err: any) {
                 if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
                     setError('Acesso à câmera foi negado. Acesse as configurações do navegador para liberar a câmera.');
