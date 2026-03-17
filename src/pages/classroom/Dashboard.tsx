@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
     Bell, Clock, LogOut, Check, X, User as UserIcon,
     Volume2, VolumeX, Send, AlertTriangle, MessageSquare,
-    ChevronRight, School, Loader2, ArrowLeft, Home,
+    ChevronRight, School, Loader2, ArrowLeft, Home, MapPin,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PriorityPipeline from '../../components/classroom/PriorityPipeline';
@@ -541,9 +541,9 @@ export default function ClassroomDashboard() {
                                                 <span style={{ fontSize: 12, fontWeight: 600, color: '#f59e0b' }}>Responsável próximo</span>
                                             </div>
                                         ) : (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${D.borderLight}`, borderRadius: 10 }}>
-                                                <Clock size={12} style={{ color: D.textMuted }} />
-                                                <span style={{ fontSize: 12, fontWeight: 500, color: D.textMuted }}>Em deslocamento</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10 }}>
+                                                <MapPin size={12} style={{ color: '#fbbf24' }} />
+                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#fbbf24' }}>Em deslocamento</span>
                                             </div>
                                         )}
                                     </div>
