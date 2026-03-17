@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Clock, Play, CheckCircle, AlertTriangle, Loader2, RefreshCw, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 import { logAudit } from '../../lib/audit';
@@ -35,6 +36,7 @@ interface Student {
 }
 
 export default function MassScheduleUpdate() {
+    const { escolaId } = useAuth();
     const navigate = useNavigate();
     const toast = useToast();
 
@@ -63,10 +65,12 @@ export default function MassScheduleUpdate() {
         setDone(false);
         setResults(null);
 
-        const { data, error } = await supabase
+        let studentsQuery = supabase
             .from('alunos')
             .select('id, nome_completo, turma, config_seguranca')
             .order('nome_completo');
+        if (escolaId) studentsQuery = studentsQuery.eq('escola_id', escolaId);
+        const { data, error } = await studentsQuery;
 
         if (error) {
             toast.error('Erro ao carregar alunos', error.message);

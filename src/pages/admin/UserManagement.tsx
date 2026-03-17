@@ -73,7 +73,7 @@ function ConfirmModal({
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function UserManagement() {
     const toast = useToast();
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, escolaId } = useAuth();
 
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -160,7 +160,7 @@ export default function UserManagement() {
                 if (authError) throw authError;
                 if (!authData.user) throw new Error('Falha ao criar usuário no Auth');
 
-                const escola_id = import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259';
+                const escola_id = escolaId ?? import.meta.env.VITE_ESCOLA_ID ?? 'e6328325-1845-420a-b333-87a747953259';
                 const { error: profileError } = await supabase.from('usuarios').insert({
                     id: authData.user.id,
                     escola_id,
@@ -243,7 +243,7 @@ export default function UserManagement() {
 
             if (error) throw error;
 
-            await logAudit('EXCLUSAO_ESTUDANTE', 'usuarios', deleteTarget.id, {
+            await logAudit('EXCLUSAO_USUARIO', 'usuarios', deleteTarget.id, {
                 acao: 'EXCLUSAO_USUARIO',
                 nome: deleteTarget.nome,
                 email: deleteTarget.email,

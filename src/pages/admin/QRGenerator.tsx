@@ -290,9 +290,12 @@ export default function AdminQRGenerator() {
 
         setUploadingPhoto(true);
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${selectedGuardian.id} -${Math.random()}.${fileExt} `;
-            const filePath = `avatars / ${fileName} `;
+            const fileExt = file.name.split('.').pop() || 'jpg';
+            const randBuf = new Uint8Array(8);
+            crypto.getRandomValues(randBuf);
+            const randHex = Array.from(randBuf, b => b.toString(16).padStart(2, '0')).join('');
+            const fileName = `${selectedGuardian.id}-${randHex}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('responsaveis')

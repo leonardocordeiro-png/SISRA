@@ -8,9 +8,11 @@ import { supabase } from '../../lib/supabase';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 import { fileToDataUrl } from '../../lib/imageUtils';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SystemSettings() {
     const toast = useToast();
+    const { escolaId } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [activeTab, setActiveTab] = useState('general');
     const [saving, setSaving] = useState(false);
@@ -41,7 +43,7 @@ export default function SystemSettings() {
         }
     });
 
-    const escola_id = 'e6328325-1845-420a-b333-87a747953259';
+    const escola_id = escolaId ?? (import.meta.env.VITE_ESCOLA_ID as string | undefined) ?? 'e6328325-1845-420a-b333-87a747953259';
 
     useEffect(() => {
         fetchSettings();

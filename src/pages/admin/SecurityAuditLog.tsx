@@ -9,6 +9,7 @@ import {
     Users, Eye, XCircle, Calendar
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ function exportToCSV(logs: AuditLog[], tabLabel: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SecurityAuditLog() {
+    const { escolaId } = useAuth();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -204,6 +206,8 @@ export default function SecurityAuditLog() {
             let query = supabase
                 .from('logs_auditoria')
                 .select('*, usuario:usuarios(nome, email)', { count: 'exact' });
+
+            if (escolaId) query = query.eq('escola_id', escolaId);
 
             const tabActions = TAB_FILTERS[activeTab];
             if (tabActions.length > 0) {
@@ -243,7 +247,7 @@ export default function SecurityAuditLog() {
             setLoading(false);
             setIsRefreshing(false);
         }
-    }, [activeTab, searchTerm, currentPage, pageSize, dateFrom, dateTo]);
+    }, [activeTab, searchTerm, currentPage, pageSize, dateFrom, dateTo, escolaId]);
 
     const fetchTabCounts = useCallback(async () => {
         try {
@@ -252,16 +256,18 @@ export default function SecurityAuditLog() {
                 TABS.filter(t => t.id !== 'all').map(async tab => {
                     const actions = TAB_FILTERS[tab.id];
                     if (actions.length === 0) return;
-                    const { count } = await supabase
+                    let cq = supabase
                         .from('logs_auditoria')
                         .select('id', { count: 'exact', head: true })
                         .in('acao', actions);
+                    if (escolaId) cq = cq.eq('escola_id', escolaId);
+                    const { count } = await cq;
                     results[tab.id] = count || 0;
                 })
             );
             setTabCounts(results);
         } catch { /* silent */ }
-    }, []);
+    }, [escolaId]);
 
     useEffect(() => { fetchLogs(); }, [fetchLogs]);
     useEffect(() => { fetchTabCounts(); }, [fetchTabCounts]);
