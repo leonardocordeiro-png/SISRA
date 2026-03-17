@@ -16,6 +16,7 @@ export default function AdminQRGenerator() {
     const [selectedGuardian, setSelectedGuardian] = useState<Guardian | null>(null);
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
     const qrCode = useRef<QRCodeStyling | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -187,7 +188,7 @@ export default function AdminQRGenerator() {
     const handleDownload = async () => {
         const cardElement = document.getElementById('qr-card-printable');
         if (cardElement && selectedGuardian) {
-            setGenerating(true);
+            setDownloading(true);
             try {
                 // Ensure QR code is appended
                 if (qrRef.current && qrRef.current.innerHTML === '' && qrCode.current) {
@@ -278,7 +279,7 @@ export default function AdminQRGenerator() {
                 document.getElementById('qr-capture-override')?.remove();
                 toast.error('Erro ao gerar imagem', 'Tente novamente ou use a opção imprimir.');
             } finally {
-                setGenerating(false);
+                setDownloading(false);
             }
         }
     };
@@ -687,20 +688,21 @@ export default function AdminQRGenerator() {
                                 {/* Action Buttons */}
                                 <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                     <button
+                                        disabled={downloading}
                                         onClick={handleDownload}
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                                             padding: '16px 20px',
                                             background: 'rgba(255,255,255,0.04)',
                                             border: '1px solid rgba(77,166,255,0.3)',
-                                            borderRadius: 14, cursor: 'pointer',
-                                            color: '#4da6ff',
+                                            borderRadius: 14, cursor: downloading ? 'not-allowed' : 'pointer',
+                                            color: '#4da6ff', opacity: downloading ? 0.6 : 1,
                                             fontFamily: "'Roboto Mono', monospace",
                                             fontSize: 11, fontWeight: 700, letterSpacing: 2,
                                             textTransform: 'uppercase', transition: 'all 0.15s ease'
                                         }}
                                     >
-                                        <Download size={16} /> Baixar PNG
+                                        {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} {downloading ? 'Gerando...' : 'Baixar PNG'}
                                     </button>
                                     <button
                                         onClick={handlePrint}
