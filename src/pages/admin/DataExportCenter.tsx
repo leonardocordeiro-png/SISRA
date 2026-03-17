@@ -60,7 +60,7 @@ export default function DataExportCenter() {
             name,
             type,
             rows,
-            format: 'CSV',
+            format: 'CSV' as const,
             date: new Date().toLocaleString('pt-BR'),
         }, ...prev].slice(0, 10));
     };
