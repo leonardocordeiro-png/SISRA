@@ -174,6 +174,7 @@ export default function AdminDashboard() {
         dailyPickups:  0,
         avgWaitTime:   0,
     });
+    const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 80);
@@ -182,19 +183,62 @@ export default function AdminDashboard() {
 
     async function fetchStats() {
         try {
-            const [studentsRes, activeRes, finishedRes] = await Promise.all([
-                supabase.from('alunos').select('*', { count: 'exact', head: true }),
-                supabase.from('solicitacoes_retirada').select('*', { count: 'exact', head: true })
-                    .neq('status', 'ENTREGUE').neq('status', 'CANCELADO'),
-                supabase.from('solicitacoes_retirada').select('*', { count: 'exact', head: true })
-                    .eq('status', 'ENTREGUE')
-                    .gte('horario_confirmacao', new Date().toISOString().split('T')[0]),
+            const escolaId = import.meta.env.VITE_ESCOLA_ID as string | undefined;
+            const today    = new Date().toISOString().split('T')[0];
+
+            // Measure Supabase round-trip latency
+            const t0 = Date.now();
+
+            const [studentsRes, activeRes, finishedRes, timesRes] = await Promise.all([
+                // Total students — scoped to this school
+                (() => {
+                    const q = supabase.from('alunos').select('*', { count: 'exact', head: true });
+                    return escolaId ? q.eq('escola_id', escolaId) : q;
+                })(),
+                // Active pickups today (not yet concluded or cancelled)
+                (() => {
+                    const q = supabase.from('solicitacoes_retirada')
+                        .select('*', { count: 'exact', head: true })
+                        .not('status', 'in', '("CONCLUIDO","CANCELADO")')
+                        .gte('horario_solicitacao', `${today}T00:00:00`);
+                    return escolaId ? q.eq('escola_id', escolaId) : q;
+                })(),
+                // Concluded pickups today
+                (() => {
+                    const q = supabase.from('solicitacoes_retirada')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('status', 'CONCLUIDO')
+                        .gte('horario_confirmacao', `${today}T00:00:00`);
+                    return escolaId ? q.eq('escola_id', escolaId) : q;
+                })(),
+                // Timestamps of concluded pickups today — to calculate real avg wait time
+                (() => {
+                    const q = supabase.from('solicitacoes_retirada')
+                        .select('horario_solicitacao, horario_confirmacao')
+                        .eq('status', 'CONCLUIDO')
+                        .gte('horario_confirmacao', `${today}T00:00:00`)
+                        .not('horario_confirmacao', 'is', null);
+                    return escolaId ? q.eq('escola_id', escolaId) : q;
+                })(),
             ]);
+
+            setLatencyMs(Date.now() - t0);
+
+            // Calculate real average wait time in minutes
+            const times = (timesRes.data ?? []) as { horario_solicitacao: string; horario_confirmacao: string }[];
+            let avgWaitTime = 0;
+            if (times.length > 0) {
+                const totalMs = times.reduce((sum, r) => {
+                    return sum + (new Date(r.horario_confirmacao).getTime() - new Date(r.horario_solicitacao).getTime());
+                }, 0);
+                avgWaitTime = Math.round(totalMs / times.length / 60000);
+            }
+
             setStats({
-                totalStudents: studentsRes.count  || 0,
-                activePickups: activeRes.count    || 0,
-                dailyPickups:  finishedRes.count  || 0,
-                avgWaitTime:   8,
+                totalStudents: studentsRes.count ?? 0,
+                activePickups: activeRes.count   ?? 0,
+                dailyPickups:  finishedRes.count ?? 0,
+                avgWaitTime,
             });
         } catch (err) {
             console.error('fetchStats:', err);
@@ -278,7 +322,7 @@ export default function AdminDashboard() {
                         width: 8, height: 8, borderRadius: '50%', background: D.green,
                         animation: 'adm-pulse 1.5s infinite',
                     }} />
-                    <span>Uptime 98.4% · 14ms</span>
+                    <span>Supabase · {latencyMs !== null ? `${latencyMs}ms` : '—'}</span>
                 </div>
             </aside>
 
