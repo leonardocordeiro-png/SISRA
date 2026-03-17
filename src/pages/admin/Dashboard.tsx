@@ -522,7 +522,7 @@ export default function AdminDashboard() {
                 }}>
                     {[
                         { icon: FileText,   label: 'Histórico',    path: '/admin/historico-retiradas' },
-                        { icon: UserCheck,  label: 'Funcionários', path: '/admin/funcionarios' },
+                        { icon: UserCheck,  label: 'Funcionários', path: '/admin/staff' },
                         { icon: TrendingUp, label: 'Relatórios',   path: '/admin/exportar-dados' },
                     ].map((item, i) => {
                         const [hov, setHov] = useState(false);
