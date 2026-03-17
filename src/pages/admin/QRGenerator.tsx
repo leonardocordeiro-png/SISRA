@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
-import { useAuth } from '../../context/AuthContext';
 import { Search, QrCode, Download, Printer, User as UserIcon, Calendar, Smartphone, Loader2, Camera, Edit2, Check, X } from 'lucide-react';
 import QRCodeStyling from 'qr-code-styling';
 import domtoimage from 'dom-to-image-more';
@@ -12,7 +11,6 @@ import type { Guardian } from '../../types';
 
 export default function AdminQRGenerator() {
     const toast = useToast();
-    const { escolaId } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [guardians, setGuardians] = useState<Guardian[]>([]);
     const [selectedGuardian, setSelectedGuardian] = useState<Guardian | null>(null);
@@ -44,7 +42,6 @@ export default function AdminQRGenerator() {
             const safeTerm = searchTerm.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
 
             let query = supabase.from('responsaveis').select('*');
-            if (escolaId) query = query.eq('escola_id', escolaId);
             if (isCpf) {
                 query = query.eq('cpf', cleanSearch);
             } else {
