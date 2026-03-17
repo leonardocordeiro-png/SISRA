@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
-import { Search, QrCode, Download, Printer, User as UserIcon, Calendar, Smartphone, ArrowLeft, Loader2, Camera, Edit2, Check, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Search, QrCode, Download, Printer, User as UserIcon, Calendar, Smartphone, Loader2, Camera, Edit2, Check, X } from 'lucide-react';
 import QRCodeStyling from 'qr-code-styling';
 import domtoimage from 'dom-to-image-more';
 import NavigationControls from '../../components/NavigationControls';
@@ -11,6 +12,7 @@ import type { Guardian } from '../../types';
 
 export default function AdminQRGenerator() {
     const toast = useToast();
+    const { escolaId } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [guardians, setGuardians] = useState<Guardian[]>([]);
     const [selectedGuardian, setSelectedGuardian] = useState<Guardian | null>(null);
@@ -42,6 +44,7 @@ export default function AdminQRGenerator() {
             const safeTerm = searchTerm.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
 
             let query = supabase.from('responsaveis').select('*');
+            if (escolaId) query = query.eq('escola_id', escolaId);
             if (isCpf) {
                 query = query.eq('cpf', cleanSearch);
             } else {
@@ -212,8 +215,8 @@ export default function AdminQRGenerator() {
                         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
                     }
                     /* Force everything to have transparent borders and no shadows during capture */
-                    #qr-card-printable *, 
-                    #qr-card-printable *::before, 
+                    #qr-card-printable *,
+                    #qr-card-printable *::before,
                     #qr-card-printable *::after {
                         border-color: transparent !important;
                         border-image: none !important;
@@ -283,7 +286,6 @@ export default function AdminQRGenerator() {
         }
     };
 
-
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !selectedGuardian) return;
@@ -313,6 +315,11 @@ export default function AdminQRGenerator() {
                 .eq('id', selectedGuardian.id);
 
             if (updateError) throw updateError;
+
+            logAudit('EDICAO_ESTUDANTE', 'responsaveis', selectedGuardian.id, {
+                acao: 'ATUALIZACAO_FOTO',
+                responsavel_nome: selectedGuardian.nome_completo,
+            });
 
             setSelectedGuardian({ ...selectedGuardian, foto_url: publicUrl });
             toast.success('Foto atualizada', 'A foto do responsável foi atualizada com sucesso.');
@@ -353,318 +360,405 @@ export default function AdminQRGenerator() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 sm:p-6 md:p-12 font-sans">
-            <style>
-                {`
+        <div style={{ minHeight: '100vh', background: '#050b1d', fontFamily: "'Inter', sans-serif" }}>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
                 @media print {
-                    @page {
-                        margin: 0;
-                        size: portrait;
-                    }
+                    @page { margin: 0; size: portrait; }
                     body {
                         visibility: hidden;
-                        background: white!important;
-                        -webkit - print - color - adjust: exact!important;
-                        print - color - adjust: exact!important;
+                        background: white !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-                    #qr - card - printable, #qr - card - printable * {
+                    #qr-card-printable, #qr-card-printable * {
                         visibility: visible;
-                        - webkit - print - color - adjust: exact!important;
-                    print - color - adjust: exact!important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    #qr-card-printable {
+                        position: absolute;
+                        left: 10mm;
+                        top: 10mm;
+                        width: 85mm !important;
+                        max-width: 85mm !important;
+                        height: auto !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        border-radius: 6mm !important;
+                        overflow: hidden !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #ffffff !important;
+                    }
+                    #qr-card-printable .print-header {
+                        border-radius: 6mm 6mm 0 0 !important;
+                        background-color: #0f172a !important;
+                        border: none !important;
+                        overflow: hidden !important;
+                    }
+                    #qr-card-printable .print-footer {
+                        border-radius: 0 0 6mm 6mm !important;
+                        background-color: #f1f5f9 !important;
+                        border: none !important;
+                        margin: 0 !important;
+                        padding: 3mm 5mm !important;
+                    }
+                    #qr-card-printable *, #qr-card-printable *::before, #qr-card-printable *::after {
+                        border-color: transparent !important;
+                        box-shadow: none !important;
+                    }
+                    .no-print { display: none !important; }
                 }
-                #qr - card - printable {
-                    position: absolute;
-                    left: 10mm;
-                    top: 10mm;
-                    width: 85mm!important;
-                    max - width: 85mm!important;
-                    height: auto!important;
-                    box - shadow: none!important;
-                    border: none!important;
-                    border - radius: 6mm!important;
-                    overflow: hidden!important;
-                    margin: 0!important;
-                    padding: 0!important;
-                    background: #ffffff!important;
-                }
-                /* Header: dark bg with rounded top corners */
-                #qr - card - printable.print - header {
-                    border - radius: 6mm 6mm 0 0!important;
-                    background - color: #0f172a!important;
-                    border: none!important;
-                    overflow: hidden!important;
-                }
-                /* Footer: light bg with rounded bottom corners */
-                #qr - card - printable.print - footer {
-                    border - radius: 0 0 6mm 6mm!important;
-                    background - color: #f1f5f9!important;
-                    border: none!important;
-                    margin - left: 0!important;
-                    margin - right: 0!important;
-                    margin - bottom: 0!important;
-                    padding: 3mm 5mm!important;
-                }
-                /* Force all borders transparent in print */
-                #qr - card - printable *,
-                    #qr - card - printable *:: before,
-                        #qr - card - printable *::after {
-                    border - color: transparent!important;
-                    box - shadow: none!important;
-                }
-                #qr - card - printable.p - 10 { padding: 5mm!important; }
-                #qr - card - printable.px - 10 { padding - left: 5mm!important; padding - right: 5mm!important; }
-                #qr - card - printable.py - 8 { padding - top: 4mm!important; padding - bottom: 4mm!important; }
-                #qr - card - printable.text - 2xl { font - size: 1.25rem!important; }
-                #qr - card - printable.text - 3xl { font - size: 1.5rem!important; }
-                #qr - card - printable.w - 16 { width: 12mm!important; height: 12mm!important; }
-                #qr - card - printable.h - 16 { height: 12mm!important; }
-                #qr - card - printable.w - 12 { width: 8mm!important; height: 8mm!important; }
-                #qr - card - printable.h - 12 { height: 8mm!important; }
+            `}</style>
 
-                /* Fix for info boxes (CPF, Code, Validity) */
-                #qr - card - printable.grid - cols - 3,
-                    #qr - card - printable.grid - cols - 1.sm\: grid - cols - 3 {
-                    display: grid!important;
-                    grid - template - columns: repeat(3, 1fr)!important;
-                    gap: 2mm!important;
-                }
-                #qr - card - printable.grid - cols - 3 > div,
-                    #qr - card - printable.val - box {
-                    padding: 2mm 1.5mm!important;
-                    border - radius: 4mm!important;
-                }
-                #qr - card - printable.grid - cols - 3 p: first - child,
-                    #qr - card - printable.val - box p: first - child {
-                    font - size: 8px!important;
-                    margin - bottom: 1mm!important;
-                }
-                #qr - card - printable.grid - cols - 3 p: last - child,
-                    #qr - card - printable.grid - cols - 3 .text - sm,
-                    #qr - card - printable.grid - cols - 3 .text - base,
-                    #qr - card - printable.val - box p: last - child {
-                    font - size: 10px!important;
-                    letter - spacing: normal!important;
-                }
-                    
-                    .no - print { display: none!important; }
-}
-`}
-            </style>
-
-            <div className="max-w-4xl mx-auto">
-                <div className="no-print mb-8">
+            <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
+                {/* Header */}
+                <div className="no-print" style={{ marginBottom: 36 }}>
                     <NavigationControls />
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">Gerador de Cartão QR</h1>
-                    <p className="text-slate-500 font-medium">Emita cartões de identificação para pais e responsáveis</p>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                                <div style={{
+                                    width: 40, height: 40, borderRadius: 10,
+                                    background: 'linear-gradient(135deg, rgba(77,166,255,0.2), rgba(0,230,118,0.15))',
+                                    border: '1px solid rgba(77,166,255,0.3)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <QrCode size={20} color="#4da6ff" />
+                                </div>
+                                <h1 style={{
+                                    fontFamily: "'Roboto Mono', monospace",
+                                    fontSize: 22, fontWeight: 700, letterSpacing: 2,
+                                    color: '#e2e8f0', textTransform: 'uppercase', margin: 0
+                                }}>Central de Cartões QR</h1>
+                            </div>
+                            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: 0, paddingLeft: 52 }}>
+                                Emita cartões de identificação para pais e responsáveis
+                            </p>
+                        </div>
+                        <div style={{
+                            background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.2)',
+                            borderRadius: 8, padding: '6px 14px',
+                            fontFamily: "'Roboto Mono', monospace", fontSize: 11,
+                            color: '#00e676', letterSpacing: 1
+                        }}>
+                            SISTEMA ATIVO
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Divider */}
+                <div className="no-print" style={{ height: 1, background: 'linear-gradient(90deg, rgba(77,166,255,0.3), rgba(255,215,0,0.15), transparent)', marginBottom: 36 }} />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 28, alignItems: 'start' }}>
                     {/* Left: Search & Selection */}
-                    <div className="lg:col-span-5 no-print space-y-6">
-                        <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4">Buscar Responsável</h2>
-                            <form onSubmit={handleSearch} className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Nome ou CPF..."
-                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl transition-all outline-none font-medium"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                    <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        {/* Search Panel */}
+                        <div style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,215,0,0.15)',
+                            borderRadius: 16, padding: 20,
+                            backdropFilter: 'blur(10px)'
+                        }}>
+                            <p style={{
+                                fontFamily: "'Roboto Mono', monospace",
+                                fontSize: 10, fontWeight: 700, letterSpacing: 3,
+                                color: 'rgba(255,215,0,0.6)', textTransform: 'uppercase',
+                                marginBottom: 14
+                            }}>// buscar responsável</p>
+                            <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+                                <div style={{ flex: 1, position: 'relative' }}>
+                                    <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(77,166,255,0.5)' }} size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Nome ou CPF..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{
+                                            width: '100%', paddingLeft: 40, paddingRight: 12,
+                                            paddingTop: 11, paddingBottom: 11,
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(77,166,255,0.2)',
+                                            borderRadius: 10, outline: 'none',
+                                            color: '#e2e8f0', fontSize: 13,
+                                            fontFamily: 'inherit', boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors"
+                                    style={{
+                                        padding: '11px 16px',
+                                        background: 'linear-gradient(135deg, #4da6ff, #0984e3)',
+                                        border: 'none', borderRadius: 10, cursor: 'pointer',
+                                        color: '#fff', display: 'flex', alignItems: 'center'
+                                    }}
                                 >
-                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowLeft className="w-5 h-5 rotate-180" />}
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                                 </button>
                             </form>
-                        </section>
+                        </div>
 
-                        <section className="space-y-3">
-                            {guardians.length > 0 ? (
-                                guardians.map((g) => (
+                        {/* Results */}
+                        {guardians.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {guardians.map((g) => (
                                     <button
                                         key={g.id}
                                         onClick={() => selectGuardian(g)}
-                                        className={`w - full text - left p - 4 rounded - 2xl border - 2 transition - all flex items - center justify - between group ${selectedGuardian?.id === g.id ? 'border-emerald-500 bg-emerald-50' : 'border-transparent bg-white hover:border-slate-200'} `}
+                                        style={{
+                                            width: '100%', textAlign: 'left',
+                                            padding: '14px 16px',
+                                            background: selectedGuardian?.id === g.id
+                                                ? 'rgba(0,230,118,0.08)'
+                                                : 'rgba(255,255,255,0.03)',
+                                            border: selectedGuardian?.id === g.id
+                                                ? '1px solid rgba(0,230,118,0.4)'
+                                                : '1px solid rgba(255,255,255,0.07)',
+                                            borderRadius: 12, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            transition: 'all 0.15s ease'
+                                        }}
                                     >
                                         <div>
-                                            <p className="font-bold text-slate-900 uppercase italic tracking-tight">{g.nome_completo}</p>
-                                            <p className="text-xs text-slate-500 font-medium">{g.cpf}</p>
+                                            <p style={{
+                                                color: selectedGuardian?.id === g.id ? '#00e676' : '#e2e8f0',
+                                                fontWeight: 700, fontSize: 14, marginBottom: 2,
+                                                textTransform: 'uppercase', letterSpacing: 0.5
+                                            }}>{g.nome_completo}</p>
+                                            <p style={{
+                                                fontFamily: "'Roboto Mono', monospace",
+                                                color: 'rgba(255,255,255,0.3)', fontSize: 11
+                                            }}>{g.cpf}</p>
                                         </div>
-                                        <QrCode className={`w - 5 h - 5 ${selectedGuardian?.id === g.id ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400'} `} />
+                                        <QrCode size={16} color={selectedGuardian?.id === g.id ? '#00e676' : 'rgba(255,255,255,0.2)'} />
                                     </button>
-                                ))
-                            ) : searchTerm && !loading && (
-                                <div className="text-center py-8 text-slate-400">
-                                    <p className="text-sm font-medium italic">Nenhum responsável encontrado.</p>
-                                </div>
-                            )}
-                        </section>
+                                ))}
+                            </div>
+                        )}
+
+                        {searchTerm && !loading && guardians.length === 0 && (
+                            <div style={{
+                                padding: '24px 16px', textAlign: 'center',
+                                color: 'rgba(255,255,255,0.25)', fontSize: 13, fontStyle: 'italic'
+                            }}>
+                                Nenhum responsável encontrado.
+                            </div>
+                        )}
                     </div>
 
-                    {/* Right: Preview */}
-                    <div className="lg:col-span-7">
+                    {/* Right: Card Preview */}
+                    <div>
                         {selectedGuardian ? (
-                            <div className="space-y-6">
-                                {/* The Card - Cleaned for Capture */}
-                                <div id="qr-card-printable" className="bg-white rounded-[3rem] overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {/* Printable Card */}
+                                <div
+                                    id="qr-card-printable"
+                                    style={{ backgroundColor: '#ffffff', borderRadius: '3rem', overflow: 'hidden', position: 'relative' }}
+                                >
                                     {/* Capture Loader Overlay */}
                                     {generating && (
-                                        <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300 capture-ignore">
-                                            <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Capturando Cartão...</p>
+                                        <div className="capture-ignore" style={{
+                                            position: 'absolute', inset: 0, zIndex: 50,
+                                            background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(4px)',
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12
+                                        }}>
+                                            <Loader2 size={36} color="#047857" className="animate-spin" />
+                                            <p style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 10, fontWeight: 700, color: '#0f172a', letterSpacing: 3, textTransform: 'uppercase' }}>
+                                                Capturando...
+                                            </p>
                                         </div>
                                     )}
-                                    <div className="bg-slate-900 px-10 py-8 flex items-center justify-between relative overflow-hidden print-header" style={{ backgroundColor: '#0f172a', border: 'none' }}>
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}></div>
-                                        <div className="relative z-10">
-                                            <h2 className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em] mb-1" style={{ color: '#10B981', outline: 'none', border: 'none' }}>Instituição de Ensino</h2>
-                                            <p className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none" style={{ outline: 'none', border: 'none' }}>Colégio La Salle Sobradinho</p>
+
+                                    {/* Card Header */}
+                                    <div className="print-header" style={{ background: '#0f172a', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+                                        <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, background: 'rgba(16,185,129,0.1)', borderRadius: '50%', filter: 'blur(40px)', marginRight: -48, marginTop: -48 }} />
+                                        <div style={{ position: 'relative', zIndex: 1 }}>
+                                            <h2 style={{ color: '#10B981', fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4, fontFamily: "'Roboto Mono', monospace" }}>Instituição de Ensino</h2>
+                                            <p style={{ color: '#fff', fontSize: 20, fontWeight: 900, fontStyle: 'italic', letterSpacing: -0.5, textTransform: 'uppercase', lineHeight: 1 }}>Colégio La Salle Sobradinho</p>
                                         </div>
-                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                            <QrCode className="w-6 h-6 text-white" />
+                                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <QrCode size={22} color="#fff" />
                                         </div>
                                     </div>
 
-                                    <div className="p-10 space-y-8 text-center">
-                                        <div className="flex justify-center items-center gap-6 py-2">
+                                    {/* Card Body */}
+                                    <div style={{ padding: '32px 36px', display: 'flex', flexDirection: 'column', gap: 24, textAlign: 'center', background: '#ffffff' }}>
+                                        {/* QR Code */}
+                                        <div style={{ display: 'flex', justifyContent: 'center' }}>
                                             <div ref={qrRef} />
                                         </div>
 
-                                        <div className="space-y-6">
-                                            <div className="flex items-center gap-6">
-                                                <div
-                                                    className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center shrink-0 relative overflow-hidden cursor-pointer group/avatar"
-                                                    style={{ backgroundColor: '#f1f5f9' }}
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                >
-                                                    {selectedGuardian.foto_url ? (
-                                                        <img
-                                                            src={selectedGuardian.foto_url}
-                                                            alt={selectedGuardian.nome_completo}
-                                                            className="w-full h-full object-cover"
-                                                            crossOrigin="anonymous"
-                                                        />
-                                                    ) : (
-                                                        <UserIcon className="w-8 h-8 text-slate-400" style={{ color: '#94a3b8' }} />
-                                                    )}
-                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-                                                        <Camera className="w-6 h-6 text-white" style={{ color: '#ffffff' }} />
+                                        {/* Guardian info */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left' }}>
+                                            <div
+                                                style={{ width: 56, height: 56, borderRadius: 14, background: '#f1f5f9', overflow: 'hidden', flexShrink: 0, position: 'relative', cursor: 'pointer' }}
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                {selectedGuardian.foto_url ? (
+                                                    <img src={selectedGuardian.foto_url} alt={selectedGuardian.nome_completo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
+                                                ) : (
+                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <UserIcon size={24} color="#94a3b8" />
                                                     </div>
-                                                    {uploadingPhoto && (
-                                                        <div className="absolute inset-0 bg-white/80 flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.8)' }}>
-                                                            <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" style={{ color: '#10B981' }} />
-                                                        </div>
-                                                    )}
+                                                )}
+                                                <div className="no-print" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }}
+                                                    onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                                                    onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
+                                                >
+                                                    <Camera size={18} color="#fff" />
                                                 </div>
-                                                <input
-                                                    type="file"
-                                                    ref={fileInputRef}
-                                                    onChange={handlePhotoUpload}
-                                                    className="hidden"
-                                                    accept="image/*"
-                                                />
-                                                <div className="text-left">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>Nome do Responsável</p>
-                                                    <p className="text-xl md:text-2xl font-black text-slate-900 uppercase italic tracking-tighter break-words leading-tight" style={{ color: '#0f172a' }}>{selectedGuardian.nome_completo}</p>
-                                                </div>
+                                                {uploadingPhoto && (
+                                                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Loader2 size={20} color="#10B981" className="animate-spin" />
+                                                    </div>
+                                                )}
                                             </div>
+                                            <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} style={{ display: 'none' }} accept="image/*" />
+                                            <div>
+                                                <p style={{ color: '#94a3b8', fontSize: 9, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4, fontFamily: "'Roboto Mono', monospace" }}>Nome do Responsável</p>
+                                                <p style={{ color: '#0f172a', fontSize: 18, fontWeight: 900, textTransform: 'uppercase', fontStyle: 'italic', letterSpacing: -0.3, lineHeight: 1.2 }}>{selectedGuardian.nome_completo}</p>
+                                            </div>
+                                        </div>
 
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="p-3 bg-slate-50 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f8fafc' }}>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none" style={{ color: '#94a3b8' }}>CPF</p>
-                                                    <p className="text-[10px] font-black text-slate-700 whitespace-nowrap" style={{ color: '#334155' }}>{selectedGuardian.cpf}</p>
-                                                </div>
-                                                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col justify-center" style={{ backgroundColor: '#f5f3ff' }}>
-                                                    <p className="text-[9px] font-black text-indigo-600/60 uppercase tracking-widest mb-1 leading-none" style={{ color: '#4f46e5' }}>Cód. Acesso</p>
-                                                    <p className="text-sm font-black text-indigo-700 tracking-widest leading-none" style={{ color: '#4338ca' }}>{selectedGuardian.codigo_acesso || '---'}</p>
-                                                </div>
-                                                <div className="p-3 bg-slate-50 rounded-2xl relative group/validity val-box flex flex-col justify-center" style={{ backgroundColor: '#f8fafc' }}>
-                                                    <p className="text-[9px] font-black text-emerald-600/50 uppercase tracking-widest mb-1 leading-none" style={{ color: 'rgba(5, 150, 105, 0.5)' }}>Validade</p>
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <div className="flex items-center gap-1 text-left">
-                                                            <Calendar className="w-3 h-3 text-emerald-500 shrink-0" style={{ color: '#10B981' }} />
-                                                            {editingValidity ? (
-                                                                <input
-                                                                    type="date"
-                                                                    className="text-xs font-black text-emerald-600 bg-transparent outline-none border-b border-emerald-500/30 w-full"
-                                                                    value={newValidityDate || (selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : '')}
-                                                                    onChange={(e) => setNewValidityDate(e.target.value)}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-[10px] font-black text-emerald-600 whitespace-nowrap">
-                                                                    {selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toLocaleDateString('pt-BR') : '--/--/----'}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <div className="no-print">
-                                                            {editingValidity ? (
-                                                                <div className="flex gap-1">
-                                                                    <button
-                                                                        onClick={handleUpdateValidity}
-                                                                        disabled={updatingValidity}
-                                                                        className="p-1 hover:bg-emerald-100 rounded-md text-emerald-600"
-                                                                    >
-                                                                        {updatingValidity ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setEditingValidity(false)}
-                                                                        className="p-1 hover:bg-rose-100 rounded-md text-rose-600"
-                                                                    >
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setEditingValidity(true);
-                                                                        setNewValidityDate(selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : '');
-                                                                    }}
-                                                                    className="p-1 opacity-0 group-hover/validity:opacity-100 hover:bg-slate-200 rounded-md text-slate-400 transition-opacity"
-                                                                >
-                                                                    <Edit2 className="w-3 h-3" />
+                                        {/* Data grid */}
+                                        <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                                            {/* CPF */}
+                                            <div className="val-box" style={{ background: '#f8fafc', borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                <p style={{ color: '#94a3b8', fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace", marginBottom: 4 }}>CPF</p>
+                                                <p style={{ color: '#334155', fontSize: 10, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", whiteSpace: 'nowrap' }}>{selectedGuardian.cpf}</p>
+                                            </div>
+                                            {/* Access Code */}
+                                            <div className="val-box" style={{ background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                <p style={{ color: '#4f46e5', fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace", marginBottom: 4 }}>Cód. Acesso</p>
+                                                <p style={{ color: '#4338ca', fontSize: 13, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", letterSpacing: 2 }}>{selectedGuardian.codigo_acesso || '---'}</p>
+                                            </div>
+                                            {/* Validity */}
+                                            <div className="val-box" style={{ background: '#f8fafc', borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+                                                <p style={{ color: 'rgba(5,150,105,0.5)', fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace", marginBottom: 4 }}>Validade</p>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <Calendar size={10} color="#10B981" />
+                                                        {editingValidity ? (
+                                                            <input
+                                                                type="date"
+                                                                style={{ fontSize: 10, fontWeight: 700, color: '#059669', background: 'transparent', outline: 'none', borderBottom: '1px solid rgba(16,185,129,0.3)', width: '100%', fontFamily: "'Roboto Mono', monospace" }}
+                                                                value={newValidityDate || (selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : '')}
+                                                                onChange={(e) => setNewValidityDate(e.target.value)}
+                                                            />
+                                                        ) : (
+                                                            <p style={{ color: '#059669', fontSize: 10, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", whiteSpace: 'nowrap' }}>
+                                                                {selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toLocaleDateString('pt-BR') : '--/--/----'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="no-print">
+                                                        {editingValidity ? (
+                                                            <div style={{ display: 'flex', gap: 2 }}>
+                                                                <button onClick={handleUpdateValidity} disabled={updatingValidity} style={{ padding: 3, borderRadius: 5, border: 'none', background: 'rgba(16,185,129,0.1)', cursor: 'pointer', color: '#059669' }}>
+                                                                    {updatingValidity ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
                                                                 </button>
-                                                            )}
-                                                        </div>
+                                                                <button onClick={() => setEditingValidity(false)} style={{ padding: 3, borderRadius: 5, border: 'none', background: 'rgba(239,68,68,0.1)', cursor: 'pointer', color: '#dc2626' }}>
+                                                                    <X size={10} />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => { setEditingValidity(true); setNewValidityDate(selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : ''); }}
+                                                                style={{ padding: 3, borderRadius: 5, border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8' }}
+                                                            >
+                                                                <Edit2 size={10} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-100 px-10 py-4 text-center -mx-10 -mb-10 mt-6 print-footer" style={{ backgroundColor: '#f1f5f9' }}>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-                                                <Smartphone className="w-3 h-3" /> Sistema de Identificação Biométrica Integrado
+                                        {/* Footer */}
+                                        <div className="print-footer" style={{ background: '#f1f5f9', marginLeft: -36, marginRight: -36, marginBottom: -32, padding: '12px 36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                            <Smartphone size={11} color="#94a3b8" />
+                                            <p style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 9, fontWeight: 700, color: '#94a3b8', letterSpacing: 2, textTransform: 'uppercase' }}>
+                                                Sistema de Identificação Biométrica Integrado
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Controls */}
-                                <div className="no-print grid grid-cols-2 gap-4">
+                                {/* Action Buttons */}
+                                <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                     <button
                                         onClick={handleDownload}
-                                        className="flex items-center justify-center gap-3 px-6 py-5 bg-white hover:bg-slate-50 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-700 transition-all border-2 border-slate-100 shadow-sm"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                            padding: '16px 20px',
+                                            background: 'rgba(255,255,255,0.04)',
+                                            border: '1px solid rgba(77,166,255,0.3)',
+                                            borderRadius: 14, cursor: 'pointer',
+                                            color: '#4da6ff',
+                                            fontFamily: "'Roboto Mono', monospace",
+                                            fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                                            textTransform: 'uppercase', transition: 'all 0.15s ease'
+                                        }}
                                     >
-                                        <Download className="w-5 h-5 text-emerald-500" /> Baixar PNG
+                                        <Download size={16} /> Baixar PNG
                                     </button>
                                     <button
                                         onClick={handlePrint}
-                                        className="flex items-center justify-center gap-3 px-6 py-5 bg-slate-900 hover:bg-black rounded-2xl font-black text-[10px] uppercase tracking-widest text-white transition-all shadow-xl shadow-slate-900/20"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                            padding: '16px 20px',
+                                            background: 'linear-gradient(135deg, rgba(0,230,118,0.15), rgba(0,230,118,0.08))',
+                                            border: '1px solid rgba(0,230,118,0.4)',
+                                            borderRadius: 14, cursor: 'pointer',
+                                            color: '#00e676',
+                                            fontFamily: "'Roboto Mono', monospace",
+                                            fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                                            textTransform: 'uppercase', transition: 'all 0.15s ease'
+                                        }}
                                     >
-                                        <Printer className="w-5 h-5 text-emerald-500" /> Imprimir Agora
+                                        <Printer size={16} /> Imprimir
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-[400px] sm:h-[600px] bg-white rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-center px-10 text-slate-400">
-                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                                    <QrCode className="w-10 h-10 opacity-20" />
-                                </div>
-                                <h3 className="text-lg font-black uppercase tracking-tighter italic">Nenhum responsável selecionado</h3>
-                                <p className="text-xs font-medium max-w-xs leading-relaxed uppercase tracking-widest">Utilize a barra de pesquisa à esquerda para localizar um responsável e gerar seu cartão de acesso.</p>
+                            /* Empty state */
+                            <div style={{
+                                minHeight: 520,
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px dashed rgba(255,215,0,0.15)',
+                                borderRadius: 24,
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                gap: 16, padding: 40, textAlign: 'center'
+                            }}>
+                                {generating ? (
+                                    <>
+                                        <Loader2 size={40} color="#4da6ff" className="animate-spin" />
+                                        <p style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 12, color: '#4da6ff', letterSpacing: 2, textTransform: 'uppercase' }}>Gerando cartão...</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{
+                                            width: 72, height: 72,
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,215,0,0.1)',
+                                            borderRadius: '50%',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <QrCode size={32} color="rgba(255,255,255,0.1)" />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+                                                Nenhum responsável selecionado
+                                            </h3>
+                                            <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: 12, fontFamily: "'Roboto Mono', monospace", letterSpacing: 1, maxWidth: 260, lineHeight: 1.6 }}>
+                                                Pesquise e selecione um responsável para gerar o cartão de acesso.
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
