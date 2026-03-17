@@ -56,7 +56,7 @@ export default function EmergencyAlert() {
                 .eq('id', user?.id)
                 .single();
 
-            // Create system announcement
+            // Create system announcement (persistent record)
             await supabase.from('system_announcements').insert({
                 escola_id: userData?.escola_id,
                 title: alert.title,
@@ -65,15 +65,23 @@ export default function EmergencyAlert() {
                 created_by: user?.id
             });
 
+            // Broadcast real-time alert to all connected classroom dashboards
+            if (userData?.escola_id) {
+                const broadcastChannel = supabase.channel(`emergency_alerts:${userData.escola_id}`);
+                await broadcastChannel.send({
+                    type: 'broadcast',
+                    event: 'EMERGENCY',
+                    payload: { title: alert.title, message: alert.message },
+                });
+                supabase.removeChannel(broadcastChannel);
+            }
+
             // Log audit trail
             await logAudit('MANUTENCAO', 'system_announcements', undefined, {
                 tipo: 'EMERGENCY_ALERT',
                 titulo: alert.title,
                 message: `Alerta de emergência enviado: ${alert.title}`,
             }, user?.id, userData?.escola_id);
-
-            // TODO: Send real-time notification via Supabase Realtime
-            // This would trigger push notifications to all connected clients
 
             toast.success('Alerta enviado', 'Alerta de emergência enviado com sucesso!');
             setShowModal(false);

@@ -257,7 +257,24 @@ export default function ReceptionBoard() {
     const [requests, setRequests] = useState<ActiveRequest[]>([]);
     const [completedToday, setCompletedToday] = useState(0);
     const [connected, setConnected] = useState(true);
-    const escolaId = new URLSearchParams(window.location.search).get('escola');
+    const escolaId = new URLSearchParams(window.location.search).get('escola')
+        || import.meta.env.VITE_ESCOLA_ID as string | undefined
+        || null;
+
+    // Hard block: never fetch without a school filter — prevents cross-tenant data exposure
+    if (!escolaId) {
+        return (
+            <div style={{ height: '100vh', background: '#0d131f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
+                <div style={{ textAlign: 'center', color: '#f8fafc', maxWidth: 400 }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>⚙️</div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Configuração necessária</h2>
+                    <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6 }}>
+                        Acesse o painel com o parâmetro <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: 4 }}>?escola=ID</code> na URL ou configure <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: 4 }}>VITE_ESCOLA_ID</code> no ambiente.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const fetchData = useCallback(async () => {
         try {
@@ -270,19 +287,18 @@ export default function ReceptionBoard() {
                 `)
                 .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
                 .is('horario_confirmacao', null)
-                .order('horario_solicitacao', { ascending: true });
-
-            if (escolaId) q = q.eq('escola_id', escolaId);
+                .order('horario_solicitacao', { ascending: true })
+                .eq('escola_id', escolaId);
             const { data, error } = await q;
             if (!error && data) { setRequests(data as unknown as ActiveRequest[]); setConnected(true); }
 
             const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-            let cq = supabase
+            const cq = supabase
                 .from('solicitacoes_retirada')
                 .select('*', { count: 'exact', head: true })
                 .not('horario_confirmacao', 'is', null)
-                .gte('horario_solicitacao', todayStart.toISOString());
-            if (escolaId) cq = cq.eq('escola_id', escolaId);
+                .gte('horario_solicitacao', todayStart.toISOString())
+                .eq('escola_id', escolaId);
             const { count } = await cq;
             if (count !== null) setCompletedToday(count);
         } catch {
@@ -297,7 +313,7 @@ export default function ReceptionBoard() {
             .channel('board_realtime')
             .on('postgres_changes', {
                 event: '*', schema: 'public', table: 'solicitacoes_retirada',
-                ...(escolaId ? { filter: `escola_id=eq.${escolaId}` } : {}),
+                filter: `escola_id=eq.${escolaId}`,
             }, fetchData)
             .subscribe(status => setConnected(status === 'SUBSCRIBED'));
         return () => { clearInterval(interval); supabase.removeChannel(channel); };

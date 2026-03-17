@@ -124,6 +124,7 @@ export default function ClassroomDashboard() {
     const [confirmPending, setConfirmPending] = useState<'AGUARDAR' | 'RECUSAR' | null>(null);
     const [escolaId, setEscolaId]             = useState<string | undefined>();
     const [mounted, setMounted]               = useState(false);
+    const [emergencyAlert, setEmergencyAlert] = useState<{ title: string; message: string } | null>(null);
 
     useEffect(() => {
         if (!document.getElementById('cls-montserrat')) {
@@ -162,6 +163,19 @@ export default function ClassroomDashboard() {
             }
         }
     }, [user, role]);
+
+    // Subscribe to emergency broadcasts for this school
+    useEffect(() => {
+        if (!escolaId) return;
+        const channelName = 'emergency_alerts:' + escolaId;
+        const channel = supabase
+            .channel(channelName)
+            .on('broadcast', { event: 'EMERGENCY' }, ({ payload }) => {
+                setEmergencyAlert({ title: payload.title, message: payload.message });
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [escolaId]);
 
     const playNotificationSound = () => {
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
@@ -682,6 +696,40 @@ export default function ClassroomDashboard() {
                     <RadarIdle />
                 )}
             </main>
+
+            {/* ════════════ EMERGENCY OVERLAY ════════════ */}
+            {emergencyAlert && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(180,0,20,0.92)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    animation: 'cls-bell-glow 0.8s infinite',
+                }}>
+                    <AlertTriangle size={72} color="#fff" style={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.5))' }} />
+                    <h2 style={{ fontSize: 42, fontWeight: 900, color: '#fff', marginTop: 20, textAlign: 'center', letterSpacing: '0.02em' }}>
+                        {emergencyAlert.title}
+                    </h2>
+                    <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.85)', marginTop: 12, textAlign: 'center', maxWidth: 560, lineHeight: 1.5 }}>
+                        {emergencyAlert.message}
+                    </p>
+                    <button
+                        onClick={() => setEmergencyAlert(null)}
+                        style={{
+                            marginTop: 32, padding: '14px 40px',
+                            background: 'rgba(255,255,255,0.15)',
+                            border: '2px solid rgba(255,255,255,0.6)',
+                            borderRadius: 12, color: '#fff',
+                            fontWeight: 700, fontSize: 16,
+                            cursor: 'pointer', letterSpacing: '0.06em',
+                            fontFamily: 'Montserrat, sans-serif',
+                        }}
+                    >
+                        CIENTE — DISPENSAR
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

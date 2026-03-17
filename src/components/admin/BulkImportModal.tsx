@@ -96,7 +96,12 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
 
             return {
                 nome_completo: item.nome_completo,
-                matricula: item.matricula || `MAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                matricula: item.matricula || (() => {
+                    const buf = new Uint8Array(6);
+                    crypto.getRandomValues(buf);
+                    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                    return 'MAT-' + Array.from(buf, b => chars[b % chars.length]).join('');
+                })(),
                 turma: turmaFormatada,
                 serie_display: item.serie,
                 secao_display: item.turma_secao || '',
