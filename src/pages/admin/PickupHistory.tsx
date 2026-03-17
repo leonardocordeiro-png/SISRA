@@ -46,11 +46,12 @@ const waitLabel = (secs: number | null) => {
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
 
-const STATUS_STYLE: Record<string, string> = {
-    LIBERADO: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    CONFIRMADO: 'bg-blue-50 text-blue-700 border-blue-200',
-    SOLICITADO: 'bg-amber-50 text-amber-700 border-amber-200',
-    CANCELADO: 'bg-rose-50 text-rose-700 border-rose-200',
+// Status color mapping (dark theme)
+const STATUS_COLOR: Record<string, { color: string; border: string; bg: string }> = {
+    LIBERADO:   { color: '#00e676', border: 'rgba(0,230,118,0.4)',  bg: 'rgba(0,230,118,0.08)'  },
+    CONFIRMADO: { color: '#a64dff', border: 'rgba(166,77,255,0.4)', bg: 'rgba(166,77,255,0.08)' },
+    SOLICITADO: { color: '#4da6ff', border: 'rgba(77,166,255,0.4)', bg: 'rgba(77,166,255,0.08)' },
+    CANCELADO:  { color: 'rgba(255,69,0,0.9)', border: 'rgba(255,69,0,0.4)', bg: 'rgba(255,69,0,0.08)' },
 };
 
 const STATUS_PT: Record<string, string> = {
@@ -111,18 +112,28 @@ function periodRange(
 
 // ─── Mini bar chart (SVG) ───────────────────────────────────────────────────
 
-function MiniBarChart({ data, color = '#6366f1' }: { data: { label: string; value: number }[]; color?: string }) {
+function MiniBarChart({ data, color = '#4da6ff' }: { data: { label: string; value: number }[]; color?: string }) {
     const max = Math.max(...data.map(d => d.value), 1);
     return (
-        <div className="flex items-end gap-1.5 h-20">
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px' }}>
             {data.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                    <div
-                        className="w-full rounded-t-lg transition-all duration-500"
-                        style={{ height: `${(d.value / max) * 64}px`, backgroundColor: color, opacity: 0.7 + (d.value / max) * 0.3 }}
-                    />
-                    <span className="text-[9px] text-slate-400 font-bold truncate w-full text-center">{d.label}</span>
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-10">
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', position: 'relative' }}
+                    className="group">
+                    <div style={{
+                        width: '100%',
+                        borderRadius: '3px 3px 0 0',
+                        height: `${(d.value / max) * 56}px`,
+                        backgroundColor: color,
+                        opacity: 0.4 + (d.value / max) * 0.6,
+                        transition: 'height 0.5s',
+                    }} />
+                    <span style={{ fontSize: '8px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace', whiteSpace: 'nowrap' }}>{d.label}</span>
+                    <div style={{
+                        position: 'absolute', top: '-28px', left: '50%', transform: 'translateX(-50%)',
+                        background: 'rgba(10,15,30,0.95)', color: '#e0e6ed', fontSize: '10px',
+                        padding: '2px 6px', borderRadius: '4px', pointerEvents: 'none', whiteSpace: 'nowrap',
+                        border: '1px solid rgba(77,166,255,0.3)', zIndex: 10,
+                    }} className="opacity-0 group-hover:opacity-100 transition-opacity">
                         {d.value} retirada{d.value !== 1 ? 's' : ''}
                     </div>
                 </div>
@@ -131,26 +142,61 @@ function MiniBarChart({ data, color = '#6366f1' }: { data: { label: string; valu
     );
 }
 
-// ─── Stat Card ──────────────────────────────────────────────────────────────
+// ─── Status Badge ─────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, icon: Icon, color, trend }: {
+function StatusBadge({ status }: { status: string }) {
+    const s = STATUS_COLOR[status] || { color: '#8892b0', border: 'rgba(136,146,176,0.4)', bg: 'rgba(136,146,176,0.08)' };
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '3px 10px', borderRadius: '4px',
+            border: `1px solid ${s.border}`,
+            background: s.bg,
+            color: s.color,
+            fontSize: '10px', fontFamily: 'Roboto Mono, monospace',
+            fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+            boxShadow: `0 0 6px ${s.border}`,
+        }}>
+            {STATUS_PT[status] || status}
+        </span>
+    );
+}
+
+// ─── Summary Card ─────────────────────────────────────────────────────────────
+
+function SummaryCard({ label, value, icon: Icon, glowColor, sub, trend }: {
     label: string; value: string | number; sub?: string;
-    icon: any; color: string; trend?: 'up' | 'down' | 'neutral';
+    icon: React.ComponentType<{ size?: number; color?: string }>;
+    glowColor: string; trend?: 'up' | 'down' | 'neutral';
 }) {
     const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-    const trendColor = trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-rose-500' : 'text-slate-400';
+    const trendColor = trend === 'up' ? '#00e676' : trend === 'down' ? 'rgba(255,69,0,0.9)' : '#8892b0';
     return (
-        <div className={`bg-white rounded-2xl border p-5 shadow-sm flex flex-col gap-3 ${color}`}>
-            <div className="flex items-start justify-between">
-                <div className={`p-2.5 rounded-xl ${color.replace('border-', 'bg-').replace(/\/\S+/, '/10')}`}>
-                    <Icon className="w-5 h-5" />
+        <div style={{
+            background: 'rgba(10,15,30,0.6)',
+            border: `1px solid ${glowColor}`,
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: `0 0 18px ${glowColor}`,
+            backdropFilter: 'blur(12px)',
+            display: 'flex', flexDirection: 'column', gap: '14px',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{
+                    width: 60, height: 60, borderRadius: '10px',
+                    border: `1px solid ${glowColor}`,
+                    background: 'rgba(255,255,255,0.04)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: `0 0 12px ${glowColor}`,
+                }}>
+                    <Icon size={24} color={glowColor.replace('rgba(', '').split(',').slice(0, 3).join(',').replace(',', 'rgb(') || '#4da6ff'} />
                 </div>
-                {trend && <TrendIcon className={`w-4 h-4 ${trendColor}`} />}
+                {trend && <TrendIcon size={16} color={trendColor} />}
             </div>
             <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-                <p className="text-2xl font-black text-slate-900">{value}</p>
-                {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+                <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>{label}</p>
+                <p style={{ fontSize: '28px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', animation: 'pulse 3s ease-in-out infinite' }}>{value}</p>
+                {sub && <p style={{ fontSize: '10px', color: '#8892b0', marginTop: '2px' }}>{sub}</p>}
             </div>
         </div>
     );
@@ -160,68 +206,109 @@ function StatCard({ label, value, sub, icon: Icon, color, trend }: {
 
 function RecordDetail({ record, onClose }: { record: PickupRecord; onClose: () => void }) {
     const stages = [
-        { label: 'Solicitação', time: record.horario_solicitacao, color: 'bg-slate-400' },
-        { label: 'Notificação Sala', time: record.horario_notificacao, color: 'bg-amber-400' },
-        { label: 'Chegou na Recepção', time: record.horario_confirmacao, color: 'bg-blue-500' },
-        { label: 'Liberado', time: record.horario_liberacao, color: 'bg-emerald-500' },
+        { label: 'Solicitação', time: record.horario_solicitacao, color: '#8892b0' },
+        { label: 'Notificação Sala', time: record.horario_notificacao, color: '#b0914f' },
+        { label: 'Chegou na Recepção', time: record.horario_confirmacao, color: '#a64dff' },
+        { label: 'Liberado', time: record.horario_liberacao, color: '#00e676' },
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div
+            style={{
+                position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '16px', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+            }}
+            onClick={onClose}
+        >
+            <div
+                style={{
+                    background: 'rgba(10,15,30,0.97)', border: '1px solid rgba(255,215,0,0.2)',
+                    borderRadius: '16px', width: '100%', maxWidth: '520px', overflow: 'hidden',
+                    boxShadow: '0 0 40px rgba(77,166,255,0.15)',
+                }}
+                onClick={e => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-6 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(77,166,255,0.15) 0%, rgba(166,77,255,0.15) 100%)',
+                    borderBottom: '1px solid rgba(255,215,0,0.2)',
+                    padding: '24px 32px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         {record.aluno?.foto_url ? (
-                            <img src={record.aluno.foto_url} className="w-12 h-12 rounded-xl object-cover border-2 border-white/30" alt="" />
+                            <img src={record.aluno.foto_url} style={{ width: 48, height: 48, borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,215,0,0.3)' }} alt="" />
                         ) : (
-                            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white font-black text-xl">
+                            <div style={{
+                                width: 48, height: 48, borderRadius: '8px', background: 'rgba(77,166,255,0.15)',
+                                border: '1px solid rgba(77,166,255,0.3)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#4da6ff', fontFamily: 'Roboto Mono, monospace', fontSize: '20px', fontWeight: 700,
+                            }}>
                                 {record.aluno?.nome_completo?.[0] || '?'}
                             </div>
                         )}
                         <div>
-                            <p className="text-white font-black text-base leading-tight">{record.aluno?.nome_completo}</p>
-                            <p className="text-indigo-200 text-xs">{record.aluno?.turma} · Sala {record.aluno?.sala}</p>
+                            <p style={{ color: '#e0e6ed', fontWeight: 700, fontSize: '14px', lineHeight: '1.3' }}>{record.aluno?.nome_completo}</p>
+                            <p style={{ color: '#8892b0', fontSize: '11px', fontFamily: 'Roboto Mono, monospace' }}>{record.aluno?.turma} · Sala {record.aluno?.sala}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white/70 hover:text-white">
-                        <X className="w-5 h-5" />
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px', padding: '8px', cursor: 'pointer', color: '#8892b0',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                        onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.color = '#e0e6ed'; }}
+                        onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.color = '#8892b0'; }}
+                    >
+                        <X size={18} />
                     </button>
                 </div>
 
-                <div className="p-8 space-y-6">
+                <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {/* Status */}
-                    <div className="flex items-center justify-between">
-                        <span className={`px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider ${STATUS_STYLE[record.status] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                            {STATUS_PT[record.status] || record.status}
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium">{fmtDate(record.horario_solicitacao)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <StatusBadge status={record.status} />
+                        <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{fmtDate(record.horario_solicitacao)}</span>
                     </div>
 
                     {/* Guardian */}
-                    <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-4">
+                    <div style={{
+                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.15)',
+                        borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px',
+                    }}>
                         {record.responsavel?.foto_url ? (
-                            <img src={record.responsavel.foto_url} className="w-10 h-10 rounded-xl object-cover" alt="" />
+                            <img src={record.responsavel.foto_url} style={{ width: 40, height: 40, borderRadius: '8px', objectFit: 'cover' }} alt="" />
                         ) : (
-                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
-                                <User className="w-5 h-5" />
+                            <div style={{
+                                width: 40, height: 40, borderRadius: '8px', background: 'rgba(77,166,255,0.1)',
+                                border: '1px solid rgba(77,166,255,0.3)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <User size={18} color="#4da6ff" />
                             </div>
                         )}
                         <div>
-                            <p className="text-sm font-bold text-slate-900">{record.responsavel?.nome_completo || '—'}</p>
-                            <p className="text-xs text-slate-400">CPF: {record.responsavel?.cpf || '—'}</p>
+                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#e0e6ed' }}>{record.responsavel?.nome_completo || '—'}</p>
+                            <p style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>CPF: {record.responsavel?.cpf || '—'}</p>
                         </div>
                     </div>
 
                     {/* Timeline */}
                     <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Linha do Tempo da Retirada</p>
-                        <div className="space-y-3">
+                        <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>Linha do Tempo da Retirada</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {stages.map((s, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.time ? s.color : 'bg-slate-200'}`} />
-                                    <span className="text-xs font-bold text-slate-600 flex-1">{s.label}</span>
-                                    <span className={`text-xs font-bold ${s.time ? 'text-slate-900' : 'text-slate-300'}`}>
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{
+                                        width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+                                        background: s.time ? s.color : 'rgba(136,146,176,0.3)',
+                                        boxShadow: s.time ? `0 0 6px ${s.color}` : 'none',
+                                    }} />
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#8892b0', flex: 1 }}>{s.label}</span>
+                                    <span style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: s.time ? '#e0e6ed' : 'rgba(136,146,176,0.4)' }}>
                                         {fmtTime(s.time)}
                                     </span>
                                 </div>
@@ -230,19 +317,26 @@ function RecordDetail({ record, onClose }: { record: PickupRecord; onClose: () =
                     </div>
 
                     {/* Wait time */}
-                    <div className="flex items-center justify-between bg-indigo-50 rounded-2xl px-5 py-4">
-                        <div className="flex items-center gap-2 text-indigo-600">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-xs font-bold">Tempo Total de Espera</span>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: 'rgba(77,166,255,0.06)', border: '1px solid rgba(77,166,255,0.2)',
+                        borderRadius: '10px', padding: '14px 18px',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4da6ff' }}>
+                            <Clock size={16} />
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#4da6ff' }}>Tempo Total de Espera</span>
                         </div>
-                        <span className="text-lg font-black text-indigo-700">{waitLabel(record.tempo_espera_segundos)}</span>
+                        <span style={{ fontSize: '18px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff' }}>{waitLabel(record.tempo_espera_segundos)}</span>
                     </div>
 
                     {/* Notes */}
                     {record.observacoes && (
-                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-                            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observações</p>
-                            <p className="text-xs text-amber-800 leading-relaxed">{record.observacoes}</p>
+                        <div style={{
+                            background: 'rgba(176,145,79,0.06)', border: '1px solid rgba(176,145,79,0.25)',
+                            borderRadius: '10px', padding: '14px 16px',
+                        }}>
+                            <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#b0914f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Observações</p>
+                            <p style={{ fontSize: '12px', color: '#e0e6ed', lineHeight: '1.6' }}>{record.observacoes}</p>
                         </div>
                     )}
                 </div>
@@ -565,84 +659,225 @@ export default function PickupHistoryView() {
     const currentYear = new Date().getFullYear();
     const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
+    // ── Shared style helpers ──
+    const darkBtn = (active: boolean, activeColor = '#4da6ff'): React.CSSProperties => ({
+        padding: '6px 14px',
+        borderRadius: '6px',
+        border: active ? `1px solid ${activeColor}` : '1px solid rgba(255,215,0,0.2)',
+        background: active ? `rgba(77,166,255,0.12)` : 'rgba(255,255,255,0.03)',
+        color: active ? activeColor : '#8892b0',
+        fontFamily: 'Roboto Mono, monospace',
+        fontSize: '10px',
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase' as const,
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        boxShadow: active ? `0 0 8px ${activeColor}40` : 'none',
+        whiteSpace: 'nowrap' as const,
+    });
+
+    const inputStyle: React.CSSProperties = {
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(77,166,255,0.25)',
+        borderRadius: '6px',
+        color: '#e0e6ed',
+        fontFamily: 'Roboto Mono, monospace',
+        fontSize: '12px',
+        fontWeight: 700,
+        padding: '4px 8px',
+        outline: 'none',
+    };
+
+    const selectStyle: React.CSSProperties = {
+        background: 'rgba(10,15,30,0.95)',
+        border: '1px solid rgba(77,166,255,0.25)',
+        borderRadius: '6px',
+        color: '#e0e6ed',
+        fontFamily: 'Roboto Mono, monospace',
+        fontSize: '12px',
+        fontWeight: 700,
+        padding: '4px 8px',
+        outline: 'none',
+        cursor: 'pointer',
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="font-bold text-slate-400 animate-pulse uppercase tracking-widest text-xs">Carregando Relatórios...</p>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050b1d' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                        width: 48, height: 48,
+                        border: '3px solid rgba(77,166,255,0.2)',
+                        borderTop: '3px solid #4da6ff',
+                        borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite',
+                    }} />
+                    <p style={{ fontFamily: 'Roboto Mono, monospace', color: '#8892b0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Carregando Relatórios...</p>
                 </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }`}</style>
             </div>
         );
     }
 
     return (
-        <div className="bg-slate-50 min-h-screen text-slate-800 font-display">
-            {/* Sticky Header */}
-            <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                            <BarChart2 className="text-white w-5 h-5" />
+        <div style={{ background: '#050b1d', minHeight: '100vh', color: '#e0e6ed', fontFamily: 'Roboto, sans-serif' }}>
+            <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.75} }
+                @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+                .ph-hover-row:hover { background: rgba(77,166,255,0.05) !important; }
+                .ph-btn-icon:hover { color: #4da6ff !important; border-color: rgba(77,166,255,0.4) !important; }
+                .ph-export-item:hover { background: rgba(77,166,255,0.08) !important; }
+                .ph-filter-btn:hover { color: #e0e6ed !important; border-color: rgba(77,166,255,0.35) !important; }
+            `}</style>
+
+            {/* ── Header ── */}
+            <header style={{
+                position: 'sticky', top: 0, zIndex: 30,
+                background: 'rgba(5,11,29,0.97)', backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid rgba(255,215,0,0.2)',
+                boxShadow: '0 2px 20px rgba(0,0,0,0.5)',
+            }}>
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                    {/* Left: title */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{
+                            width: 40, height: 40, borderRadius: '8px',
+                            border: '1px solid rgba(255,215,0,0.3)',
+                            background: 'rgba(255,215,0,0.06)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 0 14px rgba(255,215,0,0.15)',
+                        }}>
+                            <BarChart2 size={20} color="#b0914f" />
                         </div>
                         <div>
-                            <span className="text-sm font-black text-slate-900 block leading-none">Central de Relatórios</span>
-                            <span className="text-[10px] text-slate-400 font-medium">Retiradas · Auditoria · Análise</span>
+                            <span style={{ display: 'block', fontFamily: 'Roboto Mono, monospace', fontSize: '13px', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: '1.2' }}>
+                                Central de Relatórios
+                            </span>
+                            <span style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Relatórios · Auditoria · Análise</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+
+                    {/* Right: action buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         {/* View toggle */}
-                        <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
-                            <button onClick={() => setActiveView('list')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeView === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-700'}`}>
-                                <FileText className="w-3.5 h-3.5" /> Registros
+                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: '8px', padding: '3px', gap: '3px' }}>
+                            <button
+                                onClick={() => setActiveView('list')}
+                                style={{
+                                    padding: '5px 14px', borderRadius: '5px', border: 'none',
+                                    background: activeView === 'list' ? 'rgba(77,166,255,0.15)' : 'transparent',
+                                    color: activeView === 'list' ? '#4da6ff' : '#8892b0',
+                                    fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                    textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    transition: 'all 0.2s',
+                                }}
+                            >
+                                <FileText size={13} /> Registros
                             </button>
-                            <button onClick={() => setActiveView('analytics')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeView === 'analytics' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-700'}`}>
-                                <Activity className="w-3.5 h-3.5" /> Análise
+                            <button
+                                onClick={() => setActiveView('analytics')}
+                                style={{
+                                    padding: '5px 14px', borderRadius: '5px', border: 'none',
+                                    background: activeView === 'analytics' ? 'rgba(77,166,255,0.15)' : 'transparent',
+                                    color: activeView === 'analytics' ? '#4da6ff' : '#8892b0',
+                                    fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                    textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    transition: 'all 0.2s',
+                                }}
+                            >
+                                <Activity size={13} /> Análise
                             </button>
                         </div>
-                        <button onClick={() => fetchRecords(true)} className={`p-2 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all text-slate-400 hover:text-indigo-600 ${refreshing ? 'animate-spin' : ''}`}>
-                            <RefreshCw className="w-4 h-4" />
+
+                        {/* Refresh */}
+                        <button
+                            onClick={() => fetchRecords(true)}
+                            className="ph-btn-icon"
+                            style={{
+                                width: 36, height: 36, borderRadius: '7px',
+                                border: '1px solid rgba(255,215,0,0.2)',
+                                background: 'rgba(255,255,255,0.03)',
+                                color: '#8892b0', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                animation: refreshing ? 'spin 0.8s linear infinite' : 'none',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            <RefreshCw size={15} />
                         </button>
-                        <button onClick={() => window.print()} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200 active:scale-95">
-                            <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Imprimir</span>
+
+                        {/* Print */}
+                        <button
+                            onClick={() => window.print()}
+                            className="ph-btn-icon"
+                            style={{
+                                padding: '7px 14px', borderRadius: '7px',
+                                border: '1px solid rgba(255,215,0,0.2)',
+                                background: 'rgba(255,255,255,0.03)',
+                                color: '#8892b0', cursor: 'pointer',
+                                fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                textTransform: 'uppercase', letterSpacing: '0.06em',
+                                display: 'flex', alignItems: 'center', gap: '7px',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            <Printer size={14} /> <span>Imprimir</span>
                         </button>
 
                         {/* Export dropdown */}
-                        <div className="relative">
+                        <div style={{ position: 'relative' }}>
                             <button
                                 onClick={() => setExportMenuOpen(o => !o)}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+                                style={{
+                                    padding: '7px 14px', borderRadius: '7px',
+                                    border: '1px solid rgba(255,215,0,0.35)',
+                                    background: 'rgba(255,215,0,0.07)',
+                                    color: '#b0914f', cursor: 'pointer',
+                                    fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                                    display: 'flex', alignItems: 'center', gap: '7px',
+                                    boxShadow: '0 0 10px rgba(255,215,0,0.1)',
+                                }}
                             >
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Exportar</span>
-                                <ChevronDown className="w-3 h-3" />
+                                <Download size={14} /> Exportar <ChevronDown size={11} />
                             </button>
 
                             {exportMenuOpen && (
                                 <>
-                                    {/* Backdrop */}
-                                    <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
-                                    <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/60 overflow-hidden min-w-[160px]">
+                                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setExportMenuOpen(false)} />
+                                    <div style={{
+                                        position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 50,
+                                        background: 'rgba(10,15,30,0.98)', border: '1px solid rgba(255,215,0,0.2)',
+                                        borderRadius: '10px', overflow: 'hidden', minWidth: '168px',
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                                    }}>
                                         <button
                                             onClick={() => { exportPDF(); setExportMenuOpen(false); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                                            className="ph-export-item"
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
                                         >
-                                            <FileText className="w-4 h-4 text-red-500" />
+                                            <FileText size={14} color="rgba(255,69,0,0.85)" />
                                             Exportar PDF
                                         </button>
                                         <button
                                             onClick={() => { exportXLSX(); setExportMenuOpen(false); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors text-left"
+                                            className="ph-export-item"
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
                                         >
-                                            <Table2 className="w-4 h-4 text-emerald-500" />
+                                            <Table2 size={14} color="#00e676" />
                                             Exportar Planilha
                                         </button>
-                                        <div className="border-t border-slate-100" />
+                                        <div style={{ borderTop: '1px solid rgba(255,215,0,0.1)' }} />
                                         <button
                                             onClick={() => { exportCSV(); setExportMenuOpen(false); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left"
+                                            className="ph-export-item"
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
                                         >
-                                            <Download className="w-4 h-4 text-slate-400" />
+                                            <Download size={14} color="#8892b0" />
                                             Exportar CSV
                                         </button>
                                     </div>
@@ -653,238 +888,271 @@ export default function PickupHistoryView() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+            <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 <NavigationControls />
 
-                {/* Period Selector */}
-                <div className="space-y-3">
-                    {/* Quick presets row */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Atalhos:</span>
+                {/* ── Period Selector ── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Quick presets + custom pickers row */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.12em', flexShrink: 0 }}>Período:</span>
                         {(['day', 'week', 'month', 'year'] as Period[]).map(p => (
-                            <button key={p} onClick={() => { setPeriod(p); setPage(0); }}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${period === p
-                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                                    : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                                    }`}>{PERIOD_LABELS[p]}</button>
+                            <button
+                                key={p}
+                                onClick={() => { setPeriod(p); setPage(0); }}
+                                className="ph-filter-btn"
+                                style={darkBtn(period === p, '#4da6ff')}
+                            >
+                                {PERIOD_LABELS[p]}
+                            </button>
                         ))}
-                        <div className="h-5 w-px bg-slate-200 mx-1" />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Personalizado:</span>
+                        <div style={{ width: '1px', height: '18px', background: 'rgba(255,215,0,0.2)', margin: '0 4px' }} />
                         {(['pick-day', 'pick-month', 'pick-year', 'custom'] as Period[]).map(p => (
-                            <button key={p} onClick={() => { setPeriod(p); setPage(0); }}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${period === p
-                                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200'
-                                    : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                                    }`}>{PERIOD_LABELS[p]}</button>
+                            <button
+                                key={p}
+                                onClick={() => { setPeriod(p); setPage(0); }}
+                                className="ph-filter-btn"
+                                style={darkBtn(period === p, '#a64dff')}
+                            >
+                                {PERIOD_LABELS[p]}
+                            </button>
                         ))}
                     </div>
 
-                    {/* Contextual Sub-picker */}
+                    {/* Contextual sub-picker */}
                     {period === 'pick-day' && (
-                        <div className="flex items-center gap-3 bg-white border border-violet-200 rounded-2xl px-5 py-3 shadow-sm w-fit">
-                            <Calendar className="w-4 h-4 text-violet-500 shrink-0" />
-                            <span className="text-xs font-bold text-slate-500">Selecione o dia:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content' }}>
+                            <Calendar size={15} color="#a64dff" />
+                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Selecione o dia:</span>
                             <input
                                 type="date"
                                 value={pickDay}
                                 max={new Date().toISOString().split('T')[0]}
                                 onChange={e => { setPickDay(e.target.value); setPage(0); }}
-                                className="text-sm font-bold text-slate-800 outline-none bg-transparent border-b-2 border-violet-300 focus:border-violet-600 transition-colors px-1"
+                                style={inputStyle}
                             />
                         </div>
                     )}
 
                     {period === 'pick-month' && (
-                        <div className="flex items-center gap-3 bg-white border border-violet-200 rounded-2xl px-5 py-3 shadow-sm w-fit">
-                            <Calendar className="w-4 h-4 text-violet-500 shrink-0" />
-                            <span className="text-xs font-bold text-slate-500">Mês:</span>
-                            <select
-                                value={pickMonth}
-                                onChange={e => { setPickMonth(Number(e.target.value)); setPage(0); }}
-                                className="text-sm font-bold text-slate-800 outline-none bg-transparent border-b-2 border-violet-300 focus:border-violet-600 transition-colors px-1 pr-6"
-                            >
-                                {MONTH_NAMES.map((m, i) => (
-                                    <option key={i} value={i}>{m}</option>
-                                ))}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content', flexWrap: 'wrap' }}>
+                            <Calendar size={15} color="#a64dff" />
+                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Mês:</span>
+                            <select value={pickMonth} onChange={e => { setPickMonth(Number(e.target.value)); setPage(0); }} style={selectStyle}>
+                                {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
                             </select>
-                            <span className="text-xs font-bold text-slate-500">Ano:</span>
-                            <select
-                                value={pickMonthYear}
-                                onChange={e => { setPickMonthYear(Number(e.target.value)); setPage(0); }}
-                                className="text-sm font-bold text-slate-800 outline-none bg-transparent border-b-2 border-violet-300 focus:border-violet-600 transition-colors px-1 pr-4"
-                            >
+                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Ano:</span>
+                            <select value={pickMonthYear} onChange={e => { setPickMonthYear(Number(e.target.value)); setPage(0); }} style={selectStyle}>
                                 {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                     )}
 
                     {period === 'pick-year' && (
-                        <div className="flex items-center gap-3 bg-white border border-violet-200 rounded-2xl px-5 py-3 shadow-sm w-fit">
-                            <Calendar className="w-4 h-4 text-violet-500 shrink-0" />
-                            <span className="text-xs font-bold text-slate-500">Ano:</span>
-                            <select
-                                value={pickYear}
-                                onChange={e => { setPickYear(Number(e.target.value)); setPage(0); }}
-                                className="text-sm font-bold text-slate-800 outline-none bg-transparent border-b-2 border-violet-300 focus:border-violet-600 transition-colors px-1 pr-4"
-                            >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content' }}>
+                            <Calendar size={15} color="#a64dff" />
+                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Ano:</span>
+                            <select value={pickYear} onChange={e => { setPickYear(Number(e.target.value)); setPage(0); }} style={selectStyle}>
                                 {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                     )}
 
                     {period === 'custom' && (
-                        <div className="flex flex-wrap items-center gap-3 bg-white border border-violet-200 rounded-2xl px-5 py-3 shadow-sm w-fit">
-                            <Calendar className="w-4 h-4 text-violet-500 shrink-0" />
-                            <span className="text-xs font-bold text-slate-500">De:</span>
-                            <input type="date" value={customStart}
-                                max={new Date().toISOString().split('T')[0]}
-                                onChange={e => setCustomStart(e.target.value)}
-                                className="text-sm font-bold text-slate-800 outline-none bg-transparent border-b-2 border-violet-300 focus:border-violet-600 transition-colors px-1" />
-                            <span className="text-xs font-bold text-slate-400">até:</span>
-                            <input type="date" value={customEnd}
-                                max={new Date().toISOString().split('T')[0]}
-                                onChange={e => setCustomEnd(e.target.value)}
-                                className="text-sm font-bold text-slate-800 outline-none bg-transparent border-b-2 border-violet-300 focus:border-violet-600 transition-colors px-1" />
-                            <button onClick={() => { setPage(0); fetchRecords(); }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content', flexWrap: 'wrap' }}>
+                            <Calendar size={15} color="#a64dff" />
+                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>De:</span>
+                            <input type="date" value={customStart} max={new Date().toISOString().split('T')[0]} onChange={e => setCustomStart(e.target.value)} style={inputStyle} />
+                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>até:</span>
+                            <input type="date" value={customEnd} max={new Date().toISOString().split('T')[0]} onChange={e => setCustomEnd(e.target.value)} style={inputStyle} />
+                            <button
+                                onClick={() => { setPage(0); fetchRecords(); }}
                                 disabled={!customStart || !customEnd}
-                                className="px-4 py-1.5 bg-violet-600 text-white rounded-xl text-xs font-bold disabled:opacity-40 hover:bg-violet-700 transition-colors">
+                                style={{
+                                    padding: '5px 14px', borderRadius: '6px',
+                                    border: '1px solid rgba(166,77,255,0.4)',
+                                    background: 'rgba(166,77,255,0.12)',
+                                    color: '#a64dff', fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                    cursor: 'pointer', opacity: (!customStart || !customEnd) ? 0.4 : 1,
+                                }}
+                            >
                                 Aplicar
                             </button>
                         </div>
                     )}
 
                     {/* Active range label */}
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Exibindo: <strong className="text-slate-600">{fmtDate(from)}</strong> até <strong className="text-slate-600">{fmtDate(to)}</strong></span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>
+                        <Clock size={13} />
+                        <span>Exibindo: <strong style={{ color: '#e0e6ed' }}>{fmtDate(from)}</strong> até <strong style={{ color: '#e0e6ed' }}>{fmtDate(to)}</strong></span>
                     </div>
                 </div>
 
-                {/* KPI Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard label="Total de Retiradas" value={analytics.total} icon={Activity}
-                        color="border-slate-200 text-slate-600" sub={period === 'day' ? 'neste dia' : undefined} />
-                    <StatCard label="Liberados" value={analytics.liberados} icon={CheckCircle2}
-                        color="border-emerald-200 text-emerald-600"
-                        sub={analytics.total ? `${Math.round(analytics.liberados / analytics.total * 100)}% do total` : undefined}
-                        trend={analytics.liberados > 0 ? 'up' : 'neutral'} />
-                    <StatCard label="Cancelados / Alertas" value={analytics.cancelados} icon={AlertTriangle}
-                        color="border-rose-200 text-rose-600"
-                        trend={analytics.cancelados > 0 ? 'down' : 'neutral'} />
-                    <StatCard label="Tempo Médio de Espera" value={waitLabel(analytics.avgWait)} icon={Clock}
-                        color="border-indigo-200 text-indigo-600"
-                        sub="registros liberados" />
+                {/* ── Summary Cards ── */}
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '14px', padding: '24px', backdropFilter: 'blur(12px)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                        <SummaryCard
+                            label="Total Retiradas"
+                            value={analytics.total}
+                            icon={Activity}
+                            glowColor="rgba(77,166,255,0.35)"
+                            sub={period === 'day' ? 'neste dia' : undefined}
+                        />
+                        <SummaryCard
+                            label="Liberados"
+                            value={analytics.liberados}
+                            icon={CheckCircle2}
+                            glowColor="rgba(0,230,118,0.4)"
+                            sub={analytics.total ? `${Math.round(analytics.liberados / analytics.total * 100)}% do total` : undefined}
+                            trend={analytics.liberados > 0 ? 'up' : 'neutral'}
+                        />
+                        <SummaryCard
+                            label="Cancelados"
+                            value={analytics.cancelados}
+                            icon={AlertTriangle}
+                            glowColor="rgba(255,69,0,0.4)"
+                            trend={analytics.cancelados > 0 ? 'down' : 'neutral'}
+                        />
+                        <SummaryCard
+                            label="Tempo Médio"
+                            value={waitLabel(analytics.avgWait)}
+                            icon={Clock}
+                            glowColor="rgba(255,215,0,0.3)"
+                            sub="registros liberados"
+                        />
+                    </div>
                 </div>
 
                 {/* ─── ANALYTICS VIEW ─────────────────────────────────────────── */}
                 {activeView === 'analytics' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
                         {/* Retiradas por Hora do Dia */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Clock className="w-4 h-4 text-indigo-600" />
-                                <h3 className="text-sm font-black text-slate-900">Retiradas por Hora do Dia</h3>
+                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(77,166,255,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                <Clock size={15} color="#4da6ff" />
+                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Retiradas por Hora do Dia</h3>
                             </div>
                             {records.length > 0 ? (
-                                <MiniBarChart data={analytics.hourBuckets} color="#6366f1" />
+                                <MiniBarChart data={analytics.hourBuckets} color="#4da6ff" />
                             ) : (
-                                <p className="text-xs text-slate-400 italic text-center py-8">Sem dados para o período.</p>
+                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados para o período.</p>
                             )}
                         </div>
 
                         {/* Retiradas por Dia da Semana */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Calendar className="w-4 h-4 text-violet-600" />
-                                <h3 className="text-sm font-black text-slate-900">Retiradas por Dia da Semana</h3>
+                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(166,77,255,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                <Calendar size={15} color="#a64dff" />
+                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Retiradas por Dia da Semana</h3>
                             </div>
                             {records.length > 0 ? (
-                                <MiniBarChart data={analytics.dayBuckets} color="#7c3aed" />
+                                <MiniBarChart data={analytics.dayBuckets} color="#a64dff" />
                             ) : (
-                                <p className="text-xs text-slate-400 italic text-center py-8">Sem dados para o período.</p>
+                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados para o período.</p>
                             )}
                         </div>
 
                         {/* Top Responsáveis */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Users className="w-4 h-4 text-blue-600" />
-                                <h3 className="text-sm font-black text-slate-900">Responsáveis Mais Frequentes</h3>
+                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(77,166,255,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                <Users size={15} color="#4da6ff" />
+                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Responsáveis Mais Frequentes</h3>
                             </div>
                             {analytics.topGuardians.length > 0 ? (
-                                <div className="space-y-3">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {analytics.topGuardians.map((g, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${i === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-slate-900 truncate">{g.name}</p>
-                                                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
-                                                    <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${(g.count / (analytics.topGuardians[0]?.count || 1)) * 100}%` }} />
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: 26, height: 26, borderRadius: '6px', flexShrink: 0,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: i === 0 ? 'rgba(77,166,255,0.2)' : 'rgba(255,255,255,0.05)',
+                                                border: i === 0 ? '1px solid rgba(77,166,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                                                color: i === 0 ? '#4da6ff' : '#8892b0',
+                                                fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                            }}>{i + 1}</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
+                                                <div style={{ width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', height: '4px', marginTop: '4px' }}>
+                                                    <div style={{ background: '#4da6ff', height: '4px', borderRadius: '3px', width: `${(g.count / (analytics.topGuardians[0]?.count || 1)) * 100}%` }} />
                                                 </div>
                                             </div>
-                                            <span className="text-xs font-black text-indigo-600 shrink-0">{g.count}x</span>
+                                            <span style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff', flexShrink: 0 }}>{g.count}x</span>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-xs text-slate-400 italic text-center py-8">Sem dados.</p>
+                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados.</p>
                             )}
                         </div>
 
                         {/* Alunos com mais retiradas */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Shield className="w-4 h-4 text-emerald-600" />
-                                <h3 className="text-sm font-black text-slate-900">Alunos com Mais Retiradas</h3>
+                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                <Shield size={15} color="#00e676" />
+                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Alunos com Mais Retiradas</h3>
                             </div>
                             {analytics.topStudents.length > 0 ? (
-                                <div className="space-y-3">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {analytics.topStudents.map((s, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${i === 0 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-slate-900 truncate">{s.name}</p>
-                                                <p className="text-[10px] text-slate-400 truncate">{s.turma}</p>
-                                                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
-                                                    <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${(s.count / (analytics.topStudents[0]?.count || 1)) * 100}%` }} />
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: 26, height: 26, borderRadius: '6px', flexShrink: 0,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: i === 0 ? 'rgba(0,230,118,0.15)' : 'rgba(255,255,255,0.05)',
+                                                border: i === 0 ? '1px solid rgba(0,230,118,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                                                color: i === 0 ? '#00e676' : '#8892b0',
+                                                fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                            }}>{i + 1}</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
+                                                <p style={{ fontSize: '10px', color: '#8892b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.turma}</p>
+                                                <div style={{ width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', height: '4px', marginTop: '4px' }}>
+                                                    <div style={{ background: '#00e676', height: '4px', borderRadius: '3px', width: `${(s.count / (analytics.topStudents[0]?.count || 1)) * 100}%` }} />
                                                 </div>
                                             </div>
-                                            <span className="text-xs font-black text-emerald-600 shrink-0">{s.count}x</span>
+                                            <span style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#00e676', flexShrink: 0 }}>{s.count}x</span>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-xs text-slate-400 italic text-center py-8">Sem dados.</p>
+                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados.</p>
                             )}
                         </div>
 
-                        {/* Tempo médio por hora */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 lg:col-span-2">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <TrendingUp className="w-4 h-4 text-amber-600" />
-                                    <h3 className="text-sm font-black text-slate-900">Auditoria de Segurança — Alertas e Cancelamentos</h3>
-                                </div>
+                        {/* Auditoria de Segurança */}
+                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(255,69,0,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)', gridColumn: 'span 2' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                <TrendingUp size={15} color="#b0914f" />
+                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Auditoria de Segurança — Alertas e Cancelamentos</h3>
                             </div>
                             {analytics.cancelados > 0 ? (
-                                <div className="space-y-2">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {records.filter(r => r.status === 'CANCELADO').slice(0, 8).map(r => (
-                                        <div key={r.id} onClick={() => setDetailRecord(r)}
-                                            className="flex items-center gap-4 p-3 bg-rose-50 border border-rose-100 rounded-2xl hover:border-rose-300 cursor-pointer transition-all group">
-                                            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-slate-900 truncate">{r.aluno?.nome_completo}</p>
-                                                <p className="text-[10px] text-slate-400">{r.responsavel?.nome_completo || 'Responsável não identificado'} · {fmtDate(r.horario_solicitacao)} às {fmtTime(r.horario_solicitacao)}</p>
+                                        <div
+                                            key={r.id}
+                                            onClick={() => setDetailRecord(r)}
+                                            className="ph-hover-row"
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '14px',
+                                                padding: '12px 14px', borderRadius: '8px',
+                                                background: 'rgba(255,69,0,0.05)', border: '1px solid rgba(255,69,0,0.2)',
+                                                cursor: 'pointer', transition: 'background 0.2s',
+                                            }}
+                                        >
+                                            <AlertCircle size={16} color="rgba(255,69,0,0.85)" style={{ flexShrink: 0 }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.aluno?.nome_completo}</p>
+                                                <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{r.responsavel?.nome_completo || 'Responsável não identificado'} · {fmtDate(r.horario_solicitacao)} às {fmtTime(r.horario_solicitacao)}</p>
                                             </div>
-                                            {r.observacoes && <p className="text-[10px] text-rose-500 italic truncate max-w-[180px]">{r.observacoes}</p>}
-                                            <Eye className="w-4 h-4 text-rose-300 group-hover:text-rose-500 shrink-0" />
+                                            {r.observacoes && <p style={{ fontSize: '10px', color: 'rgba(255,69,0,0.8)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{r.observacoes}</p>}
+                                            <Eye size={15} color="rgba(255,69,0,0.5)" style={{ flexShrink: 0 }} />
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 p-6 bg-emerald-50 rounded-2xl">
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                                    <p className="text-sm font-bold text-emerald-700">Nenhum cancelamento ou alerta registrado no período. ✓</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '20px 18px', background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.2)', borderRadius: '8px' }}>
+                                    <CheckCircle2 size={18} color="#00e676" style={{ flexShrink: 0 }} />
+                                    <p style={{ fontSize: '13px', fontWeight: 700, color: '#00e676' }}>Nenhum cancelamento ou alerta registrado no período.</p>
                                 </div>
                             )}
                         </div>
@@ -894,104 +1162,161 @@ export default function PickupHistoryView() {
                 {/* ─── LIST VIEW ──────────────────────────────────────────────── */}
                 {activeView === 'list' && (
                     <>
-                        {/* Filters */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col gap-4">
-                            <div className="relative w-full">
-                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        {/* Filters row */}
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {/* Search */}
+                            <div style={{ position: 'relative' }}>
+                                <Search size={15} color="#8892b0" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                                 <input
                                     type="text"
                                     placeholder="Buscar aluno, responsável, turma..."
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setPage(0); }}
-                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                    style={{
+                                        width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px',
+                                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(77,166,255,0.2)',
+                                        borderRadius: '8px', color: '#e0e6ed',
+                                        fontFamily: 'Roboto, sans-serif', fontSize: '12px',
+                                        outline: 'none', boxSizing: 'border-box',
+                                    }}
                                 />
                             </div>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
-                                <div className="flex items-center gap-2">
-                                    <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1 overflow-x-auto">
-                                        {['all', 'TOTEM', 'RECEPCAO'].map(m => (
-                                            <button key={m} onClick={() => { setMethodFilter(m); setPage(0); }}
-                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${methodFilter === m ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                                                {m === 'all' ? 'Todos Métodos' : m === 'TOTEM' ? '🖥 Totem' : '🧑‍💼 Recepção'}
-                                            </button>
-                                        ))}
-                                    </div>
+
+                            {/* Method + Status filters */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                                <Filter size={14} color="#8892b0" style={{ flexShrink: 0 }} />
+                                {/* Method */}
+                                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '7px', padding: '3px' }}>
+                                    {['all', 'TOTEM', 'RECEPCAO'].map(m => (
+                                        <button
+                                            key={m}
+                                            onClick={() => { setMethodFilter(m); setPage(0); }}
+                                            className="ph-filter-btn"
+                                            style={darkBtn(methodFilter === m)}
+                                        >
+                                            {m === 'all' ? 'Todos Métodos' : m === 'TOTEM' ? 'Totem' : 'Recepção'}
+                                        </button>
+                                    ))}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1 overflow-x-auto">
-                                        {['all', 'LIBERADO', 'CONFIRMADO', 'SOLICITADO', 'CANCELADO'].map(s => (
-                                            <button key={s} onClick={() => { setStatusFilter(s); setPage(0); }}
-                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === s ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                                                {s === 'all' ? 'Todos Status' : STATUS_PT[s]}
-                                            </button>
-                                        ))}
-                                    </div>
+                                {/* Status */}
+                                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '7px', padding: '3px', flexWrap: 'wrap' }}>
+                                    {['all', 'LIBERADO', 'CONFIRMADO', 'SOLICITADO', 'CANCELADO'].map(s => (
+                                        <button
+                                            key={s}
+                                            onClick={() => { setStatusFilter(s); setPage(0); }}
+                                            className="ph-filter-btn"
+                                            style={darkBtn(statusFilter === s, STATUS_COLOR[s]?.color || '#4da6ff')}
+                                        >
+                                            {s === 'all' ? 'Todos Status' : STATUS_PT[s]}
+                                        </button>
+                                    ))}
                                 </div>
+                                <span style={{ fontSize: '10px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', marginLeft: 'auto' }}>
+                                    {filtered.length} registro{filtered.length !== 1 ? 's' : ''}
+                                </span>
                             </div>
                         </div>
 
-                        {/* Table */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
+                        {/* Table panel */}
+                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(77,166,255,0.2)', borderRadius: '14px', overflow: 'hidden', backdropFilter: 'blur(12px)' }}>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-200">
+                                        <tr style={{ borderBottom: '1px solid rgba(77,166,255,0.15)' }}>
                                             {['Aluno', 'Turma / Sala', 'Responsável', 'Método', 'Status', 'Solicitado', 'Liberado', 'Espera', ''].map((h, i) => (
-                                                <th key={i} className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                <th
+                                                    key={i}
+                                                    style={{
+                                                        padding: '14px 18px',
+                                                        fontSize: '9px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700,
+                                                        color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.1em',
+                                                        textAlign: 'left', whiteSpace: 'nowrap',
+                                                        background: 'rgba(255,255,255,0.02)',
+                                                    }}
+                                                >{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody>
                                         {paginated.map(record => (
-                                            <tr key={record.id} className="hover:bg-indigo-50/30 transition-colors group">
-                                                <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-3">
+                                            <tr
+                                                key={record.id}
+                                                className="ph-hover-row"
+                                                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
+                                            >
+                                                {/* Aluno */}
+                                                <td style={{ padding: '14px 18px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                         {record.aluno?.foto_url ? (
-                                                            <img src={record.aluno.foto_url} className="w-8 h-8 rounded-xl object-cover shrink-0" alt="" />
+                                                            <img src={record.aluno.foto_url} style={{ width: 32, height: 32, borderRadius: '7px', objectFit: 'cover', border: '1px solid rgba(77,166,255,0.2)', flexShrink: 0 }} alt="" />
                                                         ) : (
-                                                            <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xs shrink-0">
+                                                            <div style={{
+                                                                width: 32, height: 32, borderRadius: '7px', flexShrink: 0,
+                                                                background: 'rgba(77,166,255,0.1)', border: '1px solid rgba(77,166,255,0.2)',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                color: '#4da6ff', fontFamily: 'Roboto Mono, monospace', fontSize: '12px', fontWeight: 700,
+                                                            }}>
                                                                 {record.aluno?.nome_completo?.[0] || '?'}
                                                             </div>
                                                         )}
-                                                        <p className="text-sm font-bold text-slate-900 whitespace-nowrap">{record.aluno?.nome_completo || '—'}</p>
+                                                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#e0e6ed', whiteSpace: 'nowrap' }}>{record.aluno?.nome_completo || '—'}</p>
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <p className="text-xs font-bold text-slate-700">{record.aluno?.turma || '—'}</p>
-                                                    <p className="text-[10px] text-slate-400">Sala: {record.aluno?.sala || '—'}</p>
+                                                {/* Turma / Sala */}
+                                                <td style={{ padding: '14px 18px' }}>
+                                                    <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace' }}>{record.aluno?.turma || '—'}</p>
+                                                    <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Sala {record.aluno?.sala || '—'}</p>
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <p className="text-xs font-bold text-slate-700">{record.responsavel?.nome_completo || '—'}</p>
-                                                    <p className="text-[10px] text-slate-400 font-mono">{record.responsavel?.cpf || ''}</p>
+                                                {/* Responsável */}
+                                                <td style={{ padding: '14px 18px' }}>
+                                                    <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed' }}>{record.responsavel?.nome_completo || '—'}</p>
+                                                    <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{record.responsavel?.cpf || ''}</p>
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${record.tipo_solicitacao === 'ROTINA'
-                                                        ? 'bg-violet-50 text-violet-700 border border-violet-200'
-                                                        : 'bg-blue-50 text-blue-700 border border-blue-200'
-                                                        }`}>
-                                                        {record.tipo_solicitacao === 'ROTINA' ? '🖥 Totem' : '🧑‍💼 Recepção'}
+                                                {/* Método */}
+                                                <td style={{ padding: '14px 18px' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                        padding: '3px 10px', borderRadius: '5px',
+                                                        border: record.tipo_solicitacao === 'ROTINA' ? '1px solid rgba(166,77,255,0.35)' : '1px solid rgba(77,166,255,0.35)',
+                                                        background: record.tipo_solicitacao === 'ROTINA' ? 'rgba(166,77,255,0.08)' : 'rgba(77,166,255,0.08)',
+                                                        color: record.tipo_solicitacao === 'ROTINA' ? '#a64dff' : '#4da6ff',
+                                                        fontSize: '10px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700,
+                                                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                                                    }}>
+                                                        {record.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção'}
                                                     </span>
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[record.status] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                                        {STATUS_PT[record.status] || record.status}
-                                                    </span>
+                                                {/* Status */}
+                                                <td style={{ padding: '14px 18px' }}>
+                                                    <StatusBadge status={record.status} />
                                                 </td>
-                                                <td className="px-5 py-4 text-xs font-bold text-slate-600 whitespace-nowrap">
-                                                    <p>{fmtDate(record.horario_solicitacao)}</p>
-                                                    <p className="text-slate-400">{fmtTime(record.horario_solicitacao)}</p>
+                                                {/* Solicitado */}
+                                                <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
+                                                    <p style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed' }}>{fmtDate(record.horario_solicitacao)}</p>
+                                                    <p style={{ fontSize: '10px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0' }}>{fmtTime(record.horario_solicitacao)}</p>
                                                 </td>
-                                                <td className="px-5 py-4 text-xs font-bold text-emerald-600 whitespace-nowrap">
+                                                {/* Liberado */}
+                                                <td style={{ padding: '14px 18px', fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#00e676', whiteSpace: 'nowrap' }}>
                                                     {fmtTime(record.horario_liberacao)}
                                                 </td>
-                                                <td className="px-5 py-4 text-xs font-bold text-indigo-600 whitespace-nowrap">
+                                                {/* Espera */}
+                                                <td style={{ padding: '14px 18px', fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff', whiteSpace: 'nowrap' }}>
                                                     {waitLabel(record.tempo_espera_segundos)}
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <button onClick={() => setDetailRecord(record)}
-                                                        className="p-2 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
-                                                        <Eye className="w-4 h-4" />
+                                                {/* Detail */}
+                                                <td style={{ padding: '14px 18px' }}>
+                                                    <button
+                                                        onClick={() => setDetailRecord(record)}
+                                                        className="ph-btn-icon"
+                                                        style={{
+                                                            width: 32, height: 32, borderRadius: '7px',
+                                                            border: '1px solid rgba(255,255,255,0.08)',
+                                                            background: 'transparent', cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            color: 'rgba(136,146,176,0.5)', transition: 'all 0.2s',
+                                                        }}
+                                                    >
+                                                        <Eye size={14} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -1000,27 +1325,62 @@ export default function PickupHistoryView() {
                                 </table>
 
                                 {paginated.length === 0 && (
-                                    <div className="flex flex-col items-center justify-center py-20">
-                                        <Search className="w-12 h-12 text-slate-200 mb-4" />
-                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Nenhum registro encontrado</p>
-                                        <p className="text-xs text-slate-300 mt-2">Ajuste os filtros ou o período selecionado.</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '72px 24px' }}>
+                                        <div style={{
+                                            width: 56, height: 56, borderRadius: '50%',
+                                            border: '2px solid rgba(77,166,255,0.3)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px',
+                                            animation: 'pulseDot 2s ease-in-out infinite',
+                                        }}>
+                                            <Search size={24} color="rgba(77,166,255,0.5)" />
+                                        </div>
+                                        <p style={{ fontFamily: 'Roboto Mono, monospace', fontSize: '12px', fontWeight: 700, color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nenhum Registro Encontrado</p>
+                                        <p style={{ fontSize: '11px', color: 'rgba(136,146,176,0.5)', marginTop: '6px' }}>Ajuste os filtros ou o período selecionado.</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* Pagination */}
-                            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <div style={{
+                                padding: '14px 20px', borderTop: '1px solid rgba(77,166,255,0.12)',
+                                background: 'rgba(255,255,255,0.02)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            }}>
+                                <span style={{ fontSize: '10px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                                     {filtered.length} registro{filtered.length !== 1 ? 's' : ''} · Página {page + 1} de {Math.max(totalPages, 1)}
                                 </span>
-                                <div className="flex gap-2">
-                                    <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-30 transition-all">
-                                        <ArrowLeft className="w-3.5 h-3.5" /> Anterior
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        disabled={page === 0}
+                                        onClick={() => setPage(p => p - 1)}
+                                        className="ph-filter-btn"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '5px',
+                                            padding: '6px 12px', borderRadius: '6px',
+                                            border: '1px solid rgba(255,215,0,0.2)', background: 'rgba(255,255,255,0.03)',
+                                            color: page === 0 ? 'rgba(136,146,176,0.3)' : '#8892b0',
+                                            fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                            cursor: page === 0 ? 'default' : 'pointer',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        <ArrowLeft size={13} /> Anterior
                                     </button>
-                                    <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-30 transition-all">
-                                        Próxima <ArrowRight className="w-3.5 h-3.5" />
+                                    <button
+                                        disabled={page >= totalPages - 1}
+                                        onClick={() => setPage(p => p + 1)}
+                                        className="ph-filter-btn"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '5px',
+                                            padding: '6px 12px', borderRadius: '6px',
+                                            border: '1px solid rgba(255,215,0,0.2)', background: 'rgba(255,255,255,0.03)',
+                                            color: page >= totalPages - 1 ? 'rgba(136,146,176,0.3)' : '#8892b0',
+                                            fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
+                                            cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        Próxima <ArrowRight size={13} />
                                     </button>
                                 </div>
                             </div>
