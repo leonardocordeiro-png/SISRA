@@ -19,10 +19,10 @@ export const getSalaBySerie = (serie: string, turma: string = '') => {
     return '';
 };
 export const generateToken = (length: number = 6) => {
+    // crypto.getRandomValues() is cryptographically secure (CSPRNG).
+    // Math.random() must NOT be used for security tokens — it is predictable.
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing chars like O, 0, I, 1
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => chars[byte % chars.length]).join('');
 };

@@ -50,12 +50,11 @@ export default function SelfRegistration() {
     }, [success, lastRegisteredGuardian]);
 
     const generateAccessCode = () => {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars like 0, O, 1, I, I
-        let result = '';
-        for (let i = 0; i < 8; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
+        // Use CSPRNG — Math.random() is predictable and must not be used for access codes
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars like 0, O, 1, I
+        const array = new Uint8Array(8);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => chars[byte % chars.length]).join('');
     };
 
     const generateQRCode = () => {

@@ -2,7 +2,16 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Shield, User, School, Loader2 } from 'lucide-react';
 
+// ── DEVELOPMENT-ONLY UTILITY ──────────────────────────────────────────────────
+// This page is intentionally NOT registered in App.tsx and must NEVER be routed
+// in production. It uses a weak default password for convenience only.
+// Remove this file before the final production release.
 export default function Setup() {
+    // Hard block in production builds — even if accidentally routed
+    if (import.meta.env.PROD) {
+        return null;
+    }
+
     const [loading, setLoading] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
 

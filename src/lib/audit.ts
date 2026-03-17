@@ -56,7 +56,9 @@ export async function logAudit(
 ) {
     const runAsync = async () => {
         try {
-            const finalEscolaId = escolaId || import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259';
+            // Use provided escolaId first, then env var — no hard-coded UUID fallback
+            // to avoid silently associating logs with the wrong school in multi-tenant deploys.
+            const finalEscolaId = escolaId || import.meta.env.VITE_ESCOLA_ID || null;
             const ip = await getPublicIP();
             const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Server-side';
 

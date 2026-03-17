@@ -59,12 +59,11 @@ export default function AdminQRGenerator() {
     };
 
     const generateAccessCode = () => {
+        // Use CSPRNG — Math.random() is predictable and must not be used for access codes
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let result = '';
-        for (let i = 0; i < 8; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
+        const array = new Uint8Array(8);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => chars[byte % chars.length]).join('');
     };
 
     const selectGuardian = async (guardian: Guardian) => {

@@ -26,8 +26,11 @@ export default function ProtectedRoute({ children, allowedRoles, loginPath = '/'
         return <Navigate to={loginPath} replace />;
     }
 
-    if (role && !allowedRoles.includes(role)) {
-        return <Navigate to="/" replace />;
+    // role === null means the user exists in Supabase Auth but has no profile
+    // in the `usuarios` table (or the profile fetch failed). Never grant access
+    // in this state — redirect to login so the issue surfaces cleanly.
+    if (!role || !allowedRoles.includes(role)) {
+        return <Navigate to={loginPath} replace />;
     }
 
     return <>{children}</>;
