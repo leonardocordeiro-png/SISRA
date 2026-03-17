@@ -6,6 +6,7 @@ import {
     LogOut, Users, School, Activity, TrendingUp, QrCode,
     BarChart2, Shield, Settings, ChevronRight,
     FileText, UserCheck, LayoutGrid, ArrowLeft, Home, CalendarClock,
+    X, Clock, User as UserIcon, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { logAudit } from '../../lib/audit';
 
@@ -71,15 +72,37 @@ function LiveClock() {
 }
 
 // ── Stat Group ────────────────────────────────────────────────────────────────
-function StatGroup({ label, value, unit = '', delay = 0 }: {
+function StatGroup({ label, value, unit = '', delay = 0, onClick, clickable = false }: {
     label: string; value: number; unit?: string; delay?: number;
+    onClick?: () => void; clickable?: boolean;
 }) {
     const animated = useCountUp(value, 1000 + delay);
+    const [hov, setHov] = useState(false);
     return (
-        <div style={{ borderBottom: `1px solid ${D.dimBorder}`, paddingBottom: '1rem' }}>
-            <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: D.textMuted, marginBottom: 6 }}>
-                {label}
-            </p>
+        <div
+            onClick={onClick}
+            onMouseEnter={() => clickable && setHov(true)}
+            onMouseLeave={() => clickable && setHov(false)}
+            style={{
+                borderBottom: `1px solid ${D.dimBorder}`, paddingBottom: '1rem',
+                cursor: clickable ? 'pointer' : 'default',
+                borderRadius: clickable ? 8 : 0,
+                padding: clickable ? '0.5rem 0.6rem 1rem' : undefined,
+                background: clickable && hov ? 'rgba(244,208,111,0.05)' : 'transparent',
+                transition: 'background 0.18s',
+                marginInline: clickable ? '-0.6rem' : undefined,
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: clickable && hov ? D.gold : D.textMuted, margin: 0, transition: 'color 0.18s' }}>
+                    {label}
+                </p>
+                {clickable && (
+                    <span style={{ fontSize: '0.62rem', color: hov ? D.gold : D.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', transition: 'color 0.18s' }}>
+                        Ver detalhes →
+                    </span>
+                )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                 <span style={{ fontSize: '2.8rem', fontWeight: 700, color: D.gold, lineHeight: 1.1 }}>
                     {animated.toLocaleString('pt-BR')}
@@ -176,6 +199,54 @@ export default function AdminDashboard() {
     });
     const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
+    // ── Open Requests Modal ────────────────────────────────────────────────────
+    type OpenRequest = {
+        id: string;
+        status: string;
+        tipo_solicitacao: string;
+        horario_solicitacao: string;
+        aluno: { nome_completo: string; turma: string; sala: string } | null;
+        responsavel: { nome_completo: string } | null;
+    };
+    const [showModal, setShowModal]         = useState(false);
+    const [openRequests, setOpenRequests]   = useState<OpenRequest[]>([]);
+    const [loadingModal, setLoadingModal]   = useState(false);
+
+    const STATUS_LABEL: Record<string, { label: string; color: string }> = {
+        SOLICITADO:  { label: 'Aguardando sala',      color: '#94a3b8' },
+        NOTIFICADO:  { label: 'Sala notificada',      color: D.gold   },
+        AGUARDANDO:  { label: 'Aguardando liberação', color: D.gold   },
+        LIBERADO:    { label: 'A caminho',            color: '#60a5fa' },
+        CONFIRMADO:  { label: 'Na recepção',          color: D.green  },
+    };
+
+    function elapsed(iso: string) {
+        const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+        if (diff < 60) return `${diff}s atrás`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
+        return `${Math.floor(diff / 3600)}h atrás`;
+    }
+
+    async function fetchOpenRequests() {
+        setLoadingModal(true);
+        const { data } = await supabase
+            .from('solicitacoes_retirada')
+            .select(`
+                id, status, tipo_solicitacao, horario_solicitacao,
+                aluno:alunos(nome_completo, turma, sala),
+                responsavel:responsaveis(nome_completo)
+            `)
+            .not('status', 'in', '("CONCLUIDO","CANCELADO")')
+            .order('horario_solicitacao', { ascending: true });
+        setOpenRequests((data ?? []) as unknown as OpenRequest[]);
+        setLoadingModal(false);
+    }
+
+    function openModal() {
+        setShowModal(true);
+        fetchOpenRequests();
+    }
+
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 80);
         return () => clearTimeout(t);
@@ -258,6 +329,7 @@ export default function AdminDashboard() {
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
                 @keyframes adm-pulse { 0%{box-shadow:0 0 0 0 rgba(52,211,153,0.7)} 70%{box-shadow:0 0 0 6px rgba(52,211,153,0)} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0)} }
+                @keyframes adm-spin  { to { transform: rotate(360deg); } }
                 .adm-sidebar-hidden { display: none !important; }
                 @media (max-width: 1024px) {
                     .adm-sidebar { display: none !important; }
@@ -297,7 +369,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flexGrow: 1 }}>
                     <StatGroup label="Total de Alunos"     value={stats.totalStudents} delay={0}   />
                     <StatGroup label="Retiradas Hoje"      value={stats.dailyPickups}  delay={100} />
-                    <StatGroup label="Em Atendimento"      value={stats.activePickups} delay={200} />
+                    <StatGroup label="Em Aberto" value={stats.activePickups} delay={200} clickable onClick={openModal} />
                     <StatGroup label="Tempo Médio Resp."   value={stats.avgWaitTime}   delay={300} unit="Min" />
                 </div>
 
@@ -480,6 +552,136 @@ export default function AdminDashboard() {
                     })}
                 </nav>
             </main>
+
+            {/* ── Modal: Solicitações Em Aberto ── */}
+            {showModal && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        onClick={() => setShowModal(false)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 200 }}
+                    />
+
+                    {/* Panel */}
+                    <div style={{
+                        position: 'fixed', top: '50%', left: '50%', zIndex: 201,
+                        transform: 'translate(-50%, -50%)',
+                        width: 'min(720px, 95vw)', maxHeight: '80vh',
+                        display: 'flex', flexDirection: 'column',
+                        background: D.bgDash,
+                        border: `1px solid rgba(244,208,111,0.25)`,
+                        borderRadius: 20,
+                        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                        overflow: 'hidden',
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '1.2rem 1.5rem',
+                            borderBottom: `1px solid ${D.dimBorder}`,
+                            background: 'rgba(244,208,111,0.04)',
+                            flexShrink: 0,
+                        }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: D.textMain, margin: 0 }}>
+                                    Solicitações Em Aberto
+                                </h2>
+                                <p style={{ fontSize: '0.75rem', color: D.textMuted, margin: '4px 0 0', lineHeight: 1.5 }}>
+                                    Retiradas ainda não concluídas ou canceladas — podem ser de dias anteriores.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: D.textMuted, padding: 4 }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.5rem' }}>
+                            {loadingModal ? (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: 12, color: D.textMuted }}>
+                                    <Loader2 size={20} style={{ animation: 'adm-spin 1s linear infinite' }} />
+                                    <span style={{ fontSize: '0.9rem' }}>Carregando solicitações...</span>
+                                </div>
+                            ) : openRequests.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '3rem', color: D.textMuted }}>
+                                    <Activity size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                                    <p style={{ fontSize: '0.9rem' }}>Nenhuma solicitação em aberto no momento.</p>
+                                </div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${D.dimBorder}` }}>
+                                            {['Aluno', 'Turma / Sala', 'Responsável', 'Status', 'Tempo'].map(h => (
+                                                <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: D.textMuted, fontWeight: 600 }}>
+                                                    {h}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {openRequests.map((req, i) => {
+                                            const st = STATUS_LABEL[req.status] ?? { label: req.status, color: D.textMuted };
+                                            const isEmergency = req.tipo_solicitacao === 'EMERGENCIA';
+                                            return (
+                                                <tr key={req.id} style={{ borderBottom: `1px solid ${D.dimBorder}`, background: isEmergency ? 'rgba(228,1,35,0.07)' : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                                                    <td style={{ padding: '0.65rem 0.75rem', color: D.textMain, fontWeight: 600 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            {isEmergency && <AlertTriangle size={12} style={{ color: D.red, flexShrink: 0 }} />}
+                                                            {req.aluno?.nome_completo ?? '—'}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '0.65rem 0.75rem', color: D.textMuted }}>
+                                                        {req.aluno ? `${req.aluno.turma} · ${req.aluno.sala}` : '—'}
+                                                    </td>
+                                                    <td style={{ padding: '0.65rem 0.75rem', color: D.textMuted }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                            <UserIcon size={11} style={{ flexShrink: 0 }} />
+                                                            {req.responsavel?.nome_completo ?? '—'}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '0.65rem 0.75rem' }}>
+                                                        <span style={{
+                                                            fontSize: '0.7rem', fontWeight: 700, color: st.color,
+                                                            background: `${st.color}18`,
+                                                            padding: '2px 8px', borderRadius: 20,
+                                                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                                                            whiteSpace: 'nowrap',
+                                                        }}>
+                                                            {st.label}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.65rem 0.75rem', color: D.textMuted, whiteSpace: 'nowrap' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                            <Clock size={11} />
+                                                            {elapsed(req.horario_solicitacao)}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ padding: '0.9rem 1.5rem', borderTop: `1px solid ${D.dimBorder}`, flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: D.textMuted }}>
+                                {openRequests.length} solicitação{openRequests.length !== 1 ? 'ões' : ''} em aberto
+                            </span>
+                            <button
+                                onClick={fetchOpenRequests}
+                                style={{ background: 'none', border: `1px solid ${D.dimBorder}`, color: D.textMuted, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 6 }}
+                            >
+                                <Activity size={13} /> Atualizar
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
