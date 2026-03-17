@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react';
 import {
     Download, FileText, Users, Shield, Calendar, Clock,
     Trash2, AlertTriangle, X, MessageSquare, CheckCircle2,
-    Loader2, History, RefreshCw,
+    Loader2, History, RefreshCw, ChevronLeft,
 } from 'lucide-react';
-import NavigationControls from '../../components/NavigationControls';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
@@ -46,53 +46,11 @@ type ExportRecord = {
 
 type CleanupPreview = { requests: number } | null;
 
-// ── Section wrapper ────────────────────────────────────────────────────────────
-function Section({ title, subtitle, icon: Icon, iconColor, iconBg, children, footer }: {
-    title: string; subtitle: string;
-    icon: React.ElementType; iconColor: string; iconBg: string;
-    children: React.ReactNode; footer?: React.ReactNode;
-}) {
-    return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-center gap-3">
-                <div className={`p-2 ${iconBg} rounded-lg`}>
-                    <Icon className={`${iconColor} w-5 h-5`} />
-                </div>
-                <div>
-                    <h2 className="font-bold text-slate-900 dark:text-white">{title}</h2>
-                    <p className="text-xs text-slate-500">{subtitle}</p>
-                </div>
-            </div>
-            <div className="p-8">{children}</div>
-            {footer && (
-                <div className="p-6 bg-slate-50/50 dark:bg-slate-800/10 border-t border-slate-100 dark:border-slate-800">
-                    {footer}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ── Export button ──────────────────────────────────────────────────────────────
-function ExportBtn({ loading, onClick }: { loading: boolean; onClick: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            disabled={loading}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
-        >
-            {loading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Download className="w-5 h-5" />}
-            {loading ? 'Gerando...' : 'Exportar CSV'}
-        </button>
-    );
-}
-
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function DataExportCenter() {
     const { role, user, escolaId } = useAuth();
     const toast = useToast();
+    const navigate = useNavigate();
 
     // ── Export history (session only) ──────────────────────────────────────────
     const [exports, setExports] = useState<ExportRecord[]>([]);
@@ -301,305 +259,732 @@ export default function DataExportCenter() {
         }
     };
 
+    const now = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-800 dark:text-slate-100 font-display">
-            {/* Header */}
-            <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-30 backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                            <Download className="text-white w-5 h-5" />
-                        </div>
-                        <span className="text-xl font-bold tracking-tight">La Salle, Cheguei!</span>
+        <div style={{ background: '#f7f9fc', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+
+            {/* ── Status Bar ── */}
+            <div style={{
+                background: '#ffffff',
+                borderBottom: '1px solid #d1d9e6',
+                padding: '0 24px',
+                height: 56,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'sticky',
+                top: 0,
+                zIndex: 30,
+            }}>
+                <button
+                    onClick={() => navigate(-1)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#5c5c6c',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f0f2f5')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                    <ChevronLeft size={16} />
+                    Voltar
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        background: 'linear-gradient(90deg, #6c5ce7 0%, #0984e3 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        <Download size={14} color="#fff" />
                     </div>
-                    <span className="text-sm font-medium text-slate-400">Centro de Exportação</span>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-6 py-10">
-                <NavigationControls />
-                <div className="mb-10">
-                    <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Centro de Exportação</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Exporte dados do sistema em CSV e gerencie a manutenção do banco.</p>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1e2e' }}>Centro de Exportação</span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* ── Left: exports ── */}
-                    <div className="lg:col-span-2 space-y-8">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 12, color: '#5c5c6c' }}>{now}</span>
+                    <div style={{
+                        background: '#f0f2f5',
+                        border: '1px solid #d1d9e6',
+                        borderRadius: 20,
+                        padding: '4px 12px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#5c5c6c',
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                    }}>
+                        {role ?? 'USUÁRIO'}
+                    </div>
+                </div>
+            </div>
 
-                        {/* 1. Alunos */}
-                        <Section
-                            title="Alunos Cadastrados"
-                            subtitle="Lista completa de alunos — matrícula, turma e sala"
-                            icon={Users} iconColor="text-indigo-600" iconBg="bg-indigo-50 dark:bg-indigo-500/10"
-                            footer={
-                                <div className="flex justify-end">
-                                    <ExportBtn loading={loadingStudents} onClick={exportStudents} />
+            {/* ── Main ── */}
+            <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
+
+                {/* Page title */}
+                <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                    <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1e1e2e', margin: 0 }}>Centro de Exportação de Dados</h1>
+                    <p style={{ fontSize: 14, color: '#5c5c6c', marginTop: 8 }}>
+                        Exporte dados do sistema em formato CSV e gerencie a manutenção do banco de dados.
+                    </p>
+                </div>
+
+                {/* ── Action Grid: 3 export cards ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 32 }}>
+
+                    {/* Card 1 — Alunos */}
+                    <div style={{
+                        background: '#ffffff',
+                        border: '1px solid #d1d9e6',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{
+                            background: 'linear-gradient(90deg, #6c5ce7 0%, #0984e3 100%)',
+                            padding: '20px 24px 16px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, display: 'flex' }}>
+                                    <Users size={16} color="#fff" />
                                 </div>
-                            }
-                        >
-                            <div className="flex items-center gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-900/30 rounded-xl text-xs text-indigo-700 dark:text-indigo-300">
-                                <FileText className="w-4 h-4 shrink-0" />
-                                <span>Campos exportados: <strong>Matrícula, Nome Completo, Turma, Sala, Ativo</strong></span>
+                                <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Alunos Cadastrados</span>
                             </div>
-                        </Section>
-
-                        {/* 2. Histórico de Retiradas */}
-                        <Section
-                            title="Histórico de Retiradas"
-                            subtitle="Todas as solicitações concluídas no período selecionado"
-                            icon={History} iconColor="text-emerald-600" iconBg="bg-emerald-50 dark:bg-emerald-500/10"
-                            footer={
-                                <div className="flex justify-between items-center flex-wrap gap-4">
-                                    <div className="flex items-center gap-3 flex-wrap">
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">De</label>
-                                            <input
-                                                type="date"
-                                                value={pickupDateFrom}
-                                                onChange={e => setPickupDateFrom(e.target.value)}
-                                                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Até</label>
-                                            <input
-                                                type="date"
-                                                value={pickupDateTo}
-                                                onChange={e => setPickupDateTo(e.target.value)}
-                                                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
-                                            />
-                                        </div>
-                                    </div>
-                                    <ExportBtn loading={loadingPickups} onClick={exportPickups} />
-                                </div>
-                            }
-                        >
-                            <div className="flex items-center gap-3 p-4 bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-xs text-emerald-700 dark:text-emerald-300">
-                                <Calendar className="w-4 h-4 shrink-0" />
-                                <span>Campos exportados: <strong>Horários (solicitação / liberação / confirmação), Status, Tipo, Aluno, Turma, Sala, Responsável, Mensagens</strong></span>
+                            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, margin: 0 }}>
+                                Lista completa — matrícula, turma e sala
+                            </p>
+                        </div>
+                        <div style={{ padding: '16px 24px' }}>
+                            <div style={{
+                                background: '#f0f2f5',
+                                borderRadius: 8,
+                                padding: '10px 14px',
+                                fontSize: 11,
+                                color: '#5c5c6c',
+                                marginBottom: 16,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                            }}>
+                                <FileText size={12} />
+                                <span><strong>Campos:</strong> Matrícula, Nome, Turma, Sala, Ativo</span>
                             </div>
-                        </Section>
+                            <button
+                                onClick={exportStudents}
+                                disabled={loadingStudents}
+                                style={{
+                                    width: '100%',
+                                    padding: '11px',
+                                    background: loadingStudents ? '#d1d9e6' : 'linear-gradient(90deg, #6c5ce7 0%, #0984e3 100%)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 10,
+                                    fontWeight: 700,
+                                    fontSize: 13,
+                                    cursor: loadingStudents ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    transition: 'opacity 0.15s',
+                                }}
+                            >
+                                {loadingStudents
+                                    ? <><Loader2 size={14} className="animate-spin" /> Gerando...</>
+                                    : <><Download size={14} /> Exportar CSV</>}
+                            </button>
+                        </div>
+                    </div>
 
-                        {/* 3. Logs de Auditoria */}
-                        <Section
-                            title="Logs de Auditoria"
-                            subtitle="Trilha completa de ações e eventos de segurança"
-                            icon={Shield} iconColor="text-violet-600" iconBg="bg-violet-50 dark:bg-violet-500/10"
-                            footer={
-                                <div className="flex justify-end">
-                                    <ExportBtn loading={loadingAudit} onClick={exportAuditLogs} />
+                    {/* Card 2 — Retiradas */}
+                    <div style={{
+                        background: '#ffffff',
+                        border: '1px solid #d1d9e6',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{
+                            background: 'linear-gradient(90deg, #00b894 0%, #0984e3 100%)',
+                            padding: '20px 24px 16px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, display: 'flex' }}>
+                                    <History size={16} color="#fff" />
                                 </div>
-                            }
-                        >
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 p-4 bg-violet-50/50 dark:bg-violet-500/5 border border-violet-100 dark:border-violet-900/30 rounded-xl text-xs text-violet-700 dark:text-violet-300">
-                                    <Shield className="w-4 h-4 shrink-0" />
-                                    <span>Campos exportados: <strong>Data/Hora, Ação, Tabela, Registro ID, Usuário ID, IP, User Agent, Detalhes</strong></span>
+                                <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Histórico de Retiradas</span>
+                            </div>
+                            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, margin: 0 }}>
+                                Solicitações no período selecionado
+                            </p>
+                        </div>
+                        <div style={{ padding: '16px 24px' }}>
+                            <div style={{
+                                display: 'flex',
+                                gap: 12,
+                                marginBottom: 12,
+                            }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#5c5c6c', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>De</label>
+                                    <input
+                                        type="date"
+                                        value={pickupDateFrom}
+                                        onChange={e => setPickupDateFrom(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 10px',
+                                            border: '1px solid #d1d9e6',
+                                            borderRadius: 8,
+                                            fontSize: 12,
+                                            color: '#1e1e2e',
+                                            background: '#f7f9fc',
+                                            boxSizing: 'border-box',
+                                            outline: 'none',
+                                        }}
+                                    />
                                 </div>
-                                <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl text-xs text-amber-700 dark:text-amber-400">
-                                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <span>Arquivo pode ser grande. Exporta os últimos <strong>100.000 eventos</strong> em ordem decrescente.</span>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#5c5c6c', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Até</label>
+                                    <input
+                                        type="date"
+                                        value={pickupDateTo}
+                                        onChange={e => setPickupDateTo(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 10px',
+                                            border: '1px solid #d1d9e6',
+                                            borderRadius: 8,
+                                            fontSize: 12,
+                                            color: '#1e1e2e',
+                                            background: '#f7f9fc',
+                                            boxSizing: 'border-box',
+                                            outline: 'none',
+                                        }}
+                                    />
                                 </div>
                             </div>
-                        </Section>
+                            <div style={{
+                                background: '#f0f2f5',
+                                borderRadius: 8,
+                                padding: '10px 14px',
+                                fontSize: 11,
+                                color: '#5c5c6c',
+                                marginBottom: 16,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                            }}>
+                                <Calendar size={12} />
+                                <span><strong>11 campos:</strong> Horários, Status, Tipo, Aluno, Responsável...</span>
+                            </div>
+                            <button
+                                onClick={exportPickups}
+                                disabled={loadingPickups}
+                                style={{
+                                    width: '100%',
+                                    padding: '11px',
+                                    background: loadingPickups ? '#d1d9e6' : 'linear-gradient(90deg, #00b894 0%, #0984e3 100%)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 10,
+                                    fontWeight: 700,
+                                    fontSize: 13,
+                                    cursor: loadingPickups ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    transition: 'opacity 0.15s',
+                                }}
+                            >
+                                {loadingPickups
+                                    ? <><Loader2 size={14} className="animate-spin" /> Gerando...</>
+                                    : <><Download size={14} /> Exportar CSV</>}
+                            </button>
+                        </div>
+                    </div>
 
-                        {/* 4. Manutenção — ADMIN ONLY */}
-                        {role === 'ADMIN' && (
-                            <div className="bg-rose-50/50 dark:bg-rose-500/5 rounded-3xl border border-rose-100 dark:border-rose-900/50 overflow-hidden">
-                                <div className="p-6 border-b border-rose-100 dark:border-rose-900/30 bg-white dark:bg-slate-900 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-rose-500 rounded-xl shadow-lg shadow-rose-500/20">
-                                            <Trash2 className="text-white w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h2 className="font-bold text-slate-900 dark:text-white">Manutenção do Banco de Dados</h2>
-                                            <p className="text-[10px] text-rose-600 font-bold uppercase tracking-widest">Apenas Administradores</p>
-                                        </div>
-                                    </div>
-                                    <AlertTriangle className="text-rose-500 animate-pulse w-5 h-5" />
+                    {/* Card 3 — Auditoria */}
+                    <div style={{
+                        background: '#ffffff',
+                        border: '1px solid #d1d9e6',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{
+                            background: 'linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%)',
+                            padding: '20px 24px 16px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, display: 'flex' }}>
+                                    <Shield size={16} color="#fff" />
                                 </div>
+                                <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Logs de Auditoria</span>
+                            </div>
+                            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, margin: 0 }}>
+                                Trilha completa de ações e segurança
+                            </p>
+                        </div>
+                        <div style={{ padding: '16px 24px' }}>
+                            <div style={{
+                                background: '#f0f2f5',
+                                borderRadius: 8,
+                                padding: '10px 14px',
+                                fontSize: 11,
+                                color: '#5c5c6c',
+                                marginBottom: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                            }}>
+                                <Shield size={12} />
+                                <span><strong>Campos:</strong> Data/Hora, Ação, Tabela, IP, User Agent...</span>
+                            </div>
+                            <div style={{
+                                background: '#fff8e1',
+                                border: '1px solid #ffe082',
+                                borderRadius: 8,
+                                padding: '10px 14px',
+                                fontSize: 11,
+                                color: '#7b5e00',
+                                marginBottom: 16,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                            }}>
+                                <AlertTriangle size={12} />
+                                <span>Exporta até <strong>100.000 eventos</strong> em ordem decrescente.</span>
+                            </div>
+                            <button
+                                onClick={exportAuditLogs}
+                                disabled={loadingAudit}
+                                style={{
+                                    width: '100%',
+                                    padding: '11px',
+                                    background: loadingAudit ? '#d1d9e6' : 'linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 10,
+                                    fontWeight: 700,
+                                    fontSize: 13,
+                                    cursor: loadingAudit ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    transition: 'opacity 0.15s',
+                                }}
+                            >
+                                {loadingAudit
+                                    ? <><Loader2 size={14} className="animate-spin" /> Gerando...</>
+                                    : <><Download size={14} /> Exportar CSV</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                                <div className="p-8 space-y-6">
-                                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-rose-200/50 dark:border-rose-900/30">
-                                        <h4 className="font-bold text-slate-900 dark:text-white mb-1">Expurgar Solicitações Antigas</h4>
-                                        <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                                            Remove permanentemente registros de <strong>solicitações de retirada</strong> anteriores à data de corte.
-                                            <span className="font-bold text-rose-500"> Esta ação não pode ser desfeita.</span>
-                                            <br />
-                                            <span className="text-amber-600 font-semibold">Os logs de auditoria NÃO são apagados</span> — são mantidos para conformidade legal.
-                                        </p>
-                                        <div className="flex flex-col sm:flex-row items-end gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Corte</label>
-                                                <input
-                                                    type="date"
-                                                    value={cleanupDate}
-                                                    onChange={e => { setCleanupDate(e.target.value); setCleanupPreview(null); }}
-                                                    className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-rose-500/50 transition-all"
-                                                />
-                                            </div>
-                                            <button
-                                                onClick={previewCleanup}
-                                                disabled={previewing || cleaning}
-                                                className="flex items-center gap-2 px-6 py-3 border-2 border-rose-300 dark:border-rose-800 text-rose-600 rounded-xl font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-900/10 disabled:opacity-50 transition-all"
-                                            >
-                                                {previewing
-                                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                    : <RefreshCw className="w-4 h-4" />}
-                                                Verificar e Limpar
-                                            </button>
+                {/* ── Summary panels: 2-column ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: role === 'ADMIN' ? 32 : 0 }}>
+
+                    {/* Export history */}
+                    <div style={{
+                        background: '#ffffff',
+                        border: '1px solid #d1d9e6',
+                        borderRadius: 16,
+                        padding: 24,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Clock size={16} color="#5c5c6c" />
+                                <span style={{ fontWeight: 700, fontSize: 14, color: '#1e1e2e' }}>Exportações desta sessão</span>
+                            </div>
+                            {exports.length > 0 && (
+                                <button
+                                    onClick={() => setExports([])}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#5c5c6c',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                    }}
+                                >
+                                    Limpar
+                                </button>
+                            )}
+                        </div>
+
+                        {exports.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '24px 0', color: '#5c5c6c' }}>
+                                <Clock size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
+                                <p style={{ fontSize: 12, margin: 0 }}>Nenhuma exportação realizada ainda.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {exports.map(item => (
+                                    <div key={item.id} style={{
+                                        background: '#f7f9fc',
+                                        border: '1px solid #d1d9e6',
+                                        borderRadius: 10,
+                                        padding: '12px 14px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                    }}>
+                                        <div style={{
+                                            background: 'linear-gradient(90deg, #6c5ce7 0%, #0984e3 100%)',
+                                            borderRadius: 8,
+                                            padding: 6,
+                                            display: 'flex',
+                                            flexShrink: 0,
+                                        }}>
+                                            <FileText size={13} color="#fff" />
                                         </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{ fontSize: 12, fontWeight: 700, color: '#1e1e2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                                            <p style={{ fontSize: 10, color: '#5c5c6c', margin: '2px 0 0' }}>{item.date} · {item.rows.toLocaleString('pt-BR')} linhas</p>
+                                        </div>
+                                        <CheckCircle2 size={15} color="#00b894" style={{ flexShrink: 0 }} />
                                     </div>
-
-                                    <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                                        <Shield className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                                        <p className="text-[10px] text-amber-700 dark:text-amber-500 font-medium leading-relaxed">
-                                            <strong>Auditoria Obrigatória:</strong> Todas as ações de limpeza são registradas permanentemente
-                                            no log de conformidade, incluindo o ID do operador, a justificativa e a contagem de registros afetados.
-                                        </p>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         )}
                     </div>
 
-                    {/* ── Right sidebar ── */}
-                    <div className="space-y-8">
-                        {/* Export history */}
-                        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="font-bold text-lg">Exportações desta sessão</h3>
-                                {exports.length > 0 && (
-                                    <button
-                                        onClick={() => setExports([])}
-                                        className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors"
-                                    >
-                                        Limpar
-                                    </button>
-                                )}
-                            </div>
-
-                            {exports.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-8 text-slate-400 text-center gap-3">
-                                    <Clock className="w-8 h-8 opacity-30" />
-                                    <p className="text-xs font-medium">Nenhuma exportação realizada ainda.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {exports.map(item => (
-                                        <div key={item.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 shrink-0">
-                                                    <FileText className="w-4 h-4" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-bold truncate">{item.name}</p>
-                                                    <p className="text-[10px] text-slate-500">{item.date}</p>
-                                                </div>
-                                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 ml-auto" />
-                                            </div>
-                                            <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/50">
-                                                <span className="text-[10px] font-semibold text-slate-400">{item.type}</span>
-                                                <span className="text-[10px] text-slate-300">·</span>
-                                                <span className="text-[10px] font-semibold text-slate-400">{item.rows.toLocaleString('pt-BR')} linhas</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </section>
-
-                        {/* Audit logs CTA */}
-                        <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
-                            <Shield className="absolute -bottom-4 -right-4 w-32 h-32 opacity-10 group-hover:scale-110 transition-transform duration-700" />
-                            <h3 className="text-lg font-bold mb-2">Pacote de Auditoria</h3>
-                            <p className="text-xs text-indigo-100 mb-6 leading-relaxed">
+                    {/* Audit package CTA */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #6c5ce7 0%, #0984e3 100%)',
+                        border: '1px solid #d1d9e6',
+                        borderRadius: 16,
+                        padding: 24,
+                        boxShadow: '0 4px 20px rgba(108,92,231,0.25)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            bottom: -20,
+                            right: -20,
+                            opacity: 0.1,
+                        }}>
+                            <Shield size={100} color="#fff" />
+                        </div>
+                        <div>
+                            <h3 style={{ color: '#fff', fontWeight: 800, fontSize: 17, margin: '0 0 8px' }}>Pacote de Auditoria</h3>
+                            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 1.5, margin: '0 0 24px' }}>
                                 Baixe todos os logs de acesso e eventos de segurança para conformidade legal e análise forense.
                             </p>
-                            <button
-                                onClick={exportAuditLogs}
-                                disabled={loadingAudit}
-                                className="w-full bg-white text-indigo-600 font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
-                            >
-                                {loadingAudit
-                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                    : <Download className="w-4 h-4" />}
-                                {loadingAudit ? 'Gerando...' : 'Gerar Pacote de Auditoria'}
-                            </button>
                         </div>
+                        <button
+                            onClick={exportAuditLogs}
+                            disabled={loadingAudit}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: '#ffffff',
+                                color: '#6c5ce7',
+                                border: 'none',
+                                borderRadius: 10,
+                                fontWeight: 700,
+                                fontSize: 13,
+                                cursor: loadingAudit ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 8,
+                                opacity: loadingAudit ? 0.7 : 1,
+                            }}
+                        >
+                            {loadingAudit
+                                ? <><Loader2 size={14} className="animate-spin" /> Gerando...</>
+                                : <><Download size={14} /> Gerar Pacote de Auditoria</>}
+                        </button>
                     </div>
                 </div>
-            </main>
+
+                {/* ── Footer: Manutenção (ADMIN ONLY) ── */}
+                {role === 'ADMIN' && (
+                    <div style={{
+                        background: '#ffffff',
+                        border: '1px solid #fecaca',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{
+                            background: '#fff5f5',
+                            borderBottom: '1px solid #fecaca',
+                            padding: '16px 24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ background: '#d63031', borderRadius: 8, padding: 6, display: 'flex' }}>
+                                    <Trash2 size={15} color="#fff" />
+                                </div>
+                                <div>
+                                    <span style={{ fontWeight: 700, fontSize: 14, color: '#1e1e2e', display: 'block' }}>Manutenção do Banco de Dados</span>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: '#d63031', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Apenas Administradores</span>
+                                </div>
+                            </div>
+                            <AlertTriangle size={18} color="#d63031" style={{ opacity: 0.7 }} />
+                        </div>
+
+                        <div style={{ padding: 24 }}>
+                            <h4 style={{ fontWeight: 700, color: '#1e1e2e', margin: '0 0 6px', fontSize: 14 }}>Expurgar Solicitações Antigas</h4>
+                            <p style={{ fontSize: 12, color: '#5c5c6c', lineHeight: 1.6, margin: '0 0 20px' }}>
+                                Remove permanentemente registros de <strong>solicitações de retirada</strong> anteriores à data de corte.{' '}
+                                <span style={{ color: '#d63031', fontWeight: 700 }}>Esta ação não pode ser desfeita.</span>{' '}
+                                <span style={{ color: '#e17055', fontWeight: 600 }}>Os logs de auditoria NÃO são apagados</span> — são mantidos para conformidade legal.
+                            </p>
+
+                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#5c5c6c', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Data de Corte</label>
+                                    <input
+                                        type="date"
+                                        value={cleanupDate}
+                                        onChange={e => { setCleanupDate(e.target.value); setCleanupPreview(null); }}
+                                        style={{
+                                            padding: '9px 12px',
+                                            border: '1px solid #d1d9e6',
+                                            borderRadius: 8,
+                                            fontSize: 12,
+                                            color: '#1e1e2e',
+                                            background: '#f7f9fc',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={previewCleanup}
+                                    disabled={previewing || cleaning}
+                                    style={{
+                                        padding: '9px 20px',
+                                        background: 'none',
+                                        border: '2px solid #d63031',
+                                        color: '#d63031',
+                                        borderRadius: 8,
+                                        fontWeight: 700,
+                                        fontSize: 12,
+                                        cursor: (previewing || cleaning) ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        opacity: (previewing || cleaning) ? 0.5 : 1,
+                                        transition: 'background 0.15s',
+                                    }}
+                                >
+                                    {previewing
+                                        ? <><Loader2 size={13} className="animate-spin" /> Verificando...</>
+                                        : <><RefreshCw size={13} /> Verificar e Limpar</>}
+                                </button>
+                            </div>
+
+                            <div style={{
+                                marginTop: 16,
+                                background: '#fff8e1',
+                                border: '1px solid #ffe082',
+                                borderRadius: 8,
+                                padding: '10px 14px',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 8,
+                            }}>
+                                <Shield size={14} color="#7b5e00" style={{ flexShrink: 0, marginTop: 1 }} />
+                                <p style={{ fontSize: 11, color: '#7b5e00', margin: 0, lineHeight: 1.5 }}>
+                                    <strong>Auditoria Obrigatória:</strong> Todas as ações de limpeza são registradas permanentemente no log de conformidade, incluindo o ID do operador, a justificativa e a contagem de registros afetados.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* ── Cleanup Confirmation Modal ── */}
             {showCleanupModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-rose-500/10 rounded-xl">
-                                    <AlertTriangle className="text-rose-500 w-5 h-5" />
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 50,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 16,
+                    background: 'rgba(30,30,46,0.55)',
+                    backdropFilter: 'blur(4px)',
+                }}>
+                    <div style={{
+                        background: '#ffffff',
+                        width: '100%',
+                        maxWidth: 460,
+                        borderRadius: 20,
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                        overflow: 'hidden',
+                        border: '1px solid #d1d9e6',
+                    }}>
+                        {/* Modal header */}
+                        <div style={{
+                            padding: '20px 24px',
+                            borderBottom: '1px solid #d1d9e6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ background: 'rgba(214,48,49,0.1)', borderRadius: 8, padding: 6, display: 'flex' }}>
+                                    <AlertTriangle size={16} color="#d63031" />
                                 </div>
-                                <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Confirmar Limpeza</h3>
+                                <span style={{ fontWeight: 800, fontSize: 15, color: '#1e1e2e', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Confirmar Limpeza</span>
                             </div>
                             <button
                                 onClick={() => { setShowCleanupModal(false); setCleanupPreview(null); }}
-                                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 8 }}
                             >
-                                <X className="w-5 h-5 text-slate-400" />
+                                <X size={18} color="#5c5c6c" />
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-6">
-                            {/* Preview count */}
+                        {/* Modal body */}
+                        <div style={{ padding: '24px' }}>
                             {cleanupPreview !== null && (
-                                <div className="grid grid-cols-1 gap-3">
-                                    <div className="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-2xl">
-                                        <span className="text-xs font-bold text-rose-700 dark:text-rose-400">Solicitações a excluir</span>
-                                        <span className="text-2xl font-black text-rose-600">{cleanupPreview.requests.toLocaleString('pt-BR')}</span>
-                                    </div>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    background: '#fff5f5',
+                                    border: '1px solid #fecaca',
+                                    borderRadius: 12,
+                                    padding: '14px 18px',
+                                    marginBottom: 16,
+                                }}>
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: '#d63031' }}>Solicitações a excluir</span>
+                                    <span style={{ fontSize: 26, fontWeight: 900, color: '#d63031' }}>{cleanupPreview.requests.toLocaleString('pt-BR')}</span>
                                 </div>
                             )}
 
-                            <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
-                                <p className="text-xs text-rose-700 dark:text-rose-400 leading-relaxed font-medium">
-                                    Serão removidas todas as solicitações anteriores a <strong>{new Date(cleanupDate + 'T12:00:00').toLocaleDateString('pt-BR')}</strong>.
+                            <div style={{
+                                background: '#fff5f5',
+                                border: '1px solid #fecaca',
+                                borderRadius: 10,
+                                padding: '12px 16px',
+                                marginBottom: 16,
+                            }}>
+                                <p style={{ fontSize: 12, color: '#d63031', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
+                                    Serão removidas todas as solicitações anteriores a{' '}
+                                    <strong>{new Date(cleanupDate + 'T12:00:00').toLocaleDateString('pt-BR')}</strong>.
                                     A exclusão é <strong>permanente</strong>. Os logs de auditoria são preservados.
                                 </p>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    <MessageSquare className="w-3 h-3 text-indigo-500" />
+                            <div>
+                                <label style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: '#5c5c6c',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.08em',
+                                    marginBottom: 8,
+                                }}>
+                                    <MessageSquare size={11} color="#6c5ce7" />
                                     Justificativa da Exclusão
                                 </label>
                                 <textarea
                                     value={justification}
                                     onChange={e => setJustification(e.target.value)}
                                     placeholder="Ex: Limpeza periódica para otimização do banco de dados..."
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-xs font-medium outline-none focus:border-indigo-500/30 transition-all min-h-[100px] resize-none"
+                                    style={{
+                                        width: '100%',
+                                        minHeight: 90,
+                                        padding: '12px 14px',
+                                        border: '1px solid #d1d9e6',
+                                        borderRadius: 10,
+                                        fontSize: 12,
+                                        color: '#1e1e2e',
+                                        background: '#f7f9fc',
+                                        resize: 'vertical',
+                                        outline: 'none',
+                                        boxSizing: 'border-box',
+                                        fontFamily: 'inherit',
+                                    }}
                                 />
                             </div>
                         </div>
 
-                        <div className="p-6 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                        {/* Modal footer */}
+                        <div style={{
+                            padding: '16px 24px',
+                            background: '#f7f9fc',
+                            borderTop: '1px solid #d1d9e6',
+                            display: 'flex',
+                            gap: 10,
+                        }}>
                             <button
                                 onClick={() => { setShowCleanupModal(false); setCleanupPreview(null); }}
-                                className="flex-1 px-6 py-3 rounded-xl font-bold text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                                style={{
+                                    flex: 1,
+                                    padding: '10px',
+                                    background: 'none',
+                                    border: '1px solid #d1d9e6',
+                                    borderRadius: 8,
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    color: '#5c5c6c',
+                                    cursor: 'pointer',
+                                }}
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleCleanup}
                                 disabled={cleaning || !justification.trim() || cleanupPreview?.requests === 0}
-                                className="flex-[2] bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20 transition-all active:scale-95"
+                                style={{
+                                    flex: 2,
+                                    padding: '10px',
+                                    background: (cleaning || !justification.trim() || cleanupPreview?.requests === 0) ? '#d1d9e6' : '#d63031',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    fontWeight: 700,
+                                    fontSize: 12,
+                                    cursor: (cleaning || !justification.trim() || cleanupPreview?.requests === 0) ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 6,
+                                }}
                             >
                                 {cleaning
-                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                    : <Trash2 className="w-4 h-4" />}
-                                {cleaning ? 'Excluindo...' : `Confirmar e Excluir ${cleanupPreview?.requests ? `(${cleanupPreview.requests})` : ''}`}
+                                    ? <><Loader2 size={13} className="animate-spin" /> Excluindo...</>
+                                    : <><Trash2 size={13} /> Confirmar e Excluir {cleanupPreview?.requests ? `(${cleanupPreview.requests})` : ''}</>}
                             </button>
                         </div>
                     </div>
