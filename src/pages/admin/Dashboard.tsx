@@ -183,43 +183,32 @@ export default function AdminDashboard() {
 
     async function fetchStats() {
         try {
-            const escolaId = import.meta.env.VITE_ESCOLA_ID as string | undefined;
-            const today    = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
 
             // Measure Supabase round-trip latency
             const t0 = Date.now();
 
             const [studentsRes, activeRes, finishedRes, timesRes] = await Promise.all([
-                // Total students — scoped to this school
-                (() => {
-                    const q = supabase.from('alunos').select('*', { count: 'exact', head: true });
-                    return escolaId ? q.eq('escola_id', escolaId) : q;
-                })(),
-                // Active pickups today (not yet concluded or cancelled)
-                (() => {
-                    const q = supabase.from('solicitacoes_retirada')
-                        .select('*', { count: 'exact', head: true })
-                        .not('status', 'in', '("CONCLUIDO","CANCELADO")')
-                        .gte('horario_solicitacao', `${today}T00:00:00`);
-                    return escolaId ? q.eq('escola_id', escolaId) : q;
-                })(),
-                // Concluded pickups today
-                (() => {
-                    const q = supabase.from('solicitacoes_retirada')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('status', 'CONCLUIDO')
-                        .gte('horario_confirmacao', `${today}T00:00:00`);
-                    return escolaId ? q.eq('escola_id', escolaId) : q;
-                })(),
-                // Timestamps of concluded pickups today — to calculate real avg wait time
-                (() => {
-                    const q = supabase.from('solicitacoes_retirada')
-                        .select('horario_solicitacao, horario_confirmacao')
-                        .eq('status', 'CONCLUIDO')
-                        .gte('horario_confirmacao', `${today}T00:00:00`)
-                        .not('horario_confirmacao', 'is', null);
-                    return escolaId ? q.eq('escola_id', escolaId) : q;
-                })(),
+                // Total students — no escola_id filter to avoid silent mismatch
+                supabase.from('alunos').select('*', { count: 'exact', head: true }),
+
+                // Active pickups — all currently open (regardless of date), status fixed to CONCLUIDO
+                supabase.from('solicitacoes_retirada')
+                    .select('*', { count: 'exact', head: true })
+                    .not('status', 'in', '("CONCLUIDO","CANCELADO")'),
+
+                // Concluded pickups today — status fixed from 'ENTREGUE' → 'CONCLUIDO'
+                supabase.from('solicitacoes_retirada')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'CONCLUIDO')
+                    .gte('horario_confirmacao', `${today}T00:00:00`),
+
+                // Timestamps of concluded pickups today — for real avg wait time calculation
+                supabase.from('solicitacoes_retirada')
+                    .select('horario_solicitacao, horario_confirmacao')
+                    .eq('status', 'CONCLUIDO')
+                    .gte('horario_confirmacao', `${today}T00:00:00`)
+                    .not('horario_confirmacao', 'is', null),
             ]);
 
             setLatencyMs(Date.now() - t0);
