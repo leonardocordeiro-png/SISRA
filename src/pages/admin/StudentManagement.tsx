@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown, ArrowLeftRight, AlertTriangle, GraduationCap, LayoutGrid } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown, ArrowLeftRight, AlertTriangle, GraduationCap, LayoutGrid, Camera } from 'lucide-react';
 import { generateToken, getSalaBySerie } from '../../lib/utils';
 import { logAudit } from '../../lib/audit';
 import NavigationControls from '../../components/NavigationControls';
 import BulkImportModal from '../../components/admin/BulkImportModal';
+import BulkPhotoImportModal from '../../components/admin/BulkPhotoImportModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 
@@ -22,6 +23,7 @@ export default function StudentManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [showBulkModal, setShowBulkModal] = useState(false);
+    const [showBulkPhotoModal, setShowBulkPhotoModal] = useState(false);
     const [filterTurma, setFilterTurma] = useState<string>('TODAS');
     const [filterSala, setFilterSala] = useState<string>('TODAS');
     const [availableTurmas, setAvailableTurmas] = useState<string[]>([]);
@@ -403,6 +405,13 @@ export default function StudentManagement() {
                         <AlertTriangle className="w-4 h-4" /> Limpar Cadastro
                     </button>
                     <button
+                        onClick={() => setShowBulkPhotoModal(true)}
+                        className="flex-1 sm:flex-none bg-violet-50 border border-violet-200 hover:bg-violet-100 text-violet-700 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
+                        title="Importar fotos de alunos em lote usando o número de matrícula"
+                    >
+                        <Camera className="w-4 h-4" /> Importar Fotos
+                    </button>
+                    <button
                         onClick={() => setShowBulkModal(true)}
                         className="flex-1 sm:flex-none bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
                     >
@@ -569,8 +578,12 @@ export default function StudentManagement() {
                                             </td>
                                             <td className="px-6 py-4 font-medium text-slate-900">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 border border-slate-200 group-hover:bg-white group-hover:scale-105 group-hover:shadow-md transition-all shrink-0">
-                                                        <User className="w-5 h-5" />
+                                                    <div className="w-10 h-10 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-slate-500 border border-slate-200 group-hover:scale-105 group-hover:shadow-md transition-all shrink-0">
+                                                        {student.foto_url ? (
+                                                            <img src={student.foto_url} alt={student.nome_completo} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <User className="w-5 h-5" />
+                                                        )}
                                                     </div>
                                                     <span className="truncate max-w-[200px] lg:max-w-xs">{student.nome_completo}</span>
                                                 </div>
@@ -661,8 +674,12 @@ export default function StudentManagement() {
                                                 <Circle className="w-8 h-8 text-slate-200 shrink-0" />
                                             )}
                                         </button>
-                                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-500 shrink-0 shadow-sm border border-slate-200">
-                                            <User className="w-6 h-6" />
+                                        <div className="w-12 h-12 bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-slate-500 shrink-0 shadow-sm border border-slate-200">
+                                            {student.foto_url ? (
+                                                <img src={student.foto_url} alt={student.nome_completo} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="w-6 h-6" />
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-bold text-slate-950 truncate pr-4 uppercase tracking-tighter">{student.nome_completo}</h3>
@@ -900,6 +917,16 @@ export default function StudentManagement() {
                     onClose={() => setShowBulkModal(false)}
                     onSuccess={() => {
                         fetchStudents();
+                    }}
+                />
+            )}
+
+            {showBulkPhotoModal && (
+                <BulkPhotoImportModal
+                    onClose={() => setShowBulkPhotoModal(false)}
+                    onSuccess={() => {
+                        fetchStudents();
+                        setShowBulkPhotoModal(false);
                     }}
                 />
             )}
