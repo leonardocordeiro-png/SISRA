@@ -46,11 +46,11 @@ const TAB_FILTERS: Record<TabId, string[]> = {
     all:         [],
     auth:        ['LOGIN_SUCESSO', 'LOGIN_FALHA', 'SISTEMA_LOGIN', 'SISTEMA_LOGOUT', 'ACESSO_NEGADO'],
     data:        ['CADASTRO_ESTUDANTE', 'EDICAO_ESTUDANTE', 'EXCLUSAO_ESTUDANTE', 'EXCLUSAO_ESTUDANTE_MASSA',
-                  'CADASTRO_RESPONSAVEL', 'REMANEJAMENTO_TURMA', 'LIMPEZA_REGISTROS', 'GERACAO_LINK_ACESSO',
-                  'EXPORTACAO_DADOS', 'ANALISE'],
+                  'EXCLUSAO_USUARIO', 'CADASTRO_RESPONSAVEL', 'REMANEJAMENTO_TURMA', 'LIMPEZA_REGISTROS',
+                  'GERACAO_LINK_ACESSO', 'EXPORTACAO_DADOS', 'ANALISE'],
     withdrawals: ['SOLICITACAO_RETIRADA', 'CONFIRMACAO_ENTREGA'],
     qr:          ['GERACAO_CARTAO_QR', 'GERACAO_RELATORIO'],
-    system:      ['ALTERACAO_CONFIGURACAO', 'MANUTENCAO', 'MANIPULACAO_DADOS'],
+    system:      ['ALTERACAO_CONFIGURACAO', 'MANUTENCAO', 'MANIPULACAO_DADOS', 'ASSINATURA_DIARIA'],
     alerts:      ['LOGIN_FALHA', 'ACESSO_NEGADO', 'EXCLUSAO_ESTUDANTE_MASSA', 'LIMPEZA_REGISTROS'],
 };
 
@@ -103,8 +103,9 @@ function getEventIcon(acao: string) {
         case 'EDICAO_ESTUDANTE': case 'REMANEJAMENTO_TURMA': return <Filter className={cls} />;
         case 'SOLICITACAO_RETIRADA': case 'CONFIRMACAO_ENTREGA': return <UserCheck className={cls} />;
         case 'GERACAO_CARTAO_QR': case 'GERACAO_LINK_ACESSO': return <QrCode className={cls} />;
-        case 'GERACAO_RELATORIO': case 'ANALISE': case 'EXPORTACAO_DADOS': return <FileText className={cls} />;
+        case 'GERACAO_RELATORIO': case 'ANALISE': case 'EXPORTACAO_DADOS': case 'ASSINATURA_DIARIA': return <FileText className={cls} />;
         case 'ALTERACAO_CONFIGURACAO': case 'MANUTENCAO': return <Settings className={cls} />;
+        case 'EXCLUSAO_USUARIO': return <Trash2 className={cls} />;
         default: return <Activity className={cls} />;
     }
 }
@@ -131,6 +132,8 @@ function describeLog(log: AuditLog): string {
         case 'CADASTRO_RESPONSAVEL': return `Responsável: ${d.nome || '—'} cadastrado.`;
         case 'EXPORTACAO_DADOS': case 'ANALISE': return d.message || d.motivo || `Análise/exportação: ${d.tipo || 'dados'}.`;
         case 'ALTERACAO_CONFIGURACAO': return `Configuração alterada: ${d.campo || d.message || '—'}`;
+        case 'EXCLUSAO_USUARIO': return `Usuário removido: ${d.nome || '—'} (${d.email || '—'})`;
+        case 'ASSINATURA_DIARIA': return `Assinatura diária: turma ${d.turma || '—'} (${d.total_alunos ?? '?'} alunos presentes)`;
         default: return d.message || d.motivo || log.descricao || 'Ação registrada.';
     }
 }

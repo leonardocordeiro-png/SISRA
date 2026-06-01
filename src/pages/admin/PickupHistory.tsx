@@ -25,6 +25,7 @@ type PickupRecord = {
     horario_liberacao: string | null;
     tempo_espera_segundos: number | null;
     observacoes: string | null;
+    mensagem_sala: string | null;
     mensagem_recepcao: string | null;
     aluno: { nome_completo: string; matricula: string; turma: string; sala: string; foto_url: string | null } | null;
     responsavel: { nome_completo: string; cpf: string; foto_url: string | null } | null;
@@ -46,17 +47,31 @@ const waitLabel = (secs: number | null) => {
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
 
-// Status color mapping (dark theme)
+// LGPD Art. 46 — mask CPF in all display and export contexts
+const maskCpf = (cpf: string | null | undefined): string => {
+    if (!cpf) return '—';
+    const d = cpf.replace(/\D/g, '');
+    if (d.length === 11) return `${d.slice(0, 3)}.***.***-${d.slice(9)}`;
+    return '***.***.***-**';
+};
+
+// Status color mapping (dark theme) — all 8 states of the status machine
 const STATUS_COLOR: Record<string, { color: string; border: string; bg: string }> = {
-    LIBERADO:   { color: '#00e676', border: 'rgba(0,230,118,0.4)',  bg: 'rgba(0,230,118,0.08)'  },
-    CONFIRMADO: { color: '#a64dff', border: 'rgba(166,77,255,0.4)', bg: 'rgba(166,77,255,0.08)' },
-    SOLICITADO: { color: '#4da6ff', border: 'rgba(77,166,255,0.4)', bg: 'rgba(77,166,255,0.08)' },
+    SOLICITADO: { color: '#4da6ff', border: 'rgba(77,166,255,0.4)',  bg: 'rgba(77,166,255,0.08)'  },
+    NOTIFICADO: { color: '#fbbf24', border: 'rgba(251,191,36,0.4)',  bg: 'rgba(251,191,36,0.08)'  },
+    AGUARDANDO: { color: '#fb923c', border: 'rgba(251,146,60,0.4)',  bg: 'rgba(251,146,60,0.08)'  },
+    CONFIRMADO: { color: '#a64dff', border: 'rgba(166,77,255,0.4)',  bg: 'rgba(166,77,255,0.08)'  },
+    LIBERADO:   { color: '#00e676', border: 'rgba(0,230,118,0.4)',   bg: 'rgba(0,230,118,0.08)'   },
+    CONCLUIDO:  { color: '#34d399', border: 'rgba(52,211,153,0.4)',  bg: 'rgba(52,211,153,0.08)'  },
+    FINALIZADO: { color: '#34d399', border: 'rgba(52,211,153,0.4)',  bg: 'rgba(52,211,153,0.08)'  },
     CANCELADO:  { color: 'rgba(255,69,0,0.9)', border: 'rgba(255,69,0,0.4)', bg: 'rgba(255,69,0,0.08)' },
 };
 
 const STATUS_PT: Record<string, string> = {
-    LIBERADO: 'Liberado', CONFIRMADO: 'Na Recepção',
-    SOLICITADO: 'Solicitado', CANCELADO: 'Cancelado',
+    SOLICITADO: 'Solicitado',  NOTIFICADO: 'Notificado',
+    AGUARDANDO: 'Aguardando',  CONFIRMADO: 'Na Recepção',
+    LIBERADO: 'Liberado',      CONCLUIDO: 'Concluído',
+    FINALIZADO: 'Finalizado',  CANCELADO: 'Cancelado',
 };
 
 function periodRange(
@@ -292,7 +307,7 @@ function RecordDetail({ record, onClose }: { record: PickupRecord; onClose: () =
                         )}
                         <div>
                             <p style={{ fontSize: '13px', fontWeight: 700, color: '#e0e6ed' }}>{record.responsavel?.nome_completo || '—'}</p>
-                            <p style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>CPF: {record.responsavel?.cpf || '—'}</p>
+                            <p style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>CPF: {maskCpf(record.responsavel?.cpf)}</p>
                         </div>
                     </div>
 
@@ -329,13 +344,24 @@ function RecordDetail({ record, onClose }: { record: PickupRecord; onClose: () =
                         <span style={{ fontSize: '18px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff' }}>{waitLabel(record.tempo_espera_segundos)}</span>
                     </div>
 
+                    {/* Classroom teacher message */}
+                    {record.mensagem_sala && (
+                        <div style={{
+                            background: 'rgba(77,166,255,0.06)', border: '1px solid rgba(77,166,255,0.2)',
+                            borderRadius: '10px', padding: '14px 16px',
+                        }}>
+                            <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#4da6ff', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Mensagem da Sala</p>
+                            <p style={{ fontSize: '12px', color: '#e0e6ed', lineHeight: '1.6' }}>{record.mensagem_sala}</p>
+                        </div>
+                    )}
+
                     {/* Notes */}
                     {record.observacoes && (
                         <div style={{
                             background: 'rgba(176,145,79,0.06)', border: '1px solid rgba(176,145,79,0.25)',
                             borderRadius: '10px', padding: '14px 16px',
                         }}>
-                            <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#b0914f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Observações</p>
+                            <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#b0914f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Observações da Recepção</p>
                             <p style={{ fontSize: '12px', color: '#e0e6ed', lineHeight: '1.6' }}>{record.observacoes}</p>
                         </div>
                     )}
@@ -383,7 +409,7 @@ export default function PickupHistoryView() {
                 .select(`
                     id, status, tipo_solicitacao, horario_solicitacao,
                     horario_notificacao, horario_confirmacao, horario_liberacao,
-                    tempo_espera_segundos, observacoes, mensagem_recepcao,
+                    tempo_espera_segundos, observacoes, mensagem_sala, mensagem_recepcao,
                     aluno:alunos(nome_completo, matricula, turma, sala, foto_url),
                     responsavel:responsaveis(nome_completo, cpf, foto_url)
                 `)
@@ -434,8 +460,10 @@ export default function PickupHistoryView() {
         const total = records.length;
         const liberados = records.filter(r => r.status === 'LIBERADO');
         const cancelados = records.filter(r => r.status === 'CANCELADO');
-        const avgWait = liberados.length
-            ? Math.round(liberados.reduce((a, r) => a + (r.tempo_espera_segundos || 0), 0) / liberados.length)
+        // Use all records that have a measured wait time (set when the pickup is finalized)
+        const completedWithTime = records.filter(r => (r.tempo_espera_segundos || 0) > 0);
+        const avgWait = completedWithTime.length
+            ? Math.round(completedWithTime.reduce((a, r) => a + (r.tempo_espera_segundos || 0), 0) / completedWithTime.length)
             : 0;
 
         // Pickups by hour bucket (6 buckets: 6h-23h)
@@ -489,7 +517,7 @@ export default function PickupHistoryView() {
 
     // ── Export CSV ──
     const exportCSV = () => {
-        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Método', 'Tempo Espera (seg)', 'Observações'];
+        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Método', 'Tempo Espera (seg)', 'Msg Sala', 'Observações'];
         const rows = filtered.map(r => [
             fmtDate(r.horario_solicitacao),
             fmtTime(r.horario_solicitacao),
@@ -499,10 +527,11 @@ export default function PickupHistoryView() {
             r.aluno?.turma || '',
             r.aluno?.sala || '',
             r.responsavel?.nome_completo || '',
-            r.responsavel?.cpf || '',
+            maskCpf(r.responsavel?.cpf),
             STATUS_PT[r.status] || r.status,
             r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
             r.tempo_espera_segundos?.toString() || '',
+            r.mensagem_sala || '',
             r.observacoes || '',
         ]);
         const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -523,7 +552,7 @@ export default function PickupHistoryView() {
 
     // Excel-compatible export without the vulnerable xlsx package.
     const exportSpreadsheet = () => {
-        const header = ['Data', 'Hora Solicitacao', 'Hora Liberacao', 'Aluno', 'Matricula', 'Turma', 'Sala', 'Responsavel', 'CPF', 'Status', 'Metodo', 'Tempo Espera (seg)', 'Observacoes'];
+        const header = ['Data', 'Hora Solicitacao', 'Hora Liberacao', 'Aluno', 'Matricula', 'Turma', 'Sala', 'Responsavel', 'CPF', 'Status', 'Metodo', 'Tempo Espera (seg)', 'Msg Sala', 'Observacoes'];
         const rows = filtered.map(r => [
             fmtDate(r.horario_solicitacao),
             fmtTime(r.horario_solicitacao),
@@ -533,10 +562,11 @@ export default function PickupHistoryView() {
             r.aluno?.turma || '',
             r.aluno?.sala || '',
             r.responsavel?.nome_completo || '',
-            r.responsavel?.cpf || '',
+            maskCpf(r.responsavel?.cpf),
             STATUS_PT[r.status] || r.status,
             r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepcao',
             r.tempo_espera_segundos ?? '',
+            r.mensagem_sala || '',
             r.observacoes || '',
         ]);
 
@@ -1031,6 +1061,20 @@ export default function PickupHistoryView() {
                     </div>
                 </div>
 
+                {/* ── 500-record cap warning ── */}
+                {records.length >= 500 && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
+                        borderRadius: '10px', padding: '12px 18px',
+                    }}>
+                        <AlertTriangle size={15} color="#fbbf24" style={{ flexShrink: 0 }} />
+                        <p style={{ fontSize: '11px', color: '#fbbf24', fontFamily: 'Roboto Mono, monospace', margin: 0 }}>
+                            Limite de 500 registros atingido — análises podem estar incompletas. Selecione um período menor para dados precisos.
+                        </p>
+                    </div>
+                )}
+
                 {/* ─── ANALYTICS VIEW ─────────────────────────────────────────── */}
                 {activeView === 'analytics' && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
@@ -1208,7 +1252,7 @@ export default function PickupHistoryView() {
                                 </div>
                                 {/* Status */}
                                 <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '7px', padding: '3px', flexWrap: 'wrap' }}>
-                                    {['all', 'LIBERADO', 'CONFIRMADO', 'SOLICITADO', 'CANCELADO'].map(s => (
+                                    {['all', 'CONCLUIDO', 'LIBERADO', 'CONFIRMADO', 'NOTIFICADO', 'SOLICITADO', 'CANCELADO'].map(s => (
                                         <button
                                             key={s}
                                             onClick={() => { setStatusFilter(s); setPage(0); }}
@@ -1278,7 +1322,7 @@ export default function PickupHistoryView() {
                                                 {/* Responsável */}
                                                 <td style={{ padding: '14px 18px' }}>
                                                     <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed' }}>{record.responsavel?.nome_completo || '—'}</p>
-                                                    <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{record.responsavel?.cpf || ''}</p>
+                                                    <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{maskCpf(record.responsavel?.cpf)}</p>
                                                 </td>
                                                 {/* Método */}
                                                 <td style={{ padding: '14px 18px' }}>
