@@ -23,7 +23,8 @@ export type AuditAction =
     | 'CADASTRO_RESPONSAVEL'
     | 'MANIPULACAO_DADOS'
     | 'ANALISE'
-    | 'MANUTENCAO';
+    | 'MANUTENCAO'
+    | 'ASSINATURA_DIARIA';
 
 let cachedIP: string | null = null;
 

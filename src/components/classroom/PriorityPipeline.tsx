@@ -79,7 +79,9 @@ export default function PriorityPipeline({
                 status_geofence,
                 distancia_estimada_metros
             `)
-            .in('status', ['SOLICITADO', 'AGUARDANDO']);
+            .in('status', ['SOLICITADO', 'NOTIFICADO', 'AGUARDANDO'])
+        .is('horario_confirmacao', null)
+        .gte('horario_solicitacao', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
 
         if (selectedClass !== 'TODAS') {
             if (selectedClass.startsWith('Sala ')) {
@@ -124,8 +126,7 @@ export default function PriorityPipeline({
             .from('solicitacoes_retirada')
             .update({
                 status: 'LIBERADO',
-                professor_id: userId,
-                horario_liberacao: new Date().toISOString()
+                horario_liberacao: new Date().toISOString(),
             })
             .in('id', ids);
 
@@ -144,7 +145,7 @@ export default function PriorityPipeline({
 
         const interval = setInterval(() => {
             fetchRequests();
-        }, 1500);
+        }, 5000);
 
         const channel = supabase
             .channel(`pipeline_room_${selectedClass}_${userId}`)

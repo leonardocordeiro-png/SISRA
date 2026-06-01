@@ -56,24 +56,38 @@ export default function EmergencyAlert() {
                 .eq('id', user?.id)
                 .single();
 
-            // Create system announcement (persistent record)
-            await supabase.from('system_announcements').insert({
-                escola_id: userData?.escola_id,
-                title: alert.title,
-                content: alert.message,
-                priority: 'urgent',
-                created_by: user?.id
-            });
+            // Persist announcement if table exists (non-blocking — table may not exist in all deploys)
+            try {
+                await supabase.from('system_announcements').insert({
+                    escola_id: userData?.escola_id,
+                    title: alert.title,
+                    content: alert.message,
+                    priority: 'urgent',
+                    created_by: user?.id,
+                });
+            } catch {
+                // table not yet created — broadcast still proceeds
+            }
 
             // Broadcast real-time alert to all connected classroom dashboards
             if (userData?.escola_id) {
-                const broadcastChannel = supabase.channel(`emergency_alerts:${userData.escola_id}`);
-                await broadcastChannel.send({
-                    type: 'broadcast',
-                    event: 'EMERGENCY',
-                    payload: { title: alert.title, message: alert.message },
+                await new Promise<void>((resolve) => {
+                    const broadcastChannel = supabase
+                        .channel(`emergency_alerts:${userData.escola_id}`)
+                        .subscribe(async (status) => {
+                            if (status === 'SUBSCRIBED') {
+                                await broadcastChannel.send({
+                                    type: 'broadcast',
+                                    event: 'EMERGENCY',
+                                    payload: { title: alert.title, message: alert.message },
+                                });
+                                supabase.removeChannel(broadcastChannel);
+                                resolve();
+                            }
+                        });
+                    // Safety timeout so we don't hang if subscribe stalls
+                    setTimeout(resolve, 4000);
                 });
-                supabase.removeChannel(broadcastChannel);
             }
 
             // Log audit trail

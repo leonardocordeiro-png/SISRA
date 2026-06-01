@@ -138,31 +138,33 @@ export default function ClassroomDashboard() {
     }, []);
 
     useEffect(() => {
-        if (user) {
-            supabase.from('usuarios').select('turma_atribuida, sala_atribuida, escola_id')
-                .eq('id', user.id).single()
-                .then(({ data }) => {
-                    if (data?.escola_id) setEscolaId(data.escola_id);
-                    if (data?.sala_atribuida) {
-                        setSelectedClass(data.sala_atribuida === 'TODAS' ? 'TODAS' : data.sala_atribuida);
-                    } else if (data?.turma_atribuida) {
-                        setSelectedClass(data.turma_atribuida);
-                    } else if (role === 'ADMIN' || role === 'COORDENADOR') {
-                        setSelectedClass('TODAS');
-                    }
-                });
-            if (role === 'ADMIN' || role === 'COORDENADOR') {
-                supabase.from('alunos').select('turma, sala').then(({ data }) => {
-                    if (data) {
-                        setAllClasses(
-                            Array.from(new Set(data.map(a => a.sala).filter(Boolean)))
-                                .filter(i => i.startsWith('Sala ')).sort()
-                        );
-                    }
-                });
-            }
-        }
+        if (!user) return;
+        supabase.from('usuarios').select('turma_atribuida, sala_atribuida, escola_id')
+            .eq('id', user.id).single()
+            .then(({ data }) => {
+                if (data?.escola_id) setEscolaId(data.escola_id);
+                if (data?.sala_atribuida) {
+                    setSelectedClass(data.sala_atribuida === 'TODAS' ? 'TODAS' : data.sala_atribuida);
+                } else if (data?.turma_atribuida) {
+                    setSelectedClass(data.turma_atribuida);
+                } else if (role === 'ADMIN' || role === 'COORDENADOR') {
+                    setSelectedClass('TODAS');
+                }
+            });
     }, [user, role]);
+
+    // Separate effect: only fetch allClasses after escolaId is known to avoid cross-tenant data exposure
+    useEffect(() => {
+        if (!escolaId || (role !== 'ADMIN' && role !== 'COORDENADOR')) return;
+        supabase.from('alunos').select('turma, sala').eq('escola_id', escolaId).then(({ data }) => {
+            if (data) {
+                setAllClasses(
+                    Array.from(new Set(data.map(a => a.sala).filter(Boolean)))
+                        .filter(i => i.startsWith('Sala ')).sort()
+                );
+            }
+        });
+    }, [escolaId, role]);
 
     // Subscribe to emergency broadcasts for this school
     useEffect(() => {
@@ -211,7 +213,7 @@ export default function ClassroomDashboard() {
         const statusMap = { LIBERAR: 'LIBERADO', AGUARDAR: 'AGUARDANDO', RECUSAR: 'CANCELADO' };
         const msgMap    = { LIBERAR: 'Aluno liberado com sucesso!', AGUARDAR: 'Solicitação colocada em espera.', RECUSAR: 'Solicitação rejeitada e removida.' };
         const { error } = await supabase.from('solicitacoes_retirada')
-            .update({ status: statusMap[action], professor_id: user?.id, horario_liberacao: action === 'LIBERAR' ? new Date().toISOString() : null })
+            .update({ status: statusMap[action], horario_liberacao: action === 'LIBERAR' ? new Date().toISOString() : null })
             .eq('id', requestId);
         if (error) { toast.error('Erro ao atualizar status', error.message); }
         else {
