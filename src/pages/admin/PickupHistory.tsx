@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
+import { useAuth } from '../../context/AuthContext';
 import {
     BarChart2, Calendar, Clock, User, Shield, CheckCircle2,
     AlertCircle, Search, Download, TrendingUp,
@@ -347,6 +348,7 @@ function RecordDetail({ record, onClose }: { record: PickupRecord; onClose: () =
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function PickupHistoryView() {
+    const { escolaId } = useAuth();
     const [records, setRecords] = useState<PickupRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -376,7 +378,7 @@ export default function PickupHistoryView() {
         if (!silent) setLoading(true);
         else setRefreshing(true);
         try {
-            const { data, error } = await supabase
+            let historyQ = supabase
                 .from('solicitacoes_retirada')
                 .select(`
                     id, status, tipo_solicitacao, horario_solicitacao,
@@ -389,6 +391,8 @@ export default function PickupHistoryView() {
                 .lte('horario_solicitacao', to)
                 .order('horario_solicitacao', { ascending: false })
                 .limit(500);
+            if (escolaId) historyQ = historyQ.eq('escola_id', escolaId);
+            const { data, error } = await historyQ;
 
             if (error) throw error;
             setRecords((data as any[]) || []);
@@ -399,7 +403,7 @@ export default function PickupHistoryView() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [from, to]);
+    }, [from, to, escolaId]);
 
     useEffect(() => { fetchRecords(); }, [fetchRecords]);
 

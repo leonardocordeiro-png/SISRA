@@ -202,7 +202,7 @@ export default function ReceptionSearch() {
                 const combined: Student[] = directStudents || [];
                 auths?.forEach((a: any) => {
                     const student = Array.isArray(a.alunos) ? a.alunos[0] : a.alunos;
-                    if (student && !combined.some(s => s.id === student.id)) combined.push(student);
+                    if (student && !combined.some(s => s.id === student.id) && (!escolaId || student.escola_id === escolaId)) combined.push(student);
                 });
                 setResults(combined.slice(0, 8));
             } catch (err) {
@@ -280,23 +280,6 @@ export default function ReceptionSearch() {
                 || allStudents.find(s => s.escola_id)?.escola_id
                 || null;
 
-            if (escolaId) {
-                await supabase
-                    .from('solicitacoes_retirada')
-                    .update({ status: 'CANCELADO', horario_confirmacao: new Date().toISOString() })
-                    .in('aluno_id', studentIds)
-                    .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
-                    .is('horario_confirmacao', null)
-                    .is('escola_id', null);
-                await supabase
-                    .from('solicitacoes_retirada')
-                    .update({ status: 'CANCELADO', horario_confirmacao: new Date().toISOString() })
-                    .in('aluno_id', studentIds)
-                    .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
-                    .is('horario_confirmacao', null)
-                    .neq('escola_id', escolaId);
-            }
-
             let preCheckQuery = supabase
                 .from('solicitacoes_retirada')
                 .select('aluno_id, status')
@@ -342,12 +325,13 @@ export default function ReceptionSearch() {
 
             if (error && (error.code === '23505' || error.message?.toLowerCase().includes('unique') || error.message?.toLowerCase().includes('duplicate'))) {
                 console.warn('Unique constraint on insert — auto-closing stale records and retrying:', error.message);
-                await supabase
+                const staleQ = supabase
                     .from('solicitacoes_retirada')
                     .update({ status: 'CANCELADO', horario_confirmacao: new Date().toISOString() })
                     .in('aluno_id', studentIds)
                     .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
                     .is('horario_confirmacao', null);
+                await (escolaId ? staleQ.eq('escola_id', escolaId) : staleQ);
 
                 const retry = await supabase.from('solicitacoes_retirada').insert(requests);
                 error = retry.error;
@@ -413,9 +397,7 @@ export default function ReceptionSearch() {
                 if (uuidCandidate.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))
                     responsavelId = uuidCandidate;
             }
-            if (!responsavelId && qrData.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))
-                responsavelId = qrData;
-            if (!responsavelId) throw new Error('QR Code não reconhecido.');
+            if (!responsavelId) throw new Error('QR Code não reconhecido. Use um cartão válido do sistema.');
 
             await resolveByResponsavelId(responsavelId);
         } catch (err: any) {
