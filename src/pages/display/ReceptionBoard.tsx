@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getSchoolActiveRequests } from '../../lib/publicApi';
 import {
     Activity, CheckCircle2, Clock, AlertTriangle,
     User as UserIcon, MapPin, School, MessageSquare,
@@ -277,30 +278,12 @@ export default function ReceptionBoard() {
     }
 
     const fetchData = useCallback(async () => {
+        if (!escolaId) return;
         try {
-            let q = supabase
-                .from('solicitacoes_retirada')
-                .select(`
-                    id, status, tipo_solicitacao, horario_solicitacao, status_geofence, mensagem_sala,
-                    aluno:alunos(id, nome_completo, turma, sala, foto_url),
-                    responsavel:responsaveis(nome_completo, foto_url)
-                `)
-                .in('status', ['SOLICITADO', 'NOTIFICADO', 'CONFIRMADO', 'AGUARDANDO', 'LIBERADO'])
-                .is('horario_confirmacao', null)
-                .order('horario_solicitacao', { ascending: true })
-                .eq('escola_id', escolaId);
-            const { data, error } = await q;
-            if (!error && data) { setRequests(data as unknown as ActiveRequest[]); setConnected(true); }
-
-            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-            const cq = supabase
-                .from('solicitacoes_retirada')
-                .select('*', { count: 'exact', head: true })
-                .not('horario_confirmacao', 'is', null)
-                .gte('horario_solicitacao', todayStart.toISOString())
-                .eq('escola_id', escolaId);
-            const { count } = await cq;
-            if (count !== null) setCompletedToday(count);
+            const result = await getSchoolActiveRequests(escolaId);
+            setRequests(result.requests as unknown as ActiveRequest[]);
+            setCompletedToday(result.completed_today);
+            setConnected(true);
         } catch {
             setConnected(false);
         }
@@ -308,7 +291,7 @@ export default function ReceptionBoard() {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 2000);
+        const interval = setInterval(fetchData, 5000);
         const channel = supabase
             .channel('board_realtime')
             .on('postgres_changes', {

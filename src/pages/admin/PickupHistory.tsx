@@ -11,7 +11,6 @@ import {
 import NavigationControls from '../../components/NavigationControls';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -518,9 +517,9 @@ export default function PickupHistoryView() {
         });
     };
 
-    // ── Export Excel (XLSX) ──
-    const exportXLSX = () => {
-        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Método', 'Tempo Espera (seg)', 'Observações'];
+    // Excel-compatible export without the vulnerable xlsx package.
+    const exportSpreadsheet = () => {
+        const header = ['Data', 'Hora Solicitacao', 'Hora Liberacao', 'Aluno', 'Matricula', 'Turma', 'Sala', 'Responsavel', 'CPF', 'Status', 'Metodo', 'Tempo Espera (seg)', 'Observacoes'];
         const rows = filtered.map(r => [
             fmtDate(r.horario_solicitacao),
             fmtTime(r.horario_solicitacao),
@@ -532,38 +531,43 @@ export default function PickupHistoryView() {
             r.responsavel?.nome_completo || '',
             r.responsavel?.cpf || '',
             STATUS_PT[r.status] || r.status,
-            r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
+            r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepcao',
             r.tempo_espera_segundos ?? '',
             r.observacoes || '',
         ]);
 
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-
-        // Column widths
-        ws['!cols'] = [12,10,10,30,12,22,8,30,14,12,12,14,40].map(w => ({ wch: w }));
-
-        // Summary sheet
         const summaryData = [
-            ['Relatório de Retiradas — La Salle, Cheguei!'],
-            ['Período:', `${fmtDate(from)} até ${fmtDate(to)}`],
+            ['Relatorio de Retiradas - La Salle, Cheguei!'],
+            ['Periodo:', `${fmtDate(from)} ate ${fmtDate(to)}`],
             ['Gerado em:', new Date().toLocaleString('pt-BR')],
             [],
             ['Total de Registros', analytics.total],
             ['Liberados', analytics.liberados],
             ['Cancelados / Alertas', analytics.cancelados],
-            ['Tempo Médio de Espera', waitLabel(analytics.avgWait)],
+            ['Tempo Medio de Espera', waitLabel(analytics.avgWait)],
         ];
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        wsSummary['!cols'] = [{ wch: 30 }, { wch: 30 }];
 
-        XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
-        XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+        const escapeCell = (value: unknown) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        const renderTable = (title: string, data: unknown[][]) => {
+            const rowsHtml = data.map(row => `<tr>${row.map(cell => `<td>${escapeCell(cell)}</td>`).join('')}</tr>`).join('');
+            return `<h2>${escapeCell(title)}</h2><table border="1"><tbody>${rowsHtml}</tbody></table>`;
+        };
+        const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body>${renderTable('Resumo', summaryData)}${renderTable('Registros', [header, ...rows])}</body></html>`;
 
-        XLSX.writeFile(wb, `retiradas_${period}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `retiradas_${period}_${new Date().toISOString().split('T')[0]}.xls`;
+        a.click();
+        URL.revokeObjectURL(url);
 
         logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
-            formato: 'XLSX',
+            formato: 'XLS',
             periodo: period,
             de: from,
             ate: to,
@@ -864,7 +868,7 @@ export default function PickupHistoryView() {
                                             Exportar PDF
                                         </button>
                                         <button
-                                            onClick={() => { exportXLSX(); setExportMenuOpen(false); }}
+                                            onClick={() => { exportSpreadsheet(); setExportMenuOpen(false); }}
                                             className="ph-export-item"
                                             style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
                                         >

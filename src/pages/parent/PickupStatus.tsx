@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { createPickupRequests, getPickupStatus, markGuardianArrived } from '../../lib/publicApi';
 import {
     CheckCircle, ShieldCheck, Bell, School,
     User, Info, Loader2, Navigation, Activity, Wifi, MapPin
@@ -158,24 +159,12 @@ export default function ParentPickupStatus() {
     const loadInitialData = async (gId: string) => {
         setLoading(true);
         try {
-            const { data: link, error: linkErr } = await supabase
-                .from('alunos_responsaveis')
-                .select('aluno_id')
-                .eq('responsavel_id', gId)
-                .eq('aluno_id', studentId)
-                .maybeSingle();
-
-            if (linkErr || !link) { setAccessDenied(true); return; }
-
-            const { data: studentData, error: studentErr } = await supabase
-                .from('alunos')
-                .select('id, nome_completo, foto_url, turma, escola_id')
-                .eq('id', studentId)
-                .single();
-
-            if (studentErr || !studentData) throw studentErr;
-            setStudent(studentData);
-            await fetchPickupStatus();
+            if (!studentId) return;
+            const payload = await getPickupStatus(gId, studentId);
+            if (!payload.allowed || !payload.student) { setAccessDenied(true); return; }
+            setStudent(payload.student);
+            setPickup(payload.pickup as PickupData | null);
+            return;
         } catch {
             // fail silently
         } finally {
@@ -187,28 +176,17 @@ export default function ParentPickupStatus() {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         try {
-            const { data, error } = await supabase
-                .from('solicitacoes_retirada')
-                .select('id, status, mensagem_sala, mensagem_recepcao, horario_solicitacao')
-                .eq('aluno_id', studentId)
-                .is('horario_confirmacao', null)
-                .neq('status', 'CANCELADO')
-                .gte('horario_solicitacao', todayStart.toISOString())
-                .order('horario_solicitacao', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            if (!error) {
-                if (data) {
-                    nullCountRef.current = 0;
-                    setPickup(data as PickupData);
-                } else {
-                    nullCountRef.current += 1;
-                    // Only clear pickup (and unmount GeoTracker) after 2 consecutive
-                    // null results — guards against a single transient query miss.
-                    if (nullCountRef.current >= 2) setPickup(null);
-                }
+            if (!guardianId || !studentId) return;
+            const payload = await getPickupStatus(guardianId, studentId);
+            if (!payload.allowed) { setAccessDenied(true); return; }
+            if (payload.pickup) {
+                nullCountRef.current = 0;
+                setPickup(payload.pickup as PickupData);
+            } else {
+                nullCountRef.current += 1;
+                if (nullCountRef.current >= 2) setPickup(null);
             }
+            return;
         } catch { /* ignore */ }
     };
 
@@ -217,42 +195,10 @@ export default function ParentPickupStatus() {
         requestingRef.current = true;
         setRequesting(true);
         try {
-            const session = localStorage.getItem('sisra_parent_session');
-            const sessionData = session ? JSON.parse(session) : null;
-
-            // Guard against duplicates: must mirror fetchPickupStatus filters exactly.
-            // Only treat a request as "already active" if it is open (horario_confirmacao IS NULL)
-            // and not cancelled — same conditions used to display the status screen.
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-            const { data: existing } = await supabase
-                .from('solicitacoes_retirada')
-                .select('id')
-                .eq('aluno_id', student.id)
-                .neq('status', 'CANCELADO')
-                .is('horario_confirmacao', null)
-                .gte('horario_solicitacao', todayStart.toISOString())
-                .limit(1)
-                .maybeSingle();
-
-            if (existing) {
-                // Already has an active request — just refresh the status view
-                await fetchPickupStatus();
-                return;
-            }
-
-            const { error } = await supabase
-                .from('solicitacoes_retirada')
-                .insert({
-                    aluno_id: student.id,
-                    status: 'SOLICITADO',
-                    escola_id: student.escola_id,
-                    responsavel_id: sessionData?.id ?? null,
-                    tipo_solicitacao: 'ROTINA',
-                });
-
-            if (error) { toast.error('Erro ao solicitar', error.message); }
-            else { await fetchPickupStatus(); }
+            if (!guardianId) throw new Error('Sessao do responsavel expirada.');
+            await createPickupRequests(guardianId, [student.id], 'PARENT_STATUS');
+            await fetchPickupStatus();
+            return;
         } catch {
             toast.error('Erro ao solicitar', 'Tente novamente.');
         } finally {
@@ -402,10 +348,10 @@ export default function ParentPickupStatus() {
     // ── Active pickup — live tracker ──────────────────────────────────────
     const getStatusStep = (s: string) => {
         switch (s) {
-            case 'SOLICITADO': case 'AGUARDANDO': return 1;
+            case 'SOLICITADO': case 'NOTIFICADO': case 'AGUARDANDO': return 1;
             case 'LIBERADO':   return 2;
             case 'CONFIRMADO': return 3;
-            case 'FINALIZADO': return 4;
+            case 'CONCLUIDO': case 'FINALIZADO': return 4;
             default:           return 1;
         }
     };
@@ -551,26 +497,13 @@ export default function ParentPickupStatus() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <button
                         onClick={async () => {
-                            const todayStart = new Date();
-                            todayStart.setHours(0, 0, 0, 0);
-
-                            const filter = guardianId
-                                ? supabase
-                                    .from('solicitacoes_retirada')
-                                    .update({ status_geofence: 'CHEGOU', distancia_estimada_metros: 0 })
-                                    .eq('responsavel_id', guardianId)
-                                    .in('status', ['SOLICITADO', 'AGUARDANDO', 'LIBERADO'])
-                                    .gte('horario_solicitacao', todayStart.toISOString())
-                                : supabase
-                                    .from('solicitacoes_retirada')
-                                    .update({ status_geofence: 'CHEGOU', distancia_estimada_metros: 0 })
-                                    .eq('id', pickup.id);
-
-                            const { error } = await filter;
-                            if (!error) {
+                            if (!guardianId) return;
+                            const { updated } = await markGuardianArrived(guardianId, pickup.id);
+                            if (updated > 0) {
                                 toast.success('Chegada confirmada!', 'A escola foi notificada da sua chegada.');
                                 fetchPickupStatus();
                             }
+                            return;
                         }}
                         className="w-full flex items-center justify-center transition-all"
                         style={{

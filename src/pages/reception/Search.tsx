@@ -199,7 +199,7 @@ export default function ReceptionSearch() {
                     .or(`nome_completo.ilike.%${safeQuery}%,cpf.ilike.%${safeQuery}%`, { foreignTable: 'responsaveis' })
                     .eq('ativa', true).limit(10);
 
-                let combined: Student[] = directStudents || [];
+                const combined: Student[] = directStudents || [];
                 auths?.forEach((a: any) => {
                     const student = Array.isArray(a.alunos) ? a.alunos[0] : a.alunos;
                     if (student && !combined.some(s => s.id === student.id)) combined.push(student);

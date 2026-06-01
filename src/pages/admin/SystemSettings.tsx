@@ -43,13 +43,17 @@ export default function SystemSettings() {
         }
     });
 
-    const escola_id = escolaId ?? (import.meta.env.VITE_ESCOLA_ID as string | undefined) ?? 'e6328325-1845-420a-b333-87a747953259';
+    const escola_id = escolaId ?? (import.meta.env.VITE_ESCOLA_ID as string | undefined) ?? null;
 
     useEffect(() => {
         fetchSettings();
     }, []);
 
     const fetchSettings = async () => {
+        if (!escola_id) {
+            toast.error('Escola não identificada', 'Faça login novamente.');
+            return;
+        }
         try {
             const { data, error } = await supabase
                 .from('escolas')
@@ -85,10 +89,14 @@ export default function SystemSettings() {
     };
 
     const handleSave = async () => {
+        if (!escola_id) {
+            toast.error('Escola não identificada', 'Faça login novamente.');
+            return;
+        }
         try {
             setSaving(true);
 
-            let payload: any = {
+            const payload: any = {
                 nome: settings.nome,
                 website: settings.website,
                 endereco: settings.endereco,
@@ -100,7 +108,7 @@ export default function SystemSettings() {
             };
 
             let success = false;
-            let missingColumns: string[] = [];
+            const missingColumns: string[] = [];
 
             while (!success && Object.keys(payload).length > 0) {
                 const { error, count } = await supabase

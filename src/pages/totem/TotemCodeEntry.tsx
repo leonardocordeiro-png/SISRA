@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Hash, AlertCircle, Loader2, User as UserIcon, Settings, Wifi, ChevronRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { lookupGuardianByCode } from '../../lib/publicApi';
 import { useInactivityTimer } from '../../components/totem/InactivityTimer';
 import TotemNumPad from '../../components/totem/TotemNumPad';
 import type { Student } from '../../types';
@@ -74,74 +74,29 @@ export default function TotemCodeEntry() {
         setError(null);
 
         try {
-            // Search code case-insensitively to handle any casing stored in DB
-            const { data: resp, error: err } = await supabase
-                .from('responsaveis')
-                .select('id, nome_completo, foto_url, cpf')
-                .ilike('codigo_acesso', code.trim())
-                .maybeSingle();
-
-            if (err || !resp) {
-                setError('Código não encontrado. Verifique e tente novamente.');
+            const { guardian: resp, students: newStudents } = await lookupGuardianByCode(code);
+            if (!resp) {
+                setError('Codigo nao encontrado. Verifique e tente novamente.');
                 setLoading(false);
                 return;
             }
-
-            // Collect all responsavel IDs with same CPF — try both formats (handles duplicate registrations with different CPF formats)
-            let responsavelIds: string[] = [resp.id];
-            if (resp.cpf) {
-                const cleanCpf = resp.cpf.replace(/\D/g, '');
-                const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                const { data: samesCpf } = await supabase
-                    .from('responsaveis')
-                    .select('id')
-                    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`);
-                if (samesCpf && samesCpf.length > 0) {
-                    responsavelIds = [...new Set([resp.id, ...samesCpf.map((r: any) => r.id)])];
-                }
-            }
-
-            // Step 1: collect aluno_ids from both link tables for ALL responsavel IDs
-            const [authsRes, junctionRes] = await Promise.all([
-                supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', responsavelIds).eq('ativa', true),
-                supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', responsavelIds)
-            ]);
-
-            const alunoIds = new Set<string>([
-                ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
-                ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
-            ]);
-
-            if (alunoIds.size === 0) {
-                setError('Nenhum aluno vinculado a este código.');
-                setLoading(false);
-                return;
-            }
-
-            // Step 2: fetch full student records by IDs
-            const { data: alunosData } = await supabase
-                .from('alunos')
-                .select('*')
-                .in('id', Array.from(alunoIds));
-
-            const newStudents: Student[] = alunosData || [];
 
             if (newStudents.length === 0) {
-                setError('Nenhum aluno vinculado a este código.');
+                setError('Nenhum aluno vinculado a este codigo.');
                 setLoading(false);
                 return;
             }
 
-            // Merge avoiding duplicates
             const merged = [...selectedStudents];
             newStudents.forEach(ns => {
-                if (!merged.some(ms => ms.id === ns.id)) merged.push(ns);
+                if (!merged.some(ms => ms.id === ns.id)) merged.push(ns as Student);
             });
 
             setSelectedStudents(merged);
             setIdentifiedGuardian(resp);
             setCode('');
             setLoading(false);
+            return;
         } catch {
             setError('Erro de comunicação. Tente novamente.');
             setLoading(false);

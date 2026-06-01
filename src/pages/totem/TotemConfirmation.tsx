@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle2, Bell, User as UserIcon, ArrowLeft, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { createPickupRequests, getStudentsGuardians } from '../../lib/publicApi';
 import { logAudit } from '../../lib/audit';
 import type { Student, Guardian } from '../../types';
 
@@ -172,23 +172,8 @@ export default function TotemConfirmation() {
         try {
             const studentIds = students.map(s => s.id);
             if (studentIds.length > 0) {
-                // Fetch from both tables for redundancy
-                const [authsRes, junctionRes] = await Promise.all([
-                    supabase.from('autorizacoes').select('responsavel_id, responsaveis(id, nome_completo, foto_url)').in('aluno_id', studentIds).eq('ativa', true),
-                    supabase.from('alunos_responsaveis').select('responsavel_id, responsaveis(id, nome_completo, foto_url)').in('aluno_id', studentIds)
-                ]);
-
-                const guardiansMap = new Map();
-                const processResults = (data: any[] | null) => {
-                    if (!data) return;
-                    data.forEach((a: any) => {
-                        const r = Array.isArray(a.responsaveis) ? a.responsaveis[0] : a.responsaveis;
-                        if (r && !guardiansMap.has(r.id)) guardiansMap.set(r.id, r);
-                    });
-                };
-                processResults(authsRes.data);
-                processResults(junctionRes.data);
-                setAvailableGuardians(Array.from(guardiansMap.values()));
+                const guardians = await getStudentsGuardians(studentIds);
+                setAvailableGuardians(guardians);
             }
         } catch (e) {
             console.error('Error loading guardians:', e);
@@ -227,8 +212,12 @@ export default function TotemConfirmation() {
                 };
             });
 
-            const { error } = await supabase.from('solicitacoes_retirada').insert(requests);
-            if (error) throw error;
+            await createPickupRequests(
+                selectedGuardian.id,
+                Array.from(selectedIds),
+                'TOTEM',
+                true
+            );
 
             // Log individual audit events for each student requested
             for (const req of requests) {

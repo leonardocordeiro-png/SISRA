@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { User, ArrowRight, ShieldCheck, Loader2, Smartphone, Lock, CheckCircle2, Bell } from 'lucide-react';
 import { logAudit } from '../../lib/audit';
+import { createPickupRequests, lookupGuardianByCpfAndCode } from '../../lib/publicApi';
 
 // ── Design tokens matching the reference design ────────────────────────────
 const token = {
@@ -49,6 +49,7 @@ export default function ParentLogin() {
     const toast = useToast();
     const navigate = useNavigate();
     const [cpf, setCpf] = useState('');
+    const [accessCode, setAccessCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
@@ -64,43 +65,21 @@ export default function ParentLogin() {
         setError('');
 
         try {
-            const cleanCpf = cpf.replace(/\D/g, '');
+            const { guardian: responsavel, students: foundStudents } =
+                await lookupGuardianByCpfAndCode(cpf, accessCode);
 
-            const { data: responsavel, error: respError } = await supabase
-                .from('responsaveis')
-                .select('id, nome_completo')
-                .eq('cpf', cleanCpf)
-                .single();
+            if (!responsavel) {
+                throw new Error('Responsavel nao encontrado. Verifique o CPF e o codigo do cartao.');
+            }
 
-            if (respError || !responsavel) {
-                throw new Error('Responsável não encontrado. Verifique o CPF informado.');
+            if (foundStudents.length === 0) {
+                throw new Error('Identificamos seu acesso, mas nao ha estudantes vinculados a ele. Entre em contato com a secretaria.');
             }
 
             setGuardianId(responsavel.id);
             setGuardianName(responsavel.nome_completo);
-
-            const { data: links, error: linkError } = await supabase
-                .from('alunos_responsaveis')
-                .select(`
-                    aluno:alunos (
-                        id,
-                        nome_completo,
-                        turma,
-                        foto_url,
-                        escola_id
-                    )
-                `)
-                .eq('responsavel_id', responsavel.id);
-
-            if (linkError) throw linkError;
-
-            if (!links || links.length === 0) {
-                throw new Error('Identificamos seu CPF, mas não há estudantes vinculados a ele. Por favor, entre em contato com a secretaria da escola para regularizar seu cadastro.');
-            }
-
-            const foundStudents = links.map((l: any) => l.aluno);
             setStudents(foundStudents);
-            setSelectedIds(new Set(foundStudents.map((s: any) => s.id)));
+            setSelectedIds(new Set(foundStudents.map((s) => s.id)));
             setStep('SELECT_STUDENT');
 
             localStorage.setItem('sisra_parent_session', JSON.stringify({
@@ -113,13 +92,13 @@ export default function ParentLogin() {
                 'responsaveis',
                 responsavel.id,
                 {
-                    metodo: 'PORTAL_GUARDIÃO_CPF',
+                    metodo: 'PORTAL_GUARDIAO_CPF_CODIGO',
                     nome: responsavel.nome_completo,
-                    alunos_vinculados: links.length
+                    alunos_vinculados: foundStudents.length
                 },
                 responsavel.id
             );
-
+            return;
         } catch (err: any) {
             setError(err.message || 'Falha na verificação de sinal.');
         } finally {
@@ -141,45 +120,10 @@ export default function ParentLogin() {
         setSending(true);
 
         try {
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-
-            // Check which students already have an OPEN (unconfirmed) request today.
-            // Must mirror fetchPickupStatus filters: horario_confirmacao IS NULL + not CANCELADO.
-            const { data: existing } = await supabase
-                .from('solicitacoes_retirada')
-                .select('aluno_id')
-                .in('aluno_id', Array.from(selectedIds))
-                .neq('status', 'CANCELADO')
-                .is('horario_confirmacao', null)
-                .gte('horario_solicitacao', todayStart.toISOString());
-
-            const alreadyRequested = new Set((existing ?? []).map((r: any) => r.aluno_id));
-
-            const requests = Array.from(selectedIds)
-                .filter((id: string) => !alreadyRequested.has(id))
-                .map((id: string) => {
-                    const student = students.find((s: any) => s.id === id);
-                    if (!student) throw new Error('Falha de segurança: Tentativa de retirar aluno não vinculado.');
-                    return {
-                        escola_id: student.escola_id || import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259',
-                        aluno_id: id,
-                        responsavel_id: guardianId,
-                        recepcionista_id: null,
-                        status: 'SOLICITADO',
-                        tipo_solicitacao: 'ROTINA'
-                    };
-                });
-
-            if (requests.length > 0) {
-                const { error } = await supabase
-                    .from('solicitacoes_retirada')
-                    .insert(requests);
-                if (error) throw error;
-            }
-
-            const totalCalled = requests.length;
-            const skipped = alreadyRequested.size;
+            const selectedStudentIds = Array.from(selectedIds);
+            const result = await createPickupRequests(guardianId, selectedStudentIds, 'PORTAL_GUARDIAO');
+            const totalCalled = result.inserted;
+            const skipped = result.skipped;
 
             if (totalCalled > 0) {
                 logAudit(
@@ -189,27 +133,28 @@ export default function ParentLogin() {
                     {
                         responsavel_id: guardianId,
                         qtd_alunos: totalCalled,
-                        alunos_ids: requests.map((r) => r.aluno_id),
+                        alunos_ids: selectedStudentIds,
                         skipped_duplicates: skipped,
-                        origem: 'PORTAL_GUARDIÃO'
+                        origem: 'PORTAL_GUARDIAO'
                     },
                     guardianId
                 );
             }
 
             const toastMsg = totalCalled === 0
-                ? 'Aluno(s) já chamado(s) hoje'
+                ? 'Aluno(s) ja chamado(s) hoje'
                 : totalCalled === 1
-                    ? 'Solicitação enviada!'
-                    : `${totalCalled} solicitações enviadas!`;
+                    ? 'Solicitacao enviada!'
+                    : `${totalCalled} solicitacoes enviadas!`;
             const toastSub = skipped > 0
-                ? `${skipped} já estavam em fila. Acompanhe abaixo.`
+                ? `${skipped} ja estavam em fila. Acompanhe abaixo.`
                 : 'Acompanhando sua chegada em tempo real.';
 
             toast.success(toastMsg, toastSub);
 
-            const firstId = Array.from(selectedIds)[0];
+            const firstId = selectedStudentIds[0];
             navigate(`/parent/status/${firstId}`);
+            return;
         } catch (err: any) {
             toast.error('Erro ao solicitar', err.message || 'Tente novamente.');
         } finally {
@@ -327,6 +272,45 @@ export default function ParentLogin() {
                                             fontWeight: 700,
                                             color: token.cyan,
                                             letterSpacing: '3px',
+                                            textAlign: 'center',
+                                            fontFamily: "'Inter', monospace",
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="w-full flex items-center" style={{ gap: 10 }}>
+                                    <Lock style={{ color: token.gold, width: 16, height: 16 }} />
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: token.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                                        CODIGO DO CARTAO
+                                    </span>
+                                </div>
+
+                                <div
+                                    className="w-full"
+                                    style={{
+                                        background: 'rgba(11,16,29,0.7)',
+                                        border: '1px solid rgba(71,184,255,0.22)',
+                                        borderRadius: 8,
+                                        padding: '14px 20px',
+                                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.12), 0 0 10px rgba(71,184,255,0.08)',
+                                    }}
+                                >
+                                    <input
+                                        id="access-code-input"
+                                        type="text"
+                                        value={accessCode}
+                                        onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                                        placeholder="CODIGO"
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
+                                            fontSize: 'clamp(18px, 5vw, 26px)',
+                                            fontWeight: 800,
+                                            color: token.gold,
+                                            letterSpacing: '4px',
                                             textAlign: 'center',
                                             fontFamily: "'Inter', monospace",
                                         }}

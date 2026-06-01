@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# SISRA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de retirada escolar com portais para administracao, recepcao, sala de aula, responsaveis, display e totem.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React + TypeScript + Vite
+- Supabase Auth, Database, Realtime e RLS
+- Vercel para deploy estatico
 
-## React Compiler
+## Configuracao local
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Crie um arquivo `.env` com:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-chave-anon
+VITE_ESCOLA_ID=uuid-da-escola
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Nunca coloque `SUPABASE_SERVICE_ROLE_KEY` no frontend.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+npm audit --audit-level=moderate
 ```
+
+## Banco de dados
+
+As migrations ficam em `supabase/migrations`.
+
+Antes de liberar uso real, aplique a migration de hardening publica:
+
+```text
+supabase/migrations/20260316000001_public_rpc_hardening.sql
+```
+
+Ela remove policies anonimas amplas em tabelas sensiveis e troca os fluxos publicos para RPCs `SECURITY DEFINER` com validacao de vinculo responsavel-aluno.
+
+## Validacao de producao
+
+Veja [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md).
+

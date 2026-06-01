@@ -32,7 +32,7 @@ export default function WithdrawalQueue() {
 
     const fetchPending = async () => {
         if (!escolaId) return;
-        let q = supabase
+        const q = supabase
             .from('solicitacoes_retirada')
             .select(`
                 id,
@@ -110,7 +110,7 @@ export default function WithdrawalQueue() {
                 .from('solicitacoes_retirada')
                 .update({
                     horario_confirmacao: new Date().toISOString(),
-                    status: 'LIBERADO',
+                    status: 'CONCLUIDO',
                     recepcionista_id: user?.id
                 })
                 .eq('id', pickupId);
@@ -141,7 +141,6 @@ export default function WithdrawalQueue() {
                 .update({
                     status: 'SOLICITADO',
                     horario_liberacao: null,
-                    professor_id: null
                 })
                 .eq('id', pickupId);
 
@@ -172,8 +171,7 @@ export default function WithdrawalQueue() {
 
         fetchPending();
 
-        // 1 second polling for high synchronization
-        const interval = setInterval(fetchPending, 1000);
+        const interval = setInterval(fetchPending, 5000);
 
         const channel = supabase
             .channel(`reception_queue_${user.id}`)

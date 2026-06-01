@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { lookupGuardianByCode, getGuardianRequests } from '../../lib/publicApi';
 import {
     Shield, LogOut, RefreshCw, Bell, BellOff, Clock, CheckCircle2,
     AlertTriangle, User, School, ChevronRight, Loader2, KeyRound,
@@ -361,35 +362,14 @@ function LoginScreen({ onLogin }: { onLogin: (guardian: Guardian, students: Stud
         setError('');
 
         try {
-            const escolaIdEnv = (import.meta.env.VITE_ESCOLA_ID as string | undefined)?.trim();
-
-            const { data: responsavel, error: respErr } = await supabase
-                .from('responsaveis')
-                .select('id, nome_completo, foto_url, parentesco')
-                .eq('codigo_acesso', code.trim().toUpperCase())
-                .maybeSingle();
-
-            if (respErr) throw respErr;
+            const { guardian: responsavel, students } = await lookupGuardianByCode(code);
             if (!responsavel) {
-                setError('Código de acesso inválido. Verifique o código no cartão QR ou entre em contato com a escola.');
+                setError('Codigo de acesso invalido. Verifique o codigo no cartao QR ou entre em contato com a escola.');
                 setLoading(false);
                 return;
             }
-
-            let linksQ = supabase
-                .from('alunos_responsaveis')
-                .select('aluno:alunos(id, nome_completo, turma, sala, foto_url, escola_id)')
-                .eq('responsavel_id', responsavel.id);
-            const { data: links, error: linkErr } = await linksQ;
-
-            if (linkErr) throw linkErr;
-
-            const allStudents = (links || []).map((l: any) => l.aluno).filter(Boolean);
-            // Restrict to current school when VITE_ESCOLA_ID is configured
-            const students = escolaIdEnv
-                ? allStudents.filter((s: any) => s.escola_id === escolaIdEnv)
-                : allStudents;
             onLogin(responsavel, students);
+            return;
         } catch (err: any) {
             setError('Erro ao verificar o código. Tente novamente.');
         } finally {
@@ -563,47 +543,17 @@ export default function FamilyPortal() {
 
     // ── Fetch data ───────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
-        if (!guardian || students.length === 0) return;
-        const ids = students.map(s => s.id);
+        if (!guardian) return;
 
-        const today = new Date().toISOString().slice(0, 10);
-
-        const [activeRes, histRes] = await Promise.all([
-            supabase
-                .from('solicitacoes_retirada')
-                .select(`
-                    id, status, tipo_solicitacao,
-                    horario_solicitacao, horario_liberacao, horario_confirmacao,
-                    mensagem_sala, mensagem_recepcao,
-                    aluno:alunos!inner(id, nome_completo, turma, sala, foto_url)
-                `)
-                .in('aluno_id', ids)
-                .not('status', 'in', '("CONCLUIDO","CANCELADO")')
-                .order('horario_solicitacao', { ascending: false }),
-            supabase
-                .from('solicitacoes_retirada')
-                .select(`
-                    id, status, tipo_solicitacao,
-                    horario_solicitacao, horario_liberacao, horario_confirmacao,
-                    mensagem_sala, mensagem_recepcao,
-                    aluno:alunos!inner(id, nome_completo, turma, sala, foto_url)
-                `)
-                .in('aluno_id', ids)
-                .in('status', ['CONCLUIDO', 'CANCELADO'])
-                .gte('horario_solicitacao', `${today}T00:00:00`)
-                .order('horario_confirmacao', { ascending: false })
-                .limit(20),
-        ]);
-
-        if (!activeRes.error && activeRes.data) {
-            const newReqs = activeRes.data as unknown as Request[];
+        try {
+            const result = await getGuardianRequests(guardian.id);
+            const newReqs = result.active as unknown as Request[];
 
             // Detect status changes for notification
             if (notif) {
                 newReqs.forEach(req => {
                     const prev = prevStatusRef.current[req.id];
                     if (prev && prev !== req.status) {
-                        // Status changed — play a soft beep
                         try { audioRef.current?.play().catch(() => {}); } catch { /* ignore */ }
                     }
                     prevStatusRef.current[req.id] = req.status;
@@ -611,14 +561,12 @@ export default function FamilyPortal() {
             }
 
             setRequests(newReqs);
+            setHistory(result.history as unknown as Request[]);
+            setLastUpdate(new Date());
+        } catch {
+            // network error — keep existing state, don't crash
         }
-
-        if (!histRes.error && histRes.data) {
-            setHistory(histRes.data as unknown as Request[]);
-        }
-
-        setLastUpdate(new Date());
-    }, [guardian, students, notif]);
+    }, [guardian, notif]);
 
     // ── Initial fetch + polling ───────────────────────────────────────────────
     useEffect(() => {
