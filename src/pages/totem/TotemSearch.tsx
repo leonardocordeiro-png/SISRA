@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User as UserIcon, Search as SearchIcon, ChevronRight, Loader2, Settings, Wifi } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { lookupGuardianByCpf } from '../../lib/publicApi';
 import { useInactivityTimer } from '../../components/totem/InactivityTimer';
 import TotemNumericPad from '../../components/totem/TotemNumericPad';
 import type { Student } from '../../types';
@@ -67,59 +67,26 @@ export default function TotemSearch() {
         }
     }, []);
 
-    // Search with debounce
+    // Search with debounce — uses SECURITY DEFINER RPC (anon table access blocked post-20260316)
     useEffect(() => {
-        const trimmedQuery = query.trim();
-        const cleanCpf = trimmedQuery.replace(/\D/g, '');
-
-        // Security: only search by full CPF (11 digits)
-        if (cleanCpf.length !== 11) { setResults([]); return; }
+        // NumericPad only emits digits so query is always pure numeric
+        if (query.length !== 11) { setResults([]); setIdentifiedGuardian(null); return; }
 
         const t = setTimeout(async () => {
             setLoading(true);
             try {
-                let allResults: Student[] = [];
-
-                // Search by Guardian CPF — strictly using normalized numeric CPF
-                const { data: guardians } = await supabase
-                    .from('responsaveis')
-                    .select('*')
-                    .eq('cpf', cleanCpf);
-
-                if (guardians && guardians.length > 0) {
-                    const guardianIds = guardians.map((g: any) => g.id);
-
-                    // Query both link tables for redundancy across ALL guardian IDs
-                    const [authsRes, junctionRes] = await Promise.all([
-                        supabase.from('autorizacoes').select('aluno_id').in('responsavel_id', guardianIds).eq('ativa', true),
-                        supabase.from('alunos_responsaveis').select('aluno_id').in('responsavel_id', guardianIds)
-                    ]);
-
-                    const studentIds = new Set([
-                        ...(authsRes.data?.map((a: any) => a.aluno_id) || []),
-                        ...(junctionRes.data?.map((j: any) => j.aluno_id) || [])
-                    ]);
-
-                    if (studentIds.size > 0) {
-                        const { data: cpfStudents } = await supabase
-                            .from('alunos')
-                            .select('*')
-                            .in('id', Array.from(studentIds));
-
-                        if (cpfStudents) {
-                            allResults = cpfStudents;
-                            // Auto-select all students found by CPF
-                            setSelectedStudents(cpfStudents);
-                            setIdentifiedGuardian(guardians[0]);
-                        }
-                    }
+                const { guardian, students: found } = await lookupGuardianByCpf(query);
+                if (guardian && found.length > 0) {
+                    setResults(found as Student[]);
+                    setSelectedStudents(found as Student[]);
+                    setIdentifiedGuardian(guardian);
                 } else {
+                    setResults([]);
                     setIdentifiedGuardian(null);
                 }
-
-                setResults(allResults);
-            } catch (error) {
-                console.error('Search error:', error);
+            } catch (err) {
+                console.error('CPF search error:', err);
+                setResults([]);
             } finally {
                 setLoading(false);
             }
@@ -314,7 +281,7 @@ export default function TotemSearch() {
                     paddingBottom: 120,
                 }}>
                     {/* Empty state */}
-                    {results.length === 0 && query.trim().length < 2 && selectedStudents.length === 0 && (
+                    {results.length === 0 && query.length < 11 && selectedStudents.length === 0 && (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, textAlign: 'center' }}>
                             <div style={{
                                 width: 88, height: 88, borderRadius: 24,
@@ -336,7 +303,7 @@ export default function TotemSearch() {
                     )}
 
                     {/* No results */}
-                    {results.length === 0 && query.trim().length >= 2 && !loading && (
+                    {results.length === 0 && query.length === 11 && !loading && (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <p style={{ fontSize: 18, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', fontStyle: 'italic' }}>
                                 Nenhum aluno encontrado

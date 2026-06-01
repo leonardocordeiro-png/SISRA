@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Hash, AlertCircle, Loader2, User as UserIcon, Settings, Wifi, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Hash, AlertCircle, CheckCircle2, Loader2, User as UserIcon, Settings, Wifi, ChevronRight } from 'lucide-react';
 import { lookupGuardianByCode } from '../../lib/publicApi';
 import { useInactivityTimer } from '../../components/totem/InactivityTimer';
 import TotemNumPad from '../../components/totem/TotemNumPad';
@@ -56,6 +56,7 @@ export default function TotemCodeEntry() {
     const [code, setCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
     const [identifiedGuardian, setIdentifiedGuardian] = useState<any>(null);
     useInactivityTimer({ timeoutMs: 60000, redirectTo: '/totem' });
@@ -72,17 +73,18 @@ export default function TotemCodeEntry() {
         if (code.length < 4) return;
         setLoading(true);
         setError(null);
+        setSuccessMsg(null);
 
         try {
             const { guardian: resp, students: newStudents } = await lookupGuardianByCode(code);
             if (!resp) {
-                setError('Codigo nao encontrado. Verifique e tente novamente.');
+                setError('Código não encontrado. Verifique e tente novamente.');
                 setLoading(false);
                 return;
             }
 
             if (newStudents.length === 0) {
-                setError('Nenhum aluno vinculado a este codigo.');
+                setError('Nenhum aluno vinculado a este código.');
                 setLoading(false);
                 return;
             }
@@ -92,9 +94,16 @@ export default function TotemCodeEntry() {
                 if (!merged.some(ms => ms.id === ns.id)) merged.push(ns as Student);
             });
 
+            const addedCount = merged.length - selectedStudents.length;
             setSelectedStudents(merged);
             setIdentifiedGuardian(resp);
             setCode('');
+            setSuccessMsg(
+                addedCount > 0
+                    ? `${addedCount} aluno${addedCount !== 1 ? 's' : ''} adicionado${addedCount !== 1 ? 's' : ''}!`
+                    : 'Alunos já estão na lista.'
+            );
+            setTimeout(() => setSuccessMsg(null), 2500);
             setLoading(false);
             return;
         } catch {
@@ -329,6 +338,21 @@ export default function TotemCodeEntry() {
                         }}>
                             <AlertCircle style={{ width: 18, height: 18, flexShrink: 0 }} />
                             <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{error}</p>
+                        </div>
+                    )}
+
+                    {/* Success feedback */}
+                    {successMsg && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '12px 16px',
+                            background: 'rgba(52,211,153,0.08)',
+                            border: '1px solid rgba(52,211,153,0.3)',
+                            borderRadius: 12,
+                            color: '#34d399', width: '100%',
+                        }}>
+                            <CheckCircle2 style={{ width: 18, height: 18, flexShrink: 0 }} />
+                            <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>{successMsg}</p>
                         </div>
                     )}
 

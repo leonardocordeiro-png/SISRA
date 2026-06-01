@@ -85,6 +85,15 @@ export async function lookupGuardianByQr(qr: string) {
     return normalizeLookupPayload(data);
 }
 
+export async function lookupGuardianByCpf(cpf: string) {
+    const { data, error } = await supabase.rpc('sisra_lookup_guardian_by_cpf', {
+        p_cpf: cpf,
+        p_escola_id: escolaIdOrNull(),
+    });
+    if (error) throw error;
+    return normalizeLookupPayload(data);
+}
+
 export async function createPickupRequests(
     guardianId: string,
     studentIds: string[],
