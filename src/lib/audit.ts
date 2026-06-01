@@ -24,7 +24,8 @@ export type AuditAction =
     | 'MANIPULACAO_DADOS'
     | 'ANALISE'
     | 'MANUTENCAO'
-    | 'ASSINATURA_DIARIA';
+    | 'ASSINATURA_DIARIA'
+    | 'IMPORTACAO_FOTOS_LOTE';
 
 let cachedIP: string | null = null;
 
