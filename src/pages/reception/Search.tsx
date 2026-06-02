@@ -176,10 +176,12 @@ export default function ReceptionSearch() {
 
             try {
                 if (isCpfLookup) {
-                    const { data: guardians } = await supabase
+                    const { data: guardians, error: gErr } = await supabase
                         .from('responsaveis')
-                        .select('id, nome_completo, foto_url')
+                        .select('id, nome_completo, foto_url, cpf')
                         .eq('cpf', cleanQuery);
+
+                    if (gErr) throw new Error(`Erro ao buscar por CPF: ${gErr.message}`);
 
                     if (guardians && guardians.length > 0) {
                         const guardianIds = guardians.map((g: any) => g.id);
@@ -187,27 +189,57 @@ export default function ReceptionSearch() {
                         setLoading(false);
                         return;
                     }
+
+                    // CPF não encontrou responsável — não cair na busca por nome
+                    toast.warning('CPF não encontrado', 'Nenhum responsável cadastrado com este CPF.');
+                    setResults([]);
+                    setLoading(false);
+                    return;
                 }
 
                 const safeQuery = query.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
-                let studentsQ = supabase.from('alunos').select('*').ilike('nome_completo', `%${safeQuery}%`);
+                let studentsQ = supabase
+                    .from('alunos')
+                    .select('id, nome_completo, turma, sala, foto_url, escola_id, matricula')
+                    .ilike('nome_completo', `%${safeQuery}%`);
                 if (escolaId) studentsQ = studentsQ.eq('escola_id', escolaId);
                 const { data: directStudents } = await studentsQ.limit(5);
 
-                const { data: auths } = await supabase
-                    .from('autorizacoes')
-                    .select('alunos:aluno_id (*)')
-                    .or(`nome_completo.ilike.%${safeQuery}%,cpf.ilike.%${safeQuery}%`, { foreignTable: 'responsaveis' })
-                    .eq('ativa', true).limit(10);
+                // Busca por responsáveis cujo nome contém o termo
+                const { data: respMatches } = await supabase
+                    .from('responsaveis')
+                    .select('id')
+                    .ilike('nome_completo', `%${safeQuery}%`)
+                    .limit(10);
+
+                let authStudents: Student[] = [];
+                if (respMatches && respMatches.length > 0) {
+                    const respIds = respMatches.map((r: any) => r.id);
+                    const { data: auths } = await supabase
+                        .from('autorizacoes')
+                        .select('aluno_id')
+                        .in('responsavel_id', respIds)
+                        .eq('ativa', true);
+                    if (auths && auths.length > 0) {
+                        const alunoIds = [...new Set(auths.map((a: any) => a.aluno_id))];
+                        let aQ = supabase
+                            .from('alunos')
+                            .select('id, nome_completo, turma, sala, foto_url, escola_id, matricula')
+                            .in('id', alunoIds);
+                        if (escolaId) aQ = aQ.eq('escola_id', escolaId);
+                        const { data: aData } = await aQ;
+                        authStudents = (aData || []) as Student[];
+                    }
+                }
 
                 const combined: Student[] = directStudents || [];
-                auths?.forEach((a: any) => {
-                    const student = Array.isArray(a.alunos) ? a.alunos[0] : a.alunos;
-                    if (student && !combined.some(s => s.id === student.id) && (!escolaId || student.escola_id === escolaId)) combined.push(student);
+                authStudents.forEach(s => {
+                    if (!combined.some(c => c.id === s.id)) combined.push(s);
                 });
                 setResults(combined.slice(0, 8));
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Search error:', err);
+                toast.error('Erro na busca', err.message || 'Tente novamente.');
             } finally {
                 setLoading(false);
             }
@@ -445,7 +477,7 @@ export default function ReceptionSearch() {
             throw new Error(`Nenhum aluno vinculado a este responsável.${authErr}`);
         }
 
-        let alunosQ = supabase.from('alunos').select('id, nome_completo, turma, sala, foto_url, escola_id, sala_id, turma_id, matricula, config_seguranca').in('id', Array.from(alunoIds));
+        let alunosQ = supabase.from('alunos').select('id, nome_completo, turma, sala, foto_url, escola_id, matricula, config_seguranca').in('id', Array.from(alunoIds));
         if (escolaId) alunosQ = alunosQ.eq('escola_id', escolaId);
         const { data: alunosData, error: alunosError } = await alunosQ;
 
