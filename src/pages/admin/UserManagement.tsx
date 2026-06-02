@@ -16,6 +16,12 @@ type UserProfile = {
     ativo: boolean;
 };
 
+type SalaComTurmas = {
+    id: string;
+    nome: string;
+    turmas: { nome: string }[];
+};
+
 // ── Confirmation Modal ────────────────────────────────────────────────────────
 function ConfirmModal({
     title,
@@ -76,6 +82,7 @@ export default function UserManagement() {
     const { user: currentUser, escolaId } = useAuth();
 
     const [users, setUsers] = useState<UserProfile[]>([]);
+    const [salasDisponiveis, setSalasDisponiveis] = useState<SalaComTurmas[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -106,7 +113,16 @@ export default function UserManagement() {
         setLoading(false);
     };
 
-    useEffect(() => { fetchUsers(); }, []);
+    const fetchSalas = async () => {
+        const { data } = await supabase
+            .from('salas')
+            .select('id, nome, turmas:turmas(nome)')
+            .eq('ativa', true)
+            .order('nome');
+        setSalasDisponiveis(data as unknown as SalaComTurmas[] || []);
+    };
+
+    useEffect(() => { fetchUsers(); fetchSalas(); }, []);
 
     // ── Create / Edit ──────────────────────────────────────────────────────────
     const handleCreate = async (e: React.FormEvent) => {
@@ -281,16 +297,32 @@ export default function UserManagement() {
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const getTurmaFromSala = (sala: string | undefined) => {
-        switch (sala) {
-            case 'Sala 101': return '3º Ano';
-            case 'Sala 102': return '4º Ano';
-            case 'Sala 103': return '1º e 2º Ano';
-            case 'Sala 104': return '5º Ano';
-            case 'Sala 109': return '4º Ano';
-            case 'TODAS': return 'Todas';
-            default: return 'N/A';
+    const getTurmaFromSala = (salaNome: string | undefined): string => {
+        if (!salaNome) return 'N/A';
+        if (salaNome === 'TODAS') return 'Todas';
+        const sala = salasDisponiveis.find(s => s.nome === salaNome);
+        if (sala?.turmas?.length) {
+            const series = [...new Set(sala.turmas.map(t => {
+                const m = t.nome.match(/^(.*?) -/);
+                return m ? m[1].trim() : t.nome;
+            }))];
+            return series.join(', ');
         }
+        // fallback para salas ainda não cadastradas no banco
+        const legado: Record<string, string> = {
+            'Sala 101': '3º Ano', 'Sala 102': '4º Ano',
+            'Sala 103': '1º e 2º Ano', 'Sala 104': '5º Ano', 'Sala 109': '4º Ano',
+        };
+        return legado[salaNome] ?? salaNome;
+    };
+
+    const getSalaLabel = (sala: SalaComTurmas): string => {
+        if (!sala.turmas?.length) return sala.nome;
+        const series = [...new Set(sala.turmas.map(t => {
+            const m = t.nome.match(/^(.*?) -/);
+            return m ? m[1].trim() : t.nome;
+        }))];
+        return `${sala.nome} (${series.join(', ')})`;
     };
 
     const TIPO_LABEL: Record<string, string> = {
@@ -538,13 +570,21 @@ export default function UserManagement() {
                                             onChange={e => setFormData({ ...formData, sala_atribuida: e.target.value })}
                                         >
                                             <option value="">Selecione...</option>
-                                            <option value="Sala 101">Sala 101 (3º Ano)</option>
-                                            <option value="Sala 102">Sala 102 (4º Ano)</option>
-                                            <option value="Sala 103">Sala 103 (1º e 2º Ano)</option>
-                                            <option value="Sala 104">Sala 104 (5º Ano)</option>
-                                            <option value="Sala 109">Sala 109 (4º Ano)</option>
+                                            {salasDisponiveis.map(sala => (
+                                                <option key={sala.id} value={sala.nome}>
+                                                    {getSalaLabel(sala)}
+                                                </option>
+                                            ))}
+                                            {salasDisponiveis.length === 0 && (
+                                                <option disabled>Nenhuma sala cadastrada — acesse /admin/salas</option>
+                                            )}
                                             <option value="TODAS">TODAS AS SALAS</option>
                                         </select>
+                                        {salasDisponiveis.length === 0 && (
+                                            <p className="text-[10px] text-amber-600 mt-1">
+                                                Cadastre salas em <a href="/admin/salas" className="font-bold underline">Salas de Saída</a> e vincule turmas em <a href="/admin/turmas" className="font-bold underline">Gerenciar Turmas</a>.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             )}
