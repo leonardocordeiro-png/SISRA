@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Shield, Save, Clock, AlertTriangle, Activity, ArrowLeft, Check, Info, Bell, Loader2, Copy, AlertCircle, GraduationCap } from 'lucide-react';
+import { Shield, Save, Clock, AlertTriangle, Activity, ArrowLeft, Check, Info, Bell, Loader2, Copy, AlertCircle, GraduationCap, UserX, Plus, Trash2, Lock, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../context/AuthContext';
+
+type PessoaNaoAutorizada = {
+    id: string;
+    nome: string;
+    cpf: string;
+    motivo: string;
+    ativo: boolean;
+};
 
 const DEFAULT_SCHEDULE = [
     { day: 'Domingo', enabled: false, start: '08:00', end: '12:00' },
@@ -38,6 +46,9 @@ export default function AuthorizationRules() {
 
     const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE.map(d => ({ ...d })));
     const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
+    const [pessoasNaoAutorizadas, setPessoasNaoAutorizadas] = useState<PessoaNaoAutorizada[]>([]);
+    const [showBloqueioForm, setShowBloqueioForm] = useState(false);
+    const [bloqueioForm, setBloqueioForm] = useState({ nome: '', cpf: '', motivo: '' });
 
     // Time conflict validation
     const hasTimeConflict = (item: typeof schedule[0]) =>
@@ -70,6 +81,9 @@ export default function AuthorizationRules() {
                         }
                         if (cfg.settings) {
                             setSettings(prev => ({ ...prev, ...cfg.settings }));
+                        }
+                        if (Array.isArray(cfg.pessoas_nao_autorizadas)) {
+                            setPessoasNaoAutorizadas(cfg.pessoas_nao_autorizadas);
                         }
                     }
                 });
@@ -128,7 +142,8 @@ export default function AuthorizationRules() {
                 observacoes: studentData.observacoes_medicas || null,
                 config_seguranca: {
                     schedule,
-                    settings
+                    settings,
+                    pessoas_nao_autorizadas: pessoasNaoAutorizadas
                 }
             };
 
@@ -643,6 +658,159 @@ export default function AuthorizationRules() {
                         </section>
                     </div>
                 </div>
+
+                {/* ── PESSOAS NÃO AUTORIZADAS ─────────────────────────────── */}
+                <section className="mt-8 bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
+                    <div className="bg-rose-600 px-6 py-5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-rose-500 shadow-lg">
+                                <UserX className="text-white w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-white uppercase tracking-widest">Pessoas Não Autorizadas</h3>
+                                <p className="text-[10px] text-rose-200 mt-0.5">Bloqueio automático na tentativa de retirada</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { setShowBloqueioForm(v => !v); setBloqueioForm({ nome: '', cpf: '', motivo: '' }); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all border border-white/20"
+                        >
+                            <Plus className="w-4 h-4" /> Adicionar
+                        </button>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        {/* Formulário de adição */}
+                        {showBloqueioForm && (
+                            <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                <p className="text-xs font-black text-rose-700 uppercase tracking-widest flex items-center gap-2">
+                                    <Lock className="w-3.5 h-3.5" /> Registrar pessoa bloqueada
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-1">
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Nome Completo *</label>
+                                        <input
+                                            required
+                                            className="w-full px-4 py-2.5 bg-white border border-rose-200 rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 outline-none transition-all text-sm font-medium"
+                                            placeholder="Nome da pessoa bloqueada"
+                                            value={bloqueioForm.nome}
+                                            onChange={e => setBloqueioForm(f => ({ ...f, nome: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">CPF *</label>
+                                        <input
+                                            required
+                                            className="w-full px-4 py-2.5 bg-white border border-rose-200 rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 outline-none transition-all text-sm font-medium"
+                                            placeholder="000.000.000-00"
+                                            value={bloqueioForm.cpf}
+                                            onChange={e => setBloqueioForm(f => ({ ...f, cpf: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Motivo *</label>
+                                        <input
+                                            required
+                                            className="w-full px-4 py-2.5 bg-white border border-rose-200 rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 outline-none transition-all text-sm font-medium"
+                                            placeholder="Ex: Restrição judicial, ex-cônjuge..."
+                                            value={bloqueioForm.motivo}
+                                            onChange={e => setBloqueioForm(f => ({ ...f, motivo: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-3 pt-1">
+                                    <button
+                                        onClick={() => setShowBloqueioForm(false)}
+                                        className="px-5 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const cleanCpf = bloqueioForm.cpf.replace(/\D/g, '');
+                                            if (!bloqueioForm.nome.trim() || cleanCpf.length < 11 || !bloqueioForm.motivo.trim()) {
+                                                toast.error('Campos obrigatórios', 'Preencha nome, CPF (11 dígitos) e motivo.');
+                                                return;
+                                            }
+                                            const jaExiste = pessoasNaoAutorizadas.some(p => p.cpf.replace(/\D/g, '') === cleanCpf);
+                                            if (jaExiste) {
+                                                toast.error('CPF já cadastrado', 'Esta pessoa já está na lista de bloqueados.');
+                                                return;
+                                            }
+                                            setPessoasNaoAutorizadas(prev => [
+                                                ...prev,
+                                                { id: crypto.randomUUID(), nome: bloqueioForm.nome.trim(), cpf: cleanCpf, motivo: bloqueioForm.motivo.trim(), ativo: true }
+                                            ]);
+                                            setBloqueioForm({ nome: '', cpf: '', motivo: '' });
+                                            setShowBloqueioForm(false);
+                                        }}
+                                        className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
+                                    >
+                                        <Lock className="w-4 h-4" /> Bloquear Pessoa
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Lista de pessoas bloqueadas */}
+                        {pessoasNaoAutorizadas.length === 0 ? (
+                            <div className="text-center py-10 text-slate-400">
+                                <UserX className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                                <p className="text-sm font-medium">Nenhuma pessoa bloqueada cadastrada.</p>
+                                <p className="text-xs mt-1 opacity-70">Use o botão "Adicionar" para registrar pessoas que não podem retirar este aluno.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {pessoasNaoAutorizadas.map(pessoa => (
+                                    <div key={pessoa.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${pessoa.ativo ? 'bg-rose-50/50 border-rose-100' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${pessoa.ativo ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-400'}`}>
+                                            <UserX className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <p className="text-sm font-bold text-slate-900 truncate">{pessoa.nome}</p>
+                                                {pessoa.ativo ? (
+                                                    <span className="bg-rose-100 text-rose-700 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Ativo</span>
+                                                ) : (
+                                                    <span className="bg-slate-200 text-slate-500 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Inativo</span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">
+                                                CPF: {pessoa.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')} · {pessoa.motivo}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button
+                                                onClick={() => setPessoasNaoAutorizadas(prev => prev.map(p => p.id === pessoa.id ? { ...p, ativo: !p.ativo } : p))}
+                                                className="p-2 rounded-xl hover:bg-white transition-all"
+                                                title={pessoa.ativo ? 'Desativar bloqueio' : 'Reativar bloqueio'}
+                                            >
+                                                {pessoa.ativo
+                                                    ? <ToggleRight className="w-5 h-5 text-rose-500" />
+                                                    : <ToggleLeft className="w-5 h-5 text-slate-400" />
+                                                }
+                                            </button>
+                                            <button
+                                                onClick={() => setPessoasNaoAutorizadas(prev => prev.filter(p => p.id !== pessoa.id))}
+                                                className="p-2 rounded-xl hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-all"
+                                                title="Remover da lista"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-2 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-3 items-start">
+                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-amber-700 leading-relaxed">
+                                Quando uma pessoa bloqueada tentar realizar a retirada na recepção ou totem, o sistema emitirá um <strong>alerta crítico vermelho</strong> e bloqueará automaticamente o processo. A tentativa ficará registrada nos logs de auditoria.
+                            </p>
+                        </div>
+                    </div>
+                </section>
 
                 {/* Footer Actions */}
                 <div className="mt-12 flex items-center justify-between">

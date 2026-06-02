@@ -142,6 +142,7 @@ export default function ReceptionSearch() {
     const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
     const [isPhotoZoomed, setIsPhotoZoomed] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [blockedAlert, setBlockedAlert] = useState<{ nome: string; cpf: string; motivo: string; alunos: string[] } | null>(null);
     const addMoreInputRef = useRef<HTMLInputElement>(null);
 
     // Font injection
@@ -182,7 +183,7 @@ export default function ReceptionSearch() {
 
                     if (guardians && guardians.length > 0) {
                         const guardianIds = guardians.map((g: any) => g.id);
-                        await resolveByMultipleIds(guardianIds, guardians[0].nome_completo, guardians[0]);
+                        await resolveByMultipleIds(guardianIds, guardians[0].nome_completo, guardians[0], cleanQuery);
                         setLoading(false);
                         return;
                     }
@@ -424,7 +425,7 @@ export default function ReceptionSearch() {
         }
     };
 
-    const resolveByMultipleIds = async (responsavelIds: string[], guardianName?: string, primaryGuardian?: any) => {
+    const resolveByMultipleIds = async (responsavelIds: string[], guardianName?: string, primaryGuardian?: any, guardianCpf?: string) => {
         setSelectedStudent(null); setMultiStudents([]);
         setIsAddingMore(false); setAddMoreQuery(''); setAddMoreResults([]);
         setUseManualPickup(false); setManualPickupName('');
@@ -444,12 +445,40 @@ export default function ReceptionSearch() {
             throw new Error(`Nenhum aluno vinculado a este responsável.${authErr}`);
         }
 
-        let alunosQ = supabase.from('alunos').select('*').in('id', Array.from(alunoIds));
+        let alunosQ = supabase.from('alunos').select('id, nome_completo, turma, sala, foto_url, escola_id, sala_id, turma_id, matricula, config_seguranca').in('id', Array.from(alunoIds));
         if (escolaId) alunosQ = alunosQ.eq('escola_id', escolaId);
         const { data: alunosData, error: alunosError } = await alunosQ;
 
         if (alunosError) throw new Error(`Erro ao buscar alunos: ${alunosError.message}`);
         if (!alunosData || alunosData.length === 0) throw new Error('Nenhum aluno encontrado para este responsável.');
+
+        // ── CHECK: Pessoa Não Autorizada ──────────────────────────────────
+        const cleanGuardianCpf = (guardianCpf || '').replace(/\D/g, '');
+        if (cleanGuardianCpf.length === 11) {
+            for (const aluno of alunosData) {
+                const blocked: any[] = aluno.config_seguranca?.pessoas_nao_autorizadas || [];
+                const match = blocked.find((p: any) => p.ativo && p.cpf?.replace(/\D/g, '') === cleanGuardianCpf);
+                if (match) {
+                    await logAudit('ACESSO_NEGADO', 'responsaveis', responsavelIds[0], {
+                        motivo: 'Pessoa não autorizada tentou realizar retirada',
+                        responsavel_nome: guardianName || primaryGuardian?.nome_completo,
+                        responsavel_cpf: cleanGuardianCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
+                        aluno_id: aluno.id,
+                        aluno_nome: aluno.nome_completo,
+                        bloqueio_motivo: match.motivo,
+                    }, undefined, aluno.escola_id);
+
+                    setBlockedAlert({
+                        nome: match.nome,
+                        cpf: cleanGuardianCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
+                        motivo: match.motivo,
+                        alunos: alunosData.map((a: any) => a.nome_completo),
+                    });
+                    setLoading(false);
+                    return;
+                }
+            }
+        }
 
         let guard = primaryGuardian;
         if (!guard) {
@@ -476,15 +505,13 @@ export default function ReceptionSearch() {
         if (gError || !guardian) throw new Error('Responsável não encontrado no sistema.');
 
         let responsavelIds = [responsavelId];
-        if (guardian.cpf) {
-            const cleanCpf = guardian.cpf.replace(/\D/g, '');
-            if (cleanCpf.length >= 11) {
-                const { data: sames } = await supabase.from('responsaveis').select('id').eq('cpf', cleanCpf);
-                if (sames && sames.length > 0)
-                    responsavelIds = [...new Set([responsavelId, ...sames.map((s: any) => s.id)])];
-            }
+        const cleanCpf = guardian.cpf ? guardian.cpf.replace(/\D/g, '') : '';
+        if (cleanCpf.length >= 11) {
+            const { data: sames } = await supabase.from('responsaveis').select('id').eq('cpf', cleanCpf);
+            if (sames && sames.length > 0)
+                responsavelIds = [...new Set([responsavelId, ...sames.map((s: any) => s.id)])];
         }
-        await resolveByMultipleIds(responsavelIds, guardianName || guardian.nome_completo, guardian);
+        await resolveByMultipleIds(responsavelIds, guardianName || guardian.nome_completo, guardian, cleanCpf);
     };
 
     const handleSelectStudent = (student: Student) => {
@@ -1225,6 +1252,69 @@ export default function ReceptionSearch() {
             {/* ══════════ MODALS ══════════ */}
             <QRScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
             {isCodeModalOpen && <CodeModal onConfirm={handleCodeLookup} onClose={() => setIsCodeModalOpen(false)} />}
+
+            {/* ══ ALERTA: PESSOA BLOQUEADA ══════════════════════════════════ */}
+            {blockedAlert && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(7,10,20,0.93)', backdropFilter: 'blur(12px)' }}>
+                    {/* Pulsing red glow background */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(228,1,35,0.18) 0%, transparent 70%)', animation: 'rec-ring 2s ease-in-out infinite', pointerEvents: 'none' }} />
+
+                    <div style={{ position: 'relative', width: '100%', maxWidth: 520, background: 'rgba(17,12,15,0.98)', borderRadius: 24, border: '2px solid rgba(228,1,35,0.6)', boxShadow: '0 0 60px rgba(228,1,35,0.4), 0 30px 80px rgba(0,0,0,0.8)', overflow: 'hidden' }}>
+                        {/* Red top bar */}
+                        <div style={{ height: 4, background: 'linear-gradient(90deg, #E40123, #ff4560, #E40123)', animation: 'rec-ring 1.5s ease-in-out infinite' }} />
+
+                        {/* Sirene header */}
+                        <div style={{ background: 'rgba(228,1,35,0.12)', borderBottom: '1px solid rgba(228,1,35,0.3)', padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(228,1,35,0.2)', border: '2px solid rgba(228,1,35,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'rec-ring 1s ease-in-out infinite', flexShrink: 0 }}>
+                                <UserX size={26} style={{ color: '#ff4560' }} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.35em', color: '#ff4560', textTransform: 'uppercase', marginBottom: 3 }}>⚠ Alerta Crítico de Segurança</p>
+                                <p style={{ fontSize: 20, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.02em', fontFamily: "'Inter', sans-serif" }}>PESSOA NÃO AUTORIZADA</p>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ padding: '24px 28px', space: 16 }}>
+                            <div style={{ background: 'rgba(228,1,35,0.08)', border: '1px solid rgba(228,1,35,0.25)', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
+                                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', color: 'rgba(255,100,120,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>Identidade Detectada</p>
+                                <p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: "'Inter', sans-serif", marginBottom: 4 }}>{blockedAlert.nome}</p>
+                                <p style={{ fontSize: 12, color: 'rgba(255,100,120,0.8)', fontWeight: 600 }}>CPF: {blockedAlert.cpf}</p>
+                            </div>
+
+                            <div style={{ background: 'rgba(255,200,0,0.06)', border: '1px solid rgba(255,200,0,0.2)', borderRadius: 14, padding: '14px 18px', marginBottom: 16 }}>
+                                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', color: 'rgba(255,200,0,0.7)', textTransform: 'uppercase', marginBottom: 6 }}>Motivo do Bloqueio</p>
+                                <p style={{ fontSize: 13, color: '#fff', fontWeight: 600, lineHeight: 1.5 }}>{blockedAlert.motivo}</p>
+                            </div>
+
+                            <div style={{ marginBottom: 20 }}>
+                                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', color: D.muted, textTransform: 'uppercase', marginBottom: 8 }}>Alunos protegidos por este bloqueio</p>
+                                {blockedAlert.alunos.map((nome, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: D.green, flexShrink: 0 }} />
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: D.white }}>{nome}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ background: 'rgba(228,1,35,0.06)', border: '1px solid rgba(228,1,35,0.2)', borderRadius: 12, padding: '12px 16px', marginBottom: 24 }}>
+                                <p style={{ fontSize: 11, color: 'rgba(255,100,120,0.8)', fontWeight: 600, lineHeight: 1.6, fontFamily: "'Inter', sans-serif" }}>
+                                    ⚠ Esta tentativa de retirada foi <strong style={{ color: '#ff4560' }}>bloqueada automaticamente</strong> e registrada nos logs de auditoria do sistema. Acione o protocolo de segurança da escola imediatamente.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => { setBlockedAlert(null); setQuery(''); setResults([]); setRelatedStudents([]); setSelectedStudent(null); setGuardians([]); setSelectedGuardianId(null); }}
+                                style={{ width: '100%', padding: '16px', background: 'rgba(228,1,35,0.15)', border: '1.5px solid rgba(228,1,35,0.4)', borderRadius: 12, color: '#ff4560', fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'Inter', sans-serif", transition: 'all 0.2s' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(228,1,35,0.25)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(228,1,35,0.15)'; }}
+                            >
+                                Entendido — Encerrar Alerta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Photo zoom modal */}
             {isPhotoZoomed && (selectedStudent?.foto_url || selectedGuardian?.foto_url) && (
