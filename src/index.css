@@ -3,12 +3,27 @@
 @layer base {
   :root {
     /* Fluid Typography Scale */
-    /* Mobile: 16px -> Desktop: 18px */
     --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
-    /* Mobile: 24px -> Desktop: 36px */
     --text-2xl: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
-    /* Mobile: 20px -> Desktop: 24px */
     --text-xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+
+    /* Safe area insets (notch / home bar em iPhones e Androids modernos) */
+    --safe-top:    env(safe-area-inset-top,    0px);
+    --safe-right:  env(safe-area-inset-right,  0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left:   env(safe-area-inset-left,   0px);
+
+    /* Altura real da viewport (exclui barra de endereço do browser mobile) */
+    --vh: 1vh;
+  }
+
+  html {
+    /* Evita bounce scroll no iOS */
+    overscroll-behavior: none;
+    /* Força texto nítido em displays de alta densidade */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
@@ -16,6 +31,21 @@
     font-size: var(--text-base);
     overflow-x: hidden;
     width: 100%;
+    /* Impede zoom acidental ao tocar em inputs no iOS */
+    touch-action: manipulation;
+    /* Padding para a home bar do iPhone */
+    padding-bottom: var(--safe-bottom);
+  }
+
+  /* Tamanho mínimo de tap target recomendado (Apple HIG / Google Material) */
+  button, a, [role="button"], input[type="button"], input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove highlight de tap azul padrão no Android */
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
 
   h1 {
@@ -122,4 +152,71 @@
 
 .animate-toast-out {
   animation: toast-out 0.25s cubic-bezier(0.06, 0.71, 0.55, 1) forwards;
+}
+
+/* ── Mobile / PWA Utilities ──────────────────────────────────────────────── */
+
+/* Altura real da viewport excluindo barra de endereço do browser */
+.h-screen-real {
+  height: 100dvh; /* Dynamic viewport height — suportado em todos os browsers modernos */
+}
+
+.min-h-screen-real {
+  min-height: 100dvh;
+}
+
+/* Padding de segurança para dispositivos com notch / home bar */
+.safe-top    { padding-top:    var(--safe-top); }
+.safe-bottom { padding-bottom: var(--safe-bottom); }
+.safe-left   { padding-left:   var(--safe-left); }
+.safe-right  { padding-right:  var(--safe-right); }
+.safe-all    {
+  padding-top:    var(--safe-top);
+  padding-right:  var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  padding-left:   var(--safe-left);
+}
+
+/* Scroll nativo suave no iOS */
+.scroll-ios {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Ocultar scrollbar mas manter funcionalidade */
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar (usado no PriorityPipeline) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(199,158,97,0.3) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(199,158,97,0.3);
+  border-radius: 4px;
+}
+
+/* Responsivo: empilha em mobile, lado a lado no desktop */
+@media (max-width: 640px) {
+  /* Garante que tabelas não causem scroll horizontal */
+  table { display: block; overflow-x: auto; }
+
+  /* Cards admin ocupam 100% em mobile */
+  .admin-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Suporte a tema escuro nativo do OS */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
 }

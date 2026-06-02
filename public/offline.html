@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#070a14" />
+  <title>Sem conexão — La Salle, Cheguei!</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      background: #070a14;
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+      padding-top: calc(24px + env(safe-area-inset-top, 0));
+      text-align: center;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: rgba(199,158,97,0.12);
+      border: 2px solid rgba(199,158,97,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+
+    .icon svg { width: 40px; height: 40px; }
+
+    h1 {
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: 800;
+      color: #f4d06f;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      font-size: 14px;
+      color: #64748b;
+      line-height: 1.7;
+      max-width: 320px;
+      margin: 0 auto 32px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #c79e61, #a07a3d);
+      color: #070a14;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 32px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      min-height: 48px;
+      transition: opacity 0.2s;
+    }
+
+    button:active { opacity: 0.8; }
+
+    .badge {
+      margin-top: 48px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(199,158,97,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 4L33 9V22C33 29 27 34 20 37C13 34 7 29 7 22V9L20 4Z"
+            stroke="#c79e61" stroke-width="2" stroke-linejoin="round"/>
+      <line x1="14" y1="20" x2="26" y2="20" stroke="#c79e61" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <h1>Sem conexão</h1>
+  <p>
+    Verifique sua conexão com a internet e tente novamente.<br/>
+    O sistema precisa de conexão para carregar dados em tempo real.
+  </p>
+
+  <button onclick="window.location.reload()">Tentar Novamente</button>
+
+  <p class="badge">La Salle, Cheguei! — SISRA</p>
+</body>
+</html>
