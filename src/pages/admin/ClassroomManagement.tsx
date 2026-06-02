@@ -66,7 +66,7 @@ export default function ClassroomManagement() {
         if (error) {
             toast.error('Erro ao carregar turmas', error.message);
         } else if (data) {
-            setTurmas(data as Turma[]);
+            setTurmas(data as unknown as Turma[]);
         }
         setLoading(false);
     };
