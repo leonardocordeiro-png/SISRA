@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Plus, Search, Trash2, Edit2, Save, X, School, Loader2, Power, PowerOff } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Plus, Search, Trash2, Edit2, Save, X, School, Loader2, Power, PowerOff, DoorOpen } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
 
@@ -9,10 +10,16 @@ type Turma = {
     nome: string;
     descricao: string;
     ativa: boolean;
+    sala_id: string | null;
+    sala?: { id: string; nome: string } | null;
 };
 
+type SalaOpcao = { id: string; nome: string };
+
 export default function ClassroomManagement() {
+    const { escolaId } = useAuth();
     const [turmas, setTurmas] = useState<Turma[]>([]);
+    const [salas, setSalas] = useState<SalaOpcao[]>([]);
     const toast = useToast();
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -24,7 +31,8 @@ export default function ClassroomManagement() {
         grau: 'Ensino Fundamental I',
         secao: '111M',
         descricao: '',
-        ativa: true
+        ativa: true,
+        sala_id: ''
     });
 
     const SERIES = ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano'];
@@ -36,17 +44,29 @@ export default function ClassroomManagement() {
 
     useEffect(() => {
         fetchTurmas();
+        fetchSalas();
     }, []);
+
+    const fetchSalas = async () => {
+        const { data } = await supabase
+            .from('salas')
+            .select('id, nome')
+            .eq('ativa', true)
+            .order('nome');
+        setSalas(data || []);
+    };
 
     const fetchTurmas = async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('turmas')
-            .select('*')
+            .select('id, nome, descricao, ativa, sala_id, sala:sala_id(id, nome)')
             .order('nome');
 
-        if (!error && data) {
-            setTurmas(data);
+        if (error) {
+            toast.error('Erro ao carregar turmas', error.message);
+        } else if (data) {
+            setTurmas(data as Turma[]);
         }
         setLoading(false);
     };
@@ -56,21 +76,16 @@ export default function ClassroomManagement() {
         try {
             setLoading(true);
 
-            // Get escola_id - in a real app this comes from context
-            const { data: userData } = await supabase.auth.getUser();
-            const { data: profile } = await supabase.from('usuarios').select('escola_id').eq('id', userData.user?.id).single();
-            const escola_id = profile?.escola_id || 'e6328325-1845-420a-b333-87a747953259';
+            const escola_id = escolaId || import.meta.env.VITE_ESCOLA_ID;
+            if (!escola_id) throw new Error('Escola não identificada. Faça login novamente.');
 
             const nomeCompleto = `${formData.serie} - ${formData.grau} (${formData.secao})`;
+            const sala_id = formData.sala_id || null;
 
             if (editingId) {
                 const { error } = await supabase
                     .from('turmas')
-                    .update({
-                        nome: nomeCompleto,
-                        descricao: formData.descricao,
-                        ativa: formData.ativa
-                    })
+                    .update({ nome: nomeCompleto, descricao: formData.descricao, ativa: formData.ativa, sala_id })
                     .eq('id', editingId);
 
                 if (error) throw error;
@@ -78,12 +93,7 @@ export default function ClassroomManagement() {
             } else {
                 const { error } = await supabase
                     .from('turmas')
-                    .insert([{
-                        escola_id,
-                        nome: nomeCompleto,
-                        descricao: formData.descricao,
-                        ativa: true
-                    }]);
+                    .insert([{ escola_id, nome: nomeCompleto, descricao: formData.descricao, ativa: true, sala_id }]);
 
                 if (error) throw error;
                 toast.success('Turma criada', 'A nova turma foi adicionada ao sistema.');
@@ -92,7 +102,6 @@ export default function ClassroomManagement() {
             closeModal();
             fetchTurmas();
         } catch (error: any) {
-            console.error('Error saving turma:', error);
             toast.error('Erro ao salvar turma', error.message || 'Verifique se a turma já existe.');
         } finally {
             setLoading(false);
@@ -109,7 +118,8 @@ export default function ClassroomManagement() {
             grau: parts ? parts[2] : 'Ensino Fundamental I',
             secao: parts ? parts[3] : '111M',
             descricao: turma.descricao || '',
-            ativa: turma.ativa
+            ativa: turma.ativa,
+            sala_id: turma.sala_id || ''
         });
         setShowModal(true);
     };
@@ -117,13 +127,7 @@ export default function ClassroomManagement() {
     const closeModal = () => {
         setShowModal(false);
         setEditingId(null);
-        setFormData({
-            serie: '1º Ano',
-            grau: 'Ensino Fundamental I',
-            secao: '111M',
-            descricao: '',
-            ativa: true
-        });
+        setFormData({ serie: '1º Ano', grau: 'Ensino Fundamental I', secao: '111M', descricao: '', ativa: true, sala_id: '' });
     };
 
     const handleToggleActive = async (turma: Turma) => {
@@ -203,7 +207,7 @@ export default function ClassroomManagement() {
                             <thead>
                                 <tr className="bg-slate-50/50 border-b border-slate-200">
                                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Identificação da Turma</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Descrição</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Sala de Saída</th>
                                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
                                 </tr>
@@ -233,8 +237,15 @@ export default function ClassroomManagement() {
                                                     <span className={`font-semibold ${turma.ativa ? 'text-slate-900' : 'text-slate-400 italic'}`}>{turma.nome}</span>
                                                 </div>
                                             </td>
-                                            <td className={`px-6 py-4 text-sm ${turma.ativa ? 'text-slate-500' : 'text-slate-400 italic'}`}>
-                                                {turma.descricao || '-'}
+                                            <td className="px-6 py-4">
+                                                {turma.sala ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100">
+                                                        <DoorOpen className="w-3 h-3" />
+                                                        {(turma.sala as any).nome}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-400 text-xs italic">Não vinculada</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${turma.ativa ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
@@ -324,6 +335,26 @@ export default function ClassroomManagement() {
                                 >
                                     {SECOES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Sala de Saída</label>
+                                <div className="relative">
+                                    <DoorOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                    <select
+                                        className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all appearance-none"
+                                        value={formData.sala_id}
+                                        onChange={e => setFormData({ ...formData, sala_id: e.target.value })}
+                                    >
+                                        <option value="">— Nenhuma (usar mapeamento automático) —</option>
+                                        {salas.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                                    </select>
+                                </div>
+                                {salas.length === 0 && (
+                                    <p className="text-xs text-amber-600 mt-1">
+                                        Nenhuma sala cadastrada. <a href="/admin/salas" className="font-bold underline">Crie salas de saída</a> primeiro.
+                                    </p>
+                                )}
                             </div>
 
                             <div>

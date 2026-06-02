@@ -475,7 +475,7 @@ export default function AdminDashboard() {
                                 Módulos Operacionais
                             </h2>
                             <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: D.textMuted, fontWeight: 500 }}>
-                                3 Ativos
+                                3 Módulos
                             </span>
                         </div>
                         <div className="adm-modules" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
@@ -506,6 +506,7 @@ export default function AdminDashboard() {
                             <DeckItem icon={Shield}      label="Controle de Acessos"    path="/admin/usuarios" />
                             <DeckItem icon={Shield}      label="Auditoria de Segurança" path="/admin/auditoria-seguranca" />
                             <DeckItem icon={LayoutGrid}      label="Estrutura de Turmas"    path="/admin/turmas" />
+                            <DeckItem icon={LayoutGrid}      label="Salas de Saída"         path="/admin/salas" />
                             <DeckItem icon={Settings}        label="Configurações Globais"  path="/admin/configuracoes" />
                             <DeckItem icon={CalendarClock}   label="Manutenção de Horários" path="/admin/manutencao/horarios" />
                         </ul>

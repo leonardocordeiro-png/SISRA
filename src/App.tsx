@@ -36,6 +36,7 @@ const SystemSettings        = lazy(() => import('./pages/admin/SystemSettings'))
 const StaffLeaderboard      = lazy(() => import('./pages/admin/StaffLeaderboard'));
 const AdminQRGenerator      = lazy(() => import('./pages/admin/QRGenerator'));
 const MassScheduleUpdate    = lazy(() => import('./pages/admin/MassScheduleUpdate'));
+const SalaManagement        = lazy(() => import('./pages/admin/SalaManagement'));
 
 const OnboardingDashboard   = lazy(() => import('./pages/staff/OnboardingDashboard'));
 const FeedbackForm          = lazy(() => import('./pages/staff/FeedbackForm'));
@@ -251,6 +252,11 @@ function App() {
                 <Route path="/admin/turmas" element={
                   <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
                     <ClassroomManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/salas" element={
+                  <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
+                    <SalaManagement />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/staff" element={

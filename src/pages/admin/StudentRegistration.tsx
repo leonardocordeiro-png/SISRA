@@ -26,7 +26,7 @@ export default function StudentRegistration() {
     const [photo, setPhoto] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [turmasDisponiveis, setTurmasDisponiveis] = useState<{ serie: string, secao: string }[]>([]);
+    const [turmasDisponiveis, setTurmasDisponiveis] = useState<{ serie: string; secao: string; salaNome?: string }[]>([]);
 
     const [showCamera, setShowCamera] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -42,24 +42,28 @@ export default function StudentRegistration() {
         }
     };
 
-    const fetchTurmas = async (): Promise<{ serie: string, secao: string }[]> => {
+    const fetchTurmas = async (): Promise<{ serie: string; secao: string; salaNome?: string }[]> => {
         try {
             const { data, error } = await supabase
                 .from('turmas')
-                .select('nome')
+                .select('nome, sala:sala_id(nome)')
                 .eq('ativa', true)
                 .order('nome');
 
             if (error) throw error;
 
             if (data) {
-                const parsed = data.map(t => {
+                const parsed = data.map((t: any) => {
                     const match = t.nome.match(/^(.*?) - (.*?) \((.*?)\)$/);
                     if (match) {
-                        return { serie: `${match[1]} - ${match[2]}`, secao: match[3] };
+                        return {
+                            serie: `${match[1]} - ${match[2]}`,
+                            secao: match[3],
+                            salaNome: t.sala?.nome as string | undefined
+                        };
                     }
                     return null;
-                }).filter(Boolean) as { serie: string, secao: string }[];
+                }).filter(Boolean) as { serie: string; secao: string; salaNome?: string }[];
 
                 setTurmasDisponiveis(parsed);
                 return parsed;
@@ -206,7 +210,8 @@ export default function StudentRegistration() {
     const handleNext = (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        const calculatedSala = getSalaBySerie(formData.serie, formData.turma);
+        const selectedTurma = turmasDisponiveis.find(t => t.serie === formData.serie && t.secao === formData.turma);
+        const calculatedSala = selectedTurma?.salaNome || getSalaBySerie(formData.serie, formData.turma);
 
         // Retrieve fullTurma from original sessionStorage to preserve it
         const originalData = JSON.parse(sessionStorage.getItem('temp_student_data') || '{}');
