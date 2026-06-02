@@ -113,7 +113,15 @@ export default function PriorityPipeline({
         );
     }, [requests, searchTerm]);
 
-    // ── Split into two priority groups ────────────────────────────────────────
+    // ── Lista única ordenada: Emergências primeiro, depois por horário de chegada ─
+    const sortedRequests = useMemo(() => [...filteredRequests].sort((a, b) => {
+        const aEmerg = a.tipo_solicitacao === 'EMERGENCIA' ? 0 : 1;
+        const bEmerg = b.tipo_solicitacao === 'EMERGENCIA' ? 0 : 1;
+        if (aEmerg !== bEmerg) return aEmerg - bEmerg;
+        return new Date(a.horario_solicitacao).getTime() - new Date(b.horario_solicitacao).getTime();
+    }), [filteredRequests]);
+
+    // Mantidos para uso nos badges (não para reordenação)
     const atReceptionGroup = useMemo(() => filteredRequests.filter(isAtReception), [filteredRequests]);
     const inTransitGroup   = useMemo(() => filteredRequests.filter(r => !isAtReception(r)), [filteredRequests]);
 
@@ -169,12 +177,13 @@ export default function PriorityPipeline({
     }, [selectedClass, userId, escolaId]);
 
     // ── Request card ───────────────────────────────────────────────────────────
-    const renderCard = (req: RequestItem, idx: number, globalOffset = 0) => {
+    const renderCard = (req: RequestItem, globalPosition: number) => {
         const isActive   = activeRequestId === req.id;
         const atRecep    = isAtReception(req);
         const isWaiting  = req.status === 'AGUARDANDO';
-
-        const isEmerg = req.tipo_solicitacao === 'EMERGENCIA';
+        const isEmerg    = req.tipo_solicitacao === 'EMERGENCIA';
+        const chegouHora = new Date(req.horario_solicitacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const minutosNaFila = Math.floor((Date.now() - new Date(req.horario_solicitacao).getTime()) / 60000);
 
         // Border color: red for emergency, green for at reception, amber for in transit
         const inactiveBorder = isEmerg
@@ -231,15 +240,17 @@ export default function PriorityPipeline({
                         )}
                     </div>
 
-                    {/* Position badge */}
+                    {/* Position badge — número na fila (sequência global de chegada) */}
                     <div className={`absolute -top-2 -right-2 w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black border-2 transition-all duration-500 ${
                         isActive
                             ? 'bg-white text-emerald-600 border-emerald-600 scale-110 shadow-lg'
-                            : atRecep
-                                ? 'bg-slate-900 text-emerald-400 border-white/10 group-hover:bg-emerald-500 group-hover:text-slate-900 group-hover:border-emerald-400'
-                                : 'bg-slate-900 text-amber-400 border-white/10 group-hover:bg-amber-500 group-hover:text-slate-900 group-hover:border-amber-400'
+                            : isEmerg
+                                ? 'bg-red-500 text-white border-red-400'
+                                : atRecep
+                                    ? 'bg-slate-900 text-emerald-400 border-white/10 group-hover:bg-emerald-500 group-hover:text-slate-900 group-hover:border-emerald-400'
+                                    : 'bg-slate-900 text-amber-400 border-white/10 group-hover:bg-amber-500 group-hover:text-slate-900 group-hover:border-amber-400'
                     }`}>
-                        {globalOffset + idx + 1}
+                        {globalPosition}
                     </div>
                 </div>
 
@@ -306,8 +317,20 @@ export default function PriorityPipeline({
                     </div>
                 </div>
 
+                {/* Horário de chegada + tempo na fila */}
+                <div className={`mt-2 flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest ${isActive ? 'text-slate-950/60' : 'text-slate-600'}`}>
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span>Chegou {chegouHora}</span>
+                    {minutosNaFila > 0 && (
+                        <>
+                            <span className="opacity-40">·</span>
+                            <span className={minutosNaFila > 10 ? 'text-amber-400' : ''}>{minutosNaFila}min na fila</span>
+                        </>
+                    )}
+                </div>
+
                 {isActive && (
-                    <div className="shrink-0 animate-in fade-in zoom-in duration-500">
+                    <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-500">
                         <div className="w-8 h-8 rounded-full bg-slate-950/20 flex items-center justify-center">
                             <div className="w-1.5 h-1.5 bg-slate-950 rounded-full animate-ping" />
                         </div>
@@ -411,42 +434,30 @@ export default function PriorityPipeline({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-3 pb-4">
-
-                            {/* ── Group 1: NA RECEPÇÃO (priority) ──────────────── */}
-                            {atReceptionGroup.length > 0 && (
-                                <>
-                                    <SectionHeader
-                                        label="Na Recepção — Aguardando Liberação"
-                                        count={atReceptionGroup.length}
-                                        colorClass="text-emerald-400"
-                                        dotClass="bg-emerald-400 animate-pulse"
-                                    />
-                                    {atReceptionGroup.map((req, idx) =>
-                                        renderCard(req, idx, 0)
+                            {/* ── Legenda dos contadores ─────────────────────────── */}
+                            {(atReceptionGroup.length > 0 || inTransitGroup.length > 0) && (
+                                <div className="flex items-center gap-3 px-1 pb-1">
+                                    {atReceptionGroup.length > 0 && (
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Na recepção ({atReceptionGroup.length})</span>
+                                        </div>
                                     )}
-                                </>
-                            )}
-
-                            {/* ── Divider between groups ───────────────────────── */}
-                            {atReceptionGroup.length > 0 && inTransitGroup.length > 0 && (
-                                <div className="hidden md:flex items-center gap-2 px-1 my-1">
-                                    <div className="flex-1 h-px bg-white/5" />
+                                    {inTransitGroup.length > 0 && (
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                            <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest">A caminho ({inTransitGroup.length})</span>
+                                        </div>
+                                    )}
+                                    <div className="ml-auto text-[8px] font-black text-slate-600 uppercase tracking-widest">
+                                        Ordem de chegada
+                                    </div>
                                 </div>
                             )}
 
-                            {/* ── Group 2: EM DESLOCAMENTO ─────────────────────── */}
-                            {inTransitGroup.length > 0 && (
-                                <>
-                                    <SectionHeader
-                                        label="Em Deslocamento"
-                                        count={inTransitGroup.length}
-                                        colorClass="text-amber-400"
-                                        dotClass="bg-amber-400"
-                                    />
-                                    {inTransitGroup.map((req, idx) =>
-                                        renderCard(req, idx, atReceptionGroup.length)
-                                    )}
-                                </>
+                            {/* ── Lista única por ordem de chegada (emergências no topo) ── */}
+                            {sortedRequests.map((req, idx) =>
+                                renderCard(req, idx + 1)
                             )}
                         </div>
                     )}

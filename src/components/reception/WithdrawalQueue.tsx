@@ -214,14 +214,36 @@ export default function WithdrawalQueue() {
 
             {/* List */}
             <div className="overflow-y-auto p-4 space-y-4 custom-scrollbar bg-transparent relative z-10" style={{ maxHeight: 'calc(100vh - 20rem)' }}>
-                {pendingPickups.map((pickup) => {
+                {pendingPickups.map((pickup, idx) => {
                     const isAtDoor = pickup.status_geofence === 'CHEGOU';
                     const isNear = pickup.status_geofence === 'PERTO';
+                    const posicao = idx + 1;
+                    const chegouHora = new Date(pickup.horario_solicitacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const minutosNaFila = Math.floor((Date.now() - new Date(pickup.horario_solicitacao).getTime()) / 60000);
 
                     return (
                         <div key={pickup.id} className="group relative p-4 bg-[#020617]/40 rounded-3xl border border-white/5 hover:border-emerald-500/40 hover:bg-[#020617]/60 transition-all duration-500 shadow-xl">
                             {/* Scanning effect on hover */}
                             <div className="absolute inset-x-0 h-[1px] bg-emerald-500/20 blur-[1px] top-0 opacity-0 group-hover:opacity-100 animate-scan pointer-events-none"></div>
+
+                            {/* Barra de posição na fila */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-[11px] font-black text-white shadow-inner">
+                                        {posicao}
+                                    </div>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">#{posicao} na fila</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-600 uppercase tracking-wide">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{chegouHora}</span>
+                                    {minutosNaFila > 0 && (
+                                        <span className={`ml-1 ${minutosNaFila > 10 ? 'text-amber-400' : 'text-slate-600'}`}>
+                                            · {minutosNaFila}min
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
 
                             <div className="flex items-start gap-3 mb-4">
                                 {/* Photo */}
