@@ -273,7 +273,9 @@ export default function ReceptionSearch() {
     // Fetch guardians when student selected (manual mode)
     useEffect(() => {
         if (!selectedStudent || relatedStudents.length > 0) {
-            if (!selectedStudent) setGuardians([]);
+            // Only clear guardians when fully deselected — NOT when in related mode
+            // (related mode already has guardians set by resolveByMultipleIds)
+            if (!selectedStudent && relatedStudents.length === 0) setGuardians([]);
             return;
         }
 
@@ -371,6 +373,22 @@ export default function ReceptionSearch() {
             }
 
             if (error) throw error;
+
+            // Broadcast de emergência para o painel SCT em tempo real
+            if (isEmergency) {
+                const emergEscolaId = allStudents[0]?.escola_id || escolaId;
+                if (emergEscolaId) {
+                    const studentNames = allStudents.map(s => s.nome_completo.split(' ')[0]).join(', ');
+                    supabase.channel('emergency_alerts:' + emergEscolaId).send({
+                        type: 'broadcast',
+                        event: 'EMERGENCY',
+                        payload: {
+                            title: '🚨 CHAMADA DE EMERGÊNCIA',
+                            message: `${studentNames} — Saída imediata solicitada pela recepção.`
+                        }
+                    }).catch(e => console.warn('Emergency broadcast failed:', e));
+                }
+            }
 
             const selectedGuardianLocal = guardians.find(g => g.id === selectedGuardianId);
             const guardianName = useManualPickup && manualPickupName.trim()
@@ -890,25 +908,25 @@ export default function ReceptionSearch() {
                                         <p style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: `rgba(199,158,97,0.6)`, marginBottom: 10 }}>
                                             Selecionar alunos para chamar
                                         </p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto', overflowX: 'hidden' }}>
                                             {relatedStudents.map(student => {
                                                 const isSel = selectedStudentIds.has(student.id);
                                                 return (
                                                     <button key={student.id} onClick={() => toggleStudentSelection(student.id)} style={{
-                                                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                                                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                                                         background: isSel ? 'rgba(199,158,97,0.12)' : 'rgba(255,255,255,0.02)',
                                                         border: `1.5px solid ${isSel ? D.panelBorder : 'rgba(199,158,97,0.1)'}`,
-                                                        borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                                                        borderRadius: 10, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%', boxSizing: 'border-box',
                                                     }}>
-                                                        <div style={{ width: 36, height: 36, borderRadius: 8, overflow: 'hidden', border: `2px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, flexShrink: 0, background: D.panelBg, transition: 'border-color 0.18s' }}>
-                                                            {student.foto_url ? <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={16} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
+                                                        <div style={{ width: 40, height: 40, borderRadius: 9, overflow: 'hidden', border: `2px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, flexShrink: 0, background: D.panelBg, transition: 'border-color 0.18s' }}>
+                                                            {student.foto_url ? <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={18} style={{ color: 'rgba(199,158,97,0.35)' }} /></div>}
                                                         </div>
                                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                                            <p style={{ fontSize: 11, fontWeight: 700, color: isSel ? D.white : D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: 1 }}>{student.nome_completo}</p>
-                                                            <p style={{ fontSize: 9, color: D.muted }}>{student.turma}</p>
+                                                            <p style={{ fontSize: 12, fontWeight: 700, color: isSel ? D.white : D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: 2 }}>{student.nome_completo}</p>
+                                                            <p style={{ fontSize: 10, color: D.muted, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{student.turma} · {student.sala}</p>
                                                         </div>
-                                                        <div style={{ width: 20, height: 20, borderRadius: 5, flexShrink: 0, background: isSel ? D.gold : 'rgba(255,255,255,0.05)', border: `1.5px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s' }}>
-                                                            {isSel && <CheckCircle2 size={12} style={{ color: D.onGold }} />}
+                                                        <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: isSel ? D.gold : 'rgba(255,255,255,0.05)', border: `1.5px solid ${isSel ? D.gold : 'rgba(199,158,97,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s' }}>
+                                                            {isSel && <CheckCircle2 size={13} style={{ color: D.onGold }} />}
                                                         </div>
                                                     </button>
                                                 );

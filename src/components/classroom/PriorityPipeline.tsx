@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User as UserIcon, Check, Search, ArrowDownNarrowWide, Clock, ChevronDown, ChevronUp, MapPin, Building2 } from 'lucide-react';
+import { User as UserIcon, Check, Search, ArrowDownNarrowWide, Clock, ChevronDown, ChevronUp, MapPin, Building2, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 
 interface Aluno {
@@ -174,20 +174,26 @@ export default function PriorityPipeline({
         const atRecep    = isAtReception(req);
         const isWaiting  = req.status === 'AGUARDANDO';
 
-        // Border color when inactive: green for at reception, amber for in transit
-        const inactiveBorder = atRecep
-            ? 'border-emerald-500/40 hover:border-emerald-400/70'
-            : 'border-amber-500/20 hover:border-amber-400/50';
+        const isEmerg = req.tipo_solicitacao === 'EMERGENCIA';
 
-        const inactiveBg = atRecep
-            ? 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]'
-            : 'bg-amber-500/[0.03] hover:bg-amber-500/[0.06]';
+        // Border color: red for emergency, green for at reception, amber for in transit
+        const inactiveBorder = isEmerg
+            ? 'border-red-500/60 hover:border-red-400/80 animate-pulse'
+            : atRecep
+                ? 'border-emerald-500/40 hover:border-emerald-400/70'
+                : 'border-amber-500/20 hover:border-amber-400/50';
+
+        const inactiveBg = isEmerg
+            ? 'bg-red-500/[0.06] hover:bg-red-500/[0.10]'
+            : atRecep
+                ? 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]'
+                : 'bg-amber-500/[0.03] hover:bg-amber-500/[0.06]';
 
         return (
             <button
                 key={req.id}
                 onClick={() => onSelectRequest(req)}
-                className={`w-72 md:w-full group relative p-4 rounded-[1.5rem] border-2 transition-all duration-500 flex items-start gap-4 text-left shrink-0 overflow-hidden ${
+                className={`w-full group relative p-4 rounded-[1.5rem] border-2 transition-all duration-500 flex items-start gap-4 text-left overflow-hidden ${
                     isActive
                         ? 'bg-emerald-500 border-emerald-400 shadow-[0_15px_40px_rgba(16,185,129,0.25)] scale-[1.02] z-10'
                         : `${inactiveBg} ${inactiveBorder} hover:translate-x-1`
@@ -246,6 +252,14 @@ export default function PriorityPipeline({
                         {req.aluno.nome_completo}
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5">
+                        {/* EMERGÊNCIA badge */}
+                        {isEmerg && (
+                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-red-500/20 border border-red-500/60'}`}>
+                                <AlertTriangle className={`w-2.5 h-2.5 ${isActive ? 'text-slate-950' : 'text-red-400'}`} />
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-red-400'}`}>Emergência</span>
+                            </div>
+                        )}
+
                         {/* Turma badge */}
                         <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-white/5'}`}>
                             <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-slate-400'}`}>
@@ -396,7 +410,7 @@ export default function PriorityPipeline({
                             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Nenhum aluno aguardando transmissão no momento.</p>
                         </div>
                     ) : (
-                        <div className="flex flex-row md:flex-col gap-4 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0">
+                        <div className="flex flex-col gap-3 pb-4">
 
                             {/* ── Group 1: NA RECEPÇÃO (priority) ──────────────── */}
                             {atReceptionGroup.length > 0 && (
