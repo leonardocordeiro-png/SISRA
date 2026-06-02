@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     LogOut, Users, TrendingUp, Clock, UserPlus,
     AlertCircle, Activity, FileText, QrCode, Search, ShieldCheck,
-    UserCheck, LayoutGrid, Settings, ArrowUpRight, CalendarClock
+    UserCheck, LayoutGrid, Settings, ArrowUpRight, CalendarClock, DoorOpen
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
 import { logAudit } from '../../lib/audit';
@@ -35,6 +35,7 @@ const MODULES = [
     { to: '/admin/exportar-dados',      Icon: Search,      label: 'Relatórios e Manutenção', accent: '#C8892A' },
     { to: '/admin/usuarios',            Icon: UserCheck,   label: 'Usuários e Permissões',   accent: '#1F3057' },
     { to: '/admin/turmas',              Icon: LayoutGrid,  label: 'Gestão de Turmas',        accent: '#1E6359' },
+    { to: '/admin/salas',              Icon: DoorOpen,    label: 'Salas de Saída',           accent: '#1F3057' },
     { to: '/admin/cartoes-qr',          Icon: QrCode,      label: 'Gerar Cartões QR',        accent: '#C24B2A' },
     { to: '/admin/configuracoes',       Icon: Settings,    label: 'Configurações Gerais',    accent: '#7A6F65' },
     { to: '/admin/manutencao/horarios', Icon: CalendarClock, label: 'Manutenção de Horários', accent: '#1E6359' },
