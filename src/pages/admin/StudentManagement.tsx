@@ -16,7 +16,8 @@ import type { Student } from '../../types';
 
 export default function StudentManagement() {
     const navigate = useNavigate();
-    const { escolaId } = useAuth();
+    const { escolaId, role } = useAuth();
+    const isAdmin = role === 'ADMIN';
     const toast = useToast();
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -181,33 +182,47 @@ export default function StudentManagement() {
     const handlePurgeAll = async () => {
         if (purgeConfirmText !== 'LIMPAR') return;
 
+        // Dupla verificação de permissão no cliente — somente ADMIN executa
+        if (!isAdmin) {
+            toast.error('Permissão negada', 'Esta operação é restrita ao perfil Administrador.');
+            setShowPurgeModal(false);
+            return;
+        }
+
         try {
             setIsPurging(true);
 
-            // 1. Collect all student ids
-            const { data: allStudents } = await supabase.from('alunos').select('id');
-            const allStudentIds = (allStudents || []).map(s => s.id);
-
-            // 2. Collect all responsavel ids
+            // 1. Coletar IDs antes de deletar (SELECT ainda enxerga os dados)
+            const { data: allStudents }    = await supabase.from('alunos').select('id');
             const { data: allResponsaveis } = await supabase.from('responsaveis').select('id');
-            const allResponsavelIds = (allResponsaveis || []).map(r => r.id);
+            const allStudentIds    = (allStudents    || []).map((s: any) => s.id);
+            const allResponsavelIds = (allResponsaveis || []).map((r: any) => r.id);
 
-            // 3. Delete in FK-safe order
+            // 2. Deletar na ordem FK-safe:
+            //    a) solicitacoes_retirada por escola_id (pega TODOS, incluindo órfãos)
+            if (escolaId) {
+                await supabase.from('solicitacoes_retirada').delete().eq('escola_id', escolaId);
+            }
+
+            //    b) Dependências de responsaveis
             if (allResponsavelIds.length > 0) {
                 await supabase.from('parent_qr_cards').delete().in('responsavel_id', allResponsavelIds);
             }
+
+            //    c) Dependências de alunos
             if (allStudentIds.length > 0) {
                 await supabase.from('tokens_acesso').delete().in('aluno_id', allStudentIds);
                 await supabase.from('autorizacoes').delete().in('aluno_id', allStudentIds);
                 await supabase.from('alunos_responsaveis').delete().in('aluno_id', allStudentIds);
-                await supabase.from('solicitacoes_retirada').delete().in('aluno_id', allStudentIds);
             }
 
-            // 4. Delete main records
-            const { error: eAlunos } = await supabase.from('alunos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            //    d) Registros principais
+            const { error: eAlunos } = await supabase
+                .from('alunos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (eAlunos) throw eAlunos;
 
-            const { error: eResp } = await supabase.from('responsaveis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            const { error: eResp } = await supabase
+                .from('responsaveis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (eResp) throw eResp;
 
             await logAudit('LIMPEZA_REGISTROS', undefined, undefined, {
@@ -219,7 +234,7 @@ export default function StudentManagement() {
             setSelectedIds(new Set());
             setShowPurgeModal(false);
             setPurgeConfirmText('');
-            toast.success('Cadastro limpo', 'Todos os alunos e responsáveis foram removidos permanentemente. O sistema está pronto para nova importação.');
+            toast.success('Cadastro limpo', 'Todos os alunos e responsáveis foram removidos permanentemente.');
         } catch (err: any) {
             console.error('Purge error:', err);
             toast.error('Erro ao limpar', err.message);
@@ -402,14 +417,16 @@ export default function StudentManagement() {
                     <p className="text-sm md:text-base text-slate-500">Cadastre e edite informações dos alunos</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-                    {/* Purge Button */}
-                    <button
-                        onClick={() => { setShowPurgeModal(true); setPurgeConfirmText(''); }}
-                        className="flex-1 sm:flex-none bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
-                        title="Excluir todos os alunos e responsáveis permanentemente"
-                    >
-                        <AlertTriangle className="w-4 h-4" /> Limpar Cadastro
-                    </button>
+                    {/* Purge Button — visível somente para ADMIN */}
+                    {isAdmin && (
+                        <button
+                            onClick={() => { setShowPurgeModal(true); setPurgeConfirmText(''); }}
+                            className="flex-1 sm:flex-none bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
+                            title="Excluir todos os alunos e responsáveis permanentemente"
+                        >
+                            <AlertTriangle className="w-4 h-4" /> Limpar Cadastro
+                        </button>
+                    )}
                     <button
                         onClick={() => setShowBulkPhotoModal(true)}
                         className="flex-1 sm:flex-none bg-violet-50 border border-violet-200 hover:bg-violet-100 text-violet-700 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
