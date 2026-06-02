@@ -1275,7 +1275,7 @@ export default function ReceptionSearch() {
                         </div>
 
                         {/* Content */}
-                        <div style={{ padding: '24px 28px', space: 16 }}>
+                        <div style={{ padding: '24px 28px' }}>
                             <div style={{ background: 'rgba(228,1,35,0.08)', border: '1px solid rgba(228,1,35,0.25)', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
                                 <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', color: 'rgba(255,100,120,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>Identidade Detectada</p>
                                 <p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: "'Inter', sans-serif", marginBottom: 4 }}>{blockedAlert.nome}</p>
