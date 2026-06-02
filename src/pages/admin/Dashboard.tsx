@@ -229,6 +229,7 @@ export default function AdminDashboard() {
 
     async function fetchOpenRequests() {
         setLoadingModal(true);
+        const today = new Date().toISOString().split('T')[0];
         const { data } = await supabase
             .from('solicitacoes_retirada')
             .select(`
@@ -236,7 +237,8 @@ export default function AdminDashboard() {
                 aluno:alunos(nome_completo, turma, sala),
                 responsavel:responsaveis(nome_completo)
             `)
-            .not('status', 'in', '("CONCLUIDO","CANCELADO")')
+            .in('status', ['SOLICITADO', 'NOTIFICADO', 'AGUARDANDO', 'LIBERADO', 'CONFIRMADO'])
+            .gte('horario_solicitacao', `${today}T00:00:00`)
             .order('horario_solicitacao', { ascending: true });
         setOpenRequests((data ?? []) as unknown as OpenRequest[]);
         setLoadingModal(false);
@@ -263,10 +265,11 @@ export default function AdminDashboard() {
                 // Total students — no escola_id filter to avoid silent mismatch
                 supabase.from('alunos').select('*', { count: 'exact', head: true }),
 
-                // Active pickups — all currently open (regardless of date), status fixed to CONCLUIDO
+                // Active pickups today — only genuinely in-progress statuses, today only
                 supabase.from('solicitacoes_retirada')
                     .select('*', { count: 'exact', head: true })
-                    .not('status', 'in', '("CONCLUIDO","CANCELADO")'),
+                    .in('status', ['SOLICITADO', 'NOTIFICADO', 'AGUARDANDO', 'LIBERADO', 'CONFIRMADO'])
+                    .gte('horario_solicitacao', `${today}T00:00:00`),
 
                 // Concluded pickups today — status fixed from 'ENTREGUE' → 'CONCLUIDO'
                 supabase.from('solicitacoes_retirada')
