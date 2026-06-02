@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { usePhotoZoom } from '../../context/PhotoZoomContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -113,6 +114,7 @@ export default function ClassroomDashboard() {
     const { user, signOut, role } = useAuth();
     const navigate  = useNavigate();
     const toast     = useToast();
+    const { openPhoto } = usePhotoZoom();
 
     const [requests, setRequests]             = useState<PickupRequest[]>([]);
     const [activeRequest, setActiveRequest]   = useState<PickupRequest | null>(null);
@@ -465,7 +467,7 @@ export default function ClassroomDashboard() {
                                             background: D.bgDark2,
                                         }}>
                                             {activeRequest.aluno.foto_url ? (
-                                                <img src={activeRequest.aluno.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <img src={activeRequest.aluno.foto_url} alt={activeRequest.aluno.nome_completo} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }} onClick={() => openPhoto(activeRequest.aluno.foto_url!, activeRequest.aluno.nome_completo)} title="Clique para ampliar" />
                                             ) : (
                                                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(52,152,219,0.1)' }}>
                                                     <UserIcon size={52} style={{ color: `${D.gold}45` }} />
@@ -487,7 +489,7 @@ export default function ClassroomDashboard() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 9px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${D.borderLight}`, borderRadius: 9 }}>
                                             <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: D.bgDark2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1.5px solid ${D.gold}28` }}>
                                                 {activeRequest.responsavel?.foto_url
-                                                    ? <img src={activeRequest.responsavel.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ? <img src={activeRequest.responsavel.foto_url} alt={activeRequest.responsavel.nome_completo} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }} onClick={() => openPhoto(activeRequest.responsavel!.foto_url!, activeRequest.responsavel!.nome_completo)} title="Clique para ampliar" />
                                                     : <UserIcon size={12} style={{ color: `${D.gold}55` }} />}
                                             </div>
                                             <p style={{ fontSize: 10.5, fontWeight: 600, color: D.textMain, lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>

@@ -4,8 +4,10 @@ import { logAudit } from '../../lib/audit';
 import { useAuth } from '../../context/AuthContext';
 import WithdrawalQueue from '../../components/reception/WithdrawalQueue';
 import QRScannerModal from '../../components/reception/QRScannerModal';
+import DocumentQRScanner from '../../components/reception/DocumentQRScanner';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
+import { usePhotoZoom } from '../../context/PhotoZoomContext';
 import type { Student, Guardian } from '../../types';
 import {
     Search as SearchIcon,
@@ -120,6 +122,7 @@ function CodeModal({ onConfirm, onClose }: {
 export default function ReceptionSearch() {
     const toast = useToast();
     const { user, signOut, escolaId } = useAuth();
+    const { openPhoto } = usePhotoZoom();
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [addMoreQuery, setAddMoreQuery] = useState('');
@@ -139,6 +142,7 @@ export default function ReceptionSearch() {
     const [sending, setSending] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [isDocScannerOpen, setIsDocScannerOpen] = useState(false);
     const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
     const [isPhotoZoomed, setIsPhotoZoomed] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -735,9 +739,9 @@ export default function ReceptionSearch() {
                         <span>Código</span>
                     </button>
 
-                    {/* Escanear QR button - gold filled */}
+                    {/* Escanear QR de Identidade — abre o DocumentQRScanner */}
                     <button
-                        onClick={() => setIsScannerOpen(true)}
+                        onClick={() => setIsDocScannerOpen(true)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px',
                             background: `linear-gradient(135deg, ${D.gold} 0%, ${D.goldDark} 100%)`,
@@ -879,7 +883,7 @@ export default function ReceptionSearch() {
                                         <div style={{ position: 'relative', flexShrink: 0 }}>
                                             <div style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: `3px solid ${D.gold}`, boxShadow: `0 0 0 4px rgba(199,158,97,0.12)`, background: D.panelBg }}>
                                                 {selectedGuardian?.foto_url
-                                                    ? <img src={selectedGuardian.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => setIsPhotoZoomed(true)} />
+                                                    ? <img src={selectedGuardian.foto_url} alt={selectedGuardian.nome_completo} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }} onClick={() => openPhoto(selectedGuardian!.foto_url!, selectedGuardian!.nome_completo)} title="Clique para ampliar" />
                                                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={26} style={{ color: `rgba(199,158,97,0.4)` }} /></div>}
                                             </div>
                                         </div>
@@ -1300,6 +1304,34 @@ export default function ReceptionSearch() {
             </div>
 
             {/* ══════════ MODALS ══════════ */}
+            {/* DocumentQRScanner — lê cartões SISRA e documentos (RG, CNH, CPF) */}
+            {isDocScannerOpen && (
+                <DocumentQRScanner
+                    escolaId={escolaId}
+                    onSisraResolved={async (responsavelId, guardianName, guardian) => {
+                        setLoading(true);
+                        try { await resolveByResponsavelId(responsavelId, guardianName); }
+                        catch (err: any) { toast.error('Erro ao carregar alunos', err.message); }
+                        finally { setLoading(false); }
+                    }}
+                    onDocumentCpfFound={async (cpf, guardian) => {
+                        setLoading(true);
+                        try {
+                            const { data: guardians } = await supabase
+                                .from('responsaveis').select('id, nome_completo, foto_url, cpf').eq('cpf', cpf);
+                            if (guardians && guardians.length > 0) {
+                                const ids = guardians.map((g: any) => g.id);
+                                await resolveByMultipleIds(ids, guardian.nome_completo, guardians[0], cpf);
+                            } else {
+                                toast.warning('CPF não cadastrado', 'Este responsável não está cadastrado na escola.');
+                            }
+                        } catch (err: any) { toast.error('Erro ao carregar alunos', err.message); }
+                        finally { setLoading(false); }
+                    }}
+                    onClose={() => setIsDocScannerOpen(false)}
+                />
+            )}
+            {/* QRScannerModal legado — mantido para compatibilidade */}
             <QRScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
             {isCodeModalOpen && <CodeModal onConfirm={handleCodeLookup} onClose={() => setIsCodeModalOpen(false)} />}
 

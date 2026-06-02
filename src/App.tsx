@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider } from './context/AuthContext';
+import { PhotoZoomProvider } from './context/PhotoZoomContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // ── Lazy-loaded pages ─────────────────────────────────────────────────────────
@@ -133,6 +134,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
+        <PhotoZoomProvider>
         <AuthProvider>
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
@@ -312,6 +314,7 @@ function App() {
             </Suspense>
           </BrowserRouter>
         </AuthProvider>
+        </PhotoZoomProvider>
       </ToastProvider>
     </ErrorBoundary>
   );

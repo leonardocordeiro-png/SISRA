@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import { useAuth } from '../../context/AuthContext';
+import { usePhotoZoom } from '../../context/PhotoZoomContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle, User, ShieldCheck, Clock, FileText, Camera, Check, AlertTriangle, AlertCircle, Activity } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
@@ -31,6 +32,7 @@ export default function ReceptionConfirmation() {
     const navigate = useNavigate();
     useAuth();
     const toast = useToast();
+    const { openPhoto } = usePhotoZoom();
     const [request, setRequest] = useState<PickupRequest | null>(null);
     const [loading, setLoading] = useState(true);
     const [confirmedIdentity, setConfirmedIdentity] = useState(false);
@@ -146,7 +148,7 @@ export default function ReceptionConfirmation() {
                                     <div className="relative inline-block">
                                         <div className="w-56 h-56 bg-[#020617] rounded-[2.5rem] mx-auto overflow-hidden border-2 border-white/10 shadow-2xl transition-all duration-700 group-hover:border-emerald-500/40 relative">
                                             {request.aluno.foto_url ? (
-                                                <img src={request.aluno.foto_url} alt="" className="w-full h-full object-cover" />
+                                                <img src={request.aluno.foto_url} alt={request.aluno.nome_completo} className="w-full h-full object-cover cursor-zoom-in" onClick={() => openPhoto(request.aluno.foto_url!, request.aluno.nome_completo)} title="Clique para ampliar" />
                                             ) : (
                                                 <User className="w-full h-full p-16 text-slate-800" />
                                             )}
@@ -218,7 +220,7 @@ export default function ReceptionConfirmation() {
                                         <div className="absolute inset-x-0 h-[1px] bg-emerald-500/10 blur-sm top-0 group-hover:animate-scan"></div>
                                         <div className="w-28 h-28 bg-[#020617] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group-hover:scale-105 transition-all duration-500 shrink-0">
                                             {request.responsavel.foto_url ? (
-                                                <img src={request.responsavel.foto_url} alt="" className="w-full h-full object-cover" />
+                                                <img src={request.responsavel.foto_url} alt={request.responsavel.nome_completo} className="w-full h-full object-cover cursor-zoom-in" onClick={() => openPhoto(request.responsavel!.foto_url!, request.responsavel!.nome_completo)} title="Clique para ampliar" />
                                             ) : (
                                                 <User className="w-12 h-12 m-8 text-slate-700" />
                                             )}
