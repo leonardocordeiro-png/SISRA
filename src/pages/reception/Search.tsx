@@ -1308,7 +1308,7 @@ export default function ReceptionSearch() {
             {isDocScannerOpen && (
                 <DocumentQRScanner
                     escolaId={escolaId}
-                    onSisraResolved={async (responsavelId, guardianName, guardian) => {
+                    onSisraResolved={async (responsavelId, guardianName, _guardian) => {
                         setLoading(true);
                         try { await resolveByResponsavelId(responsavelId, guardianName); }
                         catch (err: any) { toast.error('Erro ao carregar alunos', err.message); }
