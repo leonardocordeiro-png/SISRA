@@ -340,20 +340,6 @@ export default function PriorityPipeline({
         );
     };
 
-    // ── Section header ─────────────────────────────────────────────────────────
-    const SectionHeader = ({
-        label, count, colorClass, dotClass,
-    }: { label: string; count: number; colorClass: string; dotClass: string }) => (
-        <div className="flex items-center gap-2 px-1 py-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-            <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${colorClass}`}>{label}</span>
-            <div className={`flex items-center justify-center w-4 h-4 rounded-full text-[8px] font-black ${dotClass.replace('bg-', 'bg-').replace('animate-pulse', '')} bg-opacity-20 ${colorClass}`}>
-                {count}
-            </div>
-            <div className="flex-1 h-px bg-white/5" />
-        </div>
-    );
-
     return (
         <div className="w-full md:w-[400px] border-b md:border-b-0 md:border-r border-white/10 bg-slate-950/40 backdrop-blur-3xl flex flex-col z-20 shrink-0 relative overflow-hidden">
 
