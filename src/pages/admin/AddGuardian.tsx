@@ -8,6 +8,21 @@ import { useToast } from '../../components/ui/Toast';
 
 import type { Guardian } from '../../types';
 
+function isValidCpf(raw: string): boolean {
+    const cpf = raw.replace(/\D/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+    let r = (sum * 10) % 11;
+    if (r === 10 || r === 11) r = 0;
+    if (r !== parseInt(cpf[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+    r = (sum * 10) % 11;
+    if (r === 10 || r === 11) r = 0;
+    return r === parseInt(cpf[10]);
+}
+
 export default function AddGuardian() {
     const navigate = useNavigate();
     const toast = useToast();
@@ -22,7 +37,8 @@ export default function AddGuardian() {
         cpf: '',
         telefone: '',
         parentesco: 'Pai',
-        foto_url: ''
+        foto_url: '',
+        tipo_autorizacao: 'PRINCIPAL' as 'PRINCIPAL' | 'SECUNDARIO' | 'EMERGENCIA'
     });
 
     // Photo Modals State
@@ -74,19 +90,30 @@ export default function AddGuardian() {
         e.preventDefault();
         const cleanCpf = formData.cpf.replace(/\D/g, '');
 
+        if (!isValidCpf(cleanCpf)) {
+            toast.error('CPF inválido', 'Verifique o CPF informado e tente novamente.');
+            return;
+        }
+
+        const duplicado = guardians.find(g => g.cpf?.replace(/\D/g, '') === cleanCpf && g.id !== editingId);
+        if (duplicado) {
+            toast.error('CPF duplicado', `${duplicado.nome_completo} já está cadastrado com este CPF.`);
+            return;
+        }
+
         if (editingId) {
             setGuardians(guardians.map(g => g.id === editingId ? { ...formData, id: editingId, cpf: cleanCpf } : g));
             setEditingId(null);
         } else {
             const newGuardian: Guardian = {
-                id: Math.random().toString(36).substr(2, 9),
+                id: crypto.randomUUID(),
                 ...formData,
                 cpf: cleanCpf
             };
             setGuardians([...guardians, newGuardian]);
         }
         setShowForm(false);
-        setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '' });
+        setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '', tipo_autorizacao: 'PRINCIPAL' });
     };
 
     const handleEditGuardian = (g: Guardian) => {
@@ -95,7 +122,8 @@ export default function AddGuardian() {
             cpf: g.cpf || '',
             telefone: g.telefone || '',
             parentesco: g.parentesco || 'Pai',
-            foto_url: g.foto_url || ''
+            foto_url: g.foto_url || '',
+            tipo_autorizacao: g.tipo_autorizacao || 'PRINCIPAL'
         });
         setEditingId(g.id);
         setShowForm(true);
@@ -226,7 +254,7 @@ export default function AddGuardian() {
                                         <User className="text-blue-600 w-5 h-5" />
                                         {editingId ? 'Editar Responsável' : 'Detalhes do Novo Responsável'}
                                     </h3>
-                                    <button onClick={() => { setShowForm(false); setEditingId(null); setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '' }); }} className="text-slate-400 hover:text-slate-600 p-1">
+                                    <button onClick={() => { setShowForm(false); setEditingId(null); setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '', tipo_autorizacao: 'PRINCIPAL' }); }} className="text-slate-400 hover:text-slate-600 p-1">
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -273,6 +301,18 @@ export default function AddGuardian() {
                                                         <option>Outro</option>
                                                     </select>
                                                 </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Tipo de Autorização</label>
+                                                <select
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium appearance-none"
+                                                    value={formData.tipo_autorizacao}
+                                                    onChange={e => setFormData({ ...formData, tipo_autorizacao: e.target.value as 'PRINCIPAL' | 'SECUNDARIO' | 'EMERGENCIA' })}
+                                                >
+                                                    <option value="PRINCIPAL">Principal</option>
+                                                    <option value="SECUNDARIO">Secundário</option>
+                                                    <option value="EMERGENCIA">Emergência</option>
+                                                </select>
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Telefone com WhatsApp</label>
@@ -361,7 +401,7 @@ export default function AddGuardian() {
                                     <div className="mt-10 flex justify-end gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => { setShowForm(false); setEditingId(null); setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '' }); }}
+                                            onClick={() => { setShowForm(false); setEditingId(null); setFormData({ nome_completo: '', cpf: '', telefone: '', parentesco: 'Pai', foto_url: '', tipo_autorizacao: 'PRINCIPAL' }); }}
                                             className="px-6 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-sm"
                                         >
                                             Descartar

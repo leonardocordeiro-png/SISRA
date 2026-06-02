@@ -27,6 +27,7 @@ export default function StudentManagement() {
     const [filterTurma, setFilterTurma] = useState<string>('TODAS');
     const [filterSala, setFilterSala] = useState<string>('TODAS');
     const [availableTurmas, setAvailableTurmas] = useState<string[]>([]);
+    const [availableSalas, setAvailableSalas] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
 
@@ -64,11 +65,13 @@ export default function StudentManagement() {
         setLoading(true);
         const { data, error } = await supabase
             .from('alunos')
-            .select('*')
+            .select('id, nome_completo, matricula, turma, sala, foto_url, escola_id, sala_id, turma_id')
             .order('nome_completo');
 
         if (!error && data) {
             setStudents(data);
+            const salas = Array.from(new Set(data.map(s => s.sala).filter(Boolean))).sort();
+            setAvailableSalas(salas);
         }
 
         setLoading(false);
@@ -296,7 +299,7 @@ export default function StudentManagement() {
             await logAudit('GERACAO_LINK_ACESSO', 'tokens_acesso', undefined, {
                 aluno_id: studentId,
                 aluno_nome: studentName,
-                token: token
+                token_prefix: token.substring(0, 4) + '****'
             });
 
             const url = `${window.location.origin}/parent/cadastro/${token}`;
@@ -509,11 +512,7 @@ export default function StudentManagement() {
                                         className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-slate-900/5 pr-10"
                                     >
                                         <option value="TODAS">Todas as Salas</option>
-                                        <option value="Sala 101">Sala 101</option>
-                                        <option value="Sala 102">Sala 102</option>
-                                        <option value="Sala 103">Sala 103</option>
-                                        <option value="Sala 104">Sala 104</option>
-                                        <option value="Sala 109">Sala 109</option>
+                                        {availableSalas.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                                 </div>

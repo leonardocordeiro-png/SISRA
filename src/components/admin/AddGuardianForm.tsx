@@ -64,17 +64,23 @@ export default function AddGuardianForm({ isOpen, onClose, escolaId, onSuccess }
         setError('');
 
         try {
+            const cleanCpf = guardianData.cpf.replace(/\D/g, '');
+
+            if (!authData.aluno_id) {
+                setError('Selecione um aluno para vincular o responsável.');
+                return;
+            }
+
             // 1. Check if guardian already exists by CPF
             const { data: existingGuardian } = await supabase
                 .from('responsaveis')
                 .select('id')
-                .eq('cpf', guardianData.cpf)
+                .eq('cpf', cleanCpf)
                 .maybeSingle();
 
             let guardianId;
 
             if (existingGuardian) {
-                // Update existing guardian info
                 const { error: uError } = await supabase
                     .from('responsaveis')
                     .update({
@@ -89,10 +95,9 @@ export default function AddGuardianForm({ isOpen, onClose, escolaId, onSuccess }
                 if (uError) throw uError;
                 guardianId = existingGuardian.id;
             } else {
-                // Create new guardian
                 const { data: newGuardian, error: gError } = await supabase
                     .from('responsaveis')
-                    .insert(guardianData)
+                    .insert({ ...guardianData, cpf: cleanCpf })
                     .select()
                     .single();
 
@@ -111,6 +116,11 @@ export default function AddGuardianForm({ isOpen, onClose, escolaId, onSuccess }
                 });
 
             if (authError) throw authError;
+
+            // 3. Ensure junction table link exists
+            await supabase
+                .from('alunos_responsaveis')
+                .upsert({ aluno_id: authData.aluno_id, responsavel_id: guardianId }, { ignoreDuplicates: true });
 
             onSuccess();
             resetForm();

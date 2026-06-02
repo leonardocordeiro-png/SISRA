@@ -5,13 +5,16 @@ import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../context/AuthContext';
 
 const DEFAULT_SCHEDULE = [
+    { day: 'Domingo', enabled: false, start: '08:00', end: '12:00' },
     { day: 'Segunda-feira', enabled: true, start: '12:00', end: '13:00' },
     { day: 'Terça-feira', enabled: true, start: '12:00', end: '13:00' },
     { day: 'Quarta-feira', enabled: true, start: '12:00', end: '13:00' },
     { day: 'Quinta-feira', enabled: true, start: '12:00', end: '13:00' },
     { day: 'Sexta-feira', enabled: true, start: '12:00', end: '13:00' },
+    { day: 'Sábado', enabled: false, start: '08:00', end: '12:00' },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -26,6 +29,7 @@ const DEFAULT_SETTINGS = {
 export default function AuthorizationRules() {
     const navigate = useNavigate();
     const toast = useToast();
+    const { escolaId } = useAuth();
 
     const [studentData, setStudentData] = useState<any>(null);
     const [guardiansData, setGuardiansData] = useState<any[]>([]);
@@ -96,7 +100,12 @@ export default function AuthorizationRules() {
         setIsSaving(true);
 
         try {
-            const escola_id = import.meta.env.VITE_ESCOLA_ID || 'e6328325-1845-420a-b333-87a747953259';
+            const escola_id = escolaId || import.meta.env.VITE_ESCOLA_ID;
+        if (!escola_id) {
+            toast.error('Erro de sessão', 'Escola não identificada. Faça login novamente.');
+            setIsSaving(false);
+            return;
+        }
             const editModeId = sessionStorage.getItem('edit_mode_student_id');
 
             // Build the correct turma string
@@ -208,7 +217,7 @@ export default function AuthorizationRules() {
                     .insert({
                         aluno_id: studentId,
                         responsavel_id: guardianId,
-                        tipo_autorizacao: guardiansData.indexOf(g) === 0 ? 'PRINCIPAL' : 'SECUNDARIO',
+                        tipo_autorizacao: g.tipo_autorizacao || (guardiansData.indexOf(g) === 0 ? 'PRINCIPAL' : 'SECUNDARIO'),
                         parentesco: g.parentesco,
                         ativa: true
                     });

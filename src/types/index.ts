@@ -20,4 +20,5 @@ export type Guardian = {
     telefone?: string;
     expires_at?: string;
     qr_code?: string;
+    tipo_autorizacao?: 'PRINCIPAL' | 'SECUNDARIO' | 'EMERGENCIA';
 };
