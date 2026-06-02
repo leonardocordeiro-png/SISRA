@@ -65,10 +65,13 @@ export default function StudentManagement() {
         setLoading(true);
         const { data, error } = await supabase
             .from('alunos')
-            .select('id, nome_completo, matricula, turma, sala, foto_url, escola_id, sala_id, turma_id')
+            .select('id, nome_completo, matricula, turma, sala, foto_url, escola_id')
             .order('nome_completo');
 
-        if (!error && data) {
+        if (error) {
+            console.error('fetchStudents error:', error);
+            toast.error('Erro ao carregar alunos', error.message);
+        } else if (data) {
             setStudents(data);
             const salas = Array.from(new Set(data.map(s => s.sala).filter(Boolean))).sort();
             setAvailableSalas(salas);
