@@ -39,7 +39,7 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
         return beforeParen.trim();
     };
 
-    const parseCSV = (text: string, dbTurmas: { nome: string; serie: string; secao: string }[]) => {
+    const parseCSV = (text: string, dbTurmas: { nome: string; serie: string; secao: string; salaNome?: string }[]) => {
         const lines = text.split('\n').filter(line => line.trim());
         if (lines.length < 2) throw new Error('O arquivo deve conter um cabeçalho e pelo menos uma linha de dados.');
 
