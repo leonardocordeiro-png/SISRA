@@ -39,7 +39,7 @@ export default function StudentManagement() {
 
     // Transfer (remanejamento) state
     const [transferStudent, setTransferStudent] = useState<Student | null>(null);
-    const [turmasDisponiveis, setTurmasDisponiveis] = useState<{ serie: string; secao: string }[]>([]);
+    const [turmasDisponiveis, setTurmasDisponiveis] = useState<{ serie: string; secao: string; salaNome?: string }[]>([]);
     const [transferForm, setTransferForm] = useState({ serie: '', turma: '' });
     const [isTransferring, setIsTransferring] = useState(false);
 
@@ -85,20 +85,20 @@ export default function StudentManagement() {
         try {
             const { data, error } = await supabase
                 .from('turmas')
-                .select('nome')
+                .select('nome, sala:sala_id(nome)')
                 .eq('ativa', true)
                 .order('nome');
 
             if (error) throw error;
 
             if (data) {
-                const parsed = data.map(t => {
+                const parsed = (data as any[]).map(t => {
                     const match = t.nome.match(/^(.*?) - (.*?) \((.*?)\)$/);
                     if (match) {
-                        return { serie: `${match[1]} - ${match[2]}`, secao: match[3] };
+                        return { serie: `${match[1]} - ${match[2]}`, secao: match[3], salaNome: t.sala?.nome as string | undefined };
                     }
                     return null;
-                }).filter(Boolean) as { serie: string; secao: string }[];
+                }).filter(Boolean) as { serie: string; secao: string; salaNome?: string }[];
 
                 setTurmasDisponiveis(parsed);
             }
@@ -256,7 +256,8 @@ export default function StudentManagement() {
         try {
             // Build full turma string matching what StudentRegistration produces
             const novaTurma = `${transferForm.serie} (${transferForm.turma})`;
-            const novaSala = getSalaBySerie(transferForm.serie, transferForm.turma);
+            const selectedTurma = turmasDisponiveis.find(t => t.serie === transferForm.serie && t.secao === transferForm.turma);
+            const novaSala = selectedTurma?.salaNome || getSalaBySerie(transferForm.serie, transferForm.turma);
 
             const { error } = await supabase
                 .from('alunos')

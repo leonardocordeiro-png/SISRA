@@ -19,16 +19,17 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
     const [error, setError] = useState<string | null>(null);
 
     // Fetch all turmas from DB so we can match properly
-    const fetchTurmasFromDB = async (): Promise<{ nome: string; serie: string; secao: string }[]> => {
-        const { data, error } = await supabase.from('turmas').select('nome').eq('ativa', true);
+    const fetchTurmasFromDB = async (): Promise<{ nome: string; serie: string; secao: string; salaNome?: string }[]> => {
+        const { data, error } = await supabase.from('turmas').select('nome, sala:sala_id(nome)').eq('ativa', true);
         if (error || !data) return [];
-        return data.map(t => {
+        return (data as any[]).map(t => {
+            const salaNome: string | undefined = t.sala?.nome;
             const m = t.nome.match(/^(.*?) - (.*?) \((.*?)\)$/);
-            if (m) return { nome: t.nome, serie: m[1], secao: m[3] };
+            if (m) return { nome: t.nome, serie: m[1], secao: m[3], salaNome };
             // Fallback: simple "serie (secao)" format
             const m2 = t.nome.match(/^(.*?) \((.*?)\)$/);
-            if (m2) return { nome: t.nome, serie: m2[1], secao: m2[2] };
-            return { nome: t.nome, serie: t.nome, secao: '' };
+            if (m2) return { nome: t.nome, serie: m2[1], secao: m2[2], salaNome };
+            return { nome: t.nome, serie: t.nome, secao: '', salaNome };
         });
     };
 
@@ -65,12 +66,13 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
 
             // Try to match the CSV serie against real turmas in the DB
             let turmaFormatada = item.serie; // fallback
+            let matchedTurma: typeof dbTurmas[number] | undefined;
             if (dbTurmas.length > 0) {
                 const csvShortSerie = normalize(item.serie);
                 const csvSecao = item.turma_secao || '';
 
                 // Find a DB turma whose short serie prefix matches AND secao matches
-                const matched = dbTurmas.find(t =>
+                matchedTurma = dbTurmas.find(t =>
                     normalize(getShortSerie(t.serie)) === csvShortSerie &&
                     normalize(t.secao) === normalize(csvSecao)
                 ) || dbTurmas.find(t =>
@@ -79,8 +81,8 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
                     normalize(t.secao) === normalize(csvSecao)
                 );
 
-                if (matched) {
-                    turmaFormatada = matched.nome;
+                if (matchedTurma) {
+                    turmaFormatada = matchedTurma.nome;
                 } else {
                     // No match found in turmas table — store in simple format
                     turmaFormatada = item.turma_secao
@@ -105,7 +107,7 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
                 turma: turmaFormatada,
                 serie_display: item.serie,
                 secao_display: item.turma_secao || '',
-                sala: getSalaBySerie(item.serie, item.turma_secao),
+                sala: matchedTurma?.salaNome || getSalaBySerie(item.serie, item.turma_secao),
                 escola_id: escolaId,
                 ativo: true
             };
@@ -125,7 +127,11 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const text = event.target?.result as string;
+                const buffer = event.target?.result as ArrayBuffer;
+                const bytes = new Uint8Array(buffer);
+                // Detect UTF-8 BOM (EF BB BF); if absent assume Windows-1252 (Excel/BR default)
+                const hasUtf8Bom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
+                const text = new TextDecoder(hasUtf8Bom ? 'utf-8' : 'windows-1252').decode(buffer);
                 const dbTurmas = await fetchTurmasFromDB();
                 const parsed = parseCSV(text, dbTurmas);
                 setPreview(parsed);
@@ -134,7 +140,7 @@ export default function BulkImportModal({ escolaId, onClose, onSuccess }: BulkIm
                 setPreview([]);
             }
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
     };
 
     const handlePasteProcess = async () => {
