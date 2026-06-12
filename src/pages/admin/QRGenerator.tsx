@@ -1,21 +1,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { logAudit } from '../../lib/audit';
 import { Search, QrCode, Download, Printer, User as UserIcon, Calendar, Smartphone, Loader2, Camera, Edit2, Check, X } from 'lucide-react';
 import QRCodeStyling from 'qr-code-styling';
 import domtoimage from 'dom-to-image-more';
 import NavigationControls from '../../components/NavigationControls';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../context/AuthContext';
 
 import type { Guardian } from '../../types';
 
+type QrGuardian = Guardian & {
+    alunos_count?: number;
+    aluno_nomes?: string[];
+};
+
 export default function AdminQRGenerator() {
     const toast = useToast();
+    const { escolaId } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
-    const [guardians, setGuardians] = useState<Guardian[]>([]);
-    const [selectedGuardian, setSelectedGuardian] = useState<Guardian | null>(null);
+    const [guardians, setGuardians] = useState<QrGuardian[]>([]);
+    const [selectedGuardian, setSelectedGuardian] = useState<QrGuardian | null>(null);
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
     const qrCode = useRef<QRCodeStyling | null>(null);
@@ -34,125 +41,59 @@ export default function AdminQRGenerator() {
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!searchTerm.trim()) return;
+        if (!escolaId) {
+            toast.error('Escola nao identificada', 'Entre novamente para carregar o contexto da escola.');
+            return;
+        }
 
         setLoading(true);
+        setHasSearched(true);
+        setSelectedGuardian(null);
         try {
-            const cleanSearch = searchTerm.replace(/\D/g, '');
-            const isCpf = cleanSearch.length === 11;
-            // Sanitize: escape special ilike characters to prevent injection
-            const safeTerm = searchTerm.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
-
-            let query = supabase.from('responsaveis').select('*');
-            if (isCpf) {
-                query = query.eq('cpf', cleanSearch);
-            } else {
-                query = query.or(`nome_completo.ilike.%${safeTerm}%,cpf.ilike.%${safeTerm}%`);
-            }
-            const { data, error } = await query.limit(10);
+            const { data, error } = await supabase.rpc('sisra_search_admin_qr_guardians', {
+                p_escola_id: escolaId,
+                p_search: searchTerm.trim().slice(0, 120),
+            });
 
             if (error) throw error;
-            setGuardians(data || []);
+            setGuardians(Array.isArray(data) ? data as QrGuardian[] : []);
         } catch (err) {
             console.error('Error searching guardians:', err);
+            toast.error('Erro ao buscar responsaveis', 'A busca nao pode ser concluida. Verifique sua permissao e tente novamente.');
+            setGuardians([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const generateAccessCode = () => {
-        // Use CSPRNG — Math.random() is predictable and must not be used for access codes
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        const array = new Uint8Array(8);
-        crypto.getRandomValues(array);
-        return Array.from(array, byte => chars[byte % chars.length]).join('');
-    };
+    const selectGuardian = async (guardian: QrGuardian) => {
+        if (!escolaId) {
+            toast.error('Escola nao identificada', 'Entre novamente para carregar o contexto da escola.');
+            return;
+        }
 
-    const selectGuardian = async (guardian: Guardian) => {
         setGenerating(true);
         setSelectedGuardian(null);
 
         try {
-            // Ensure guardian has an access code if missing
-            let currentAccessCode = guardian.codigo_acesso;
-            if (!currentAccessCode) {
-                const newCode = generateAccessCode();
-                const { error: updateError } = await supabase
-                    .from('responsaveis')
-                    .update({ codigo_acesso: newCode })
-                    .eq('id', guardian.id);
-
-                if (!updateError) {
-                    currentAccessCode = newCode;
-                }
-            }
-
-            // Check for existing QR card
-            const { data: qrCard, error: fetchError } = await supabase
-                .from('parent_qr_cards')
-                .select('*')
-                .eq('responsavel_id', guardian.id)
-                .eq('active', true)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle(); // Limit 1 + maybeSingle is safer against data duplication
-
-            if (fetchError) throw fetchError;
-
-            let finalCard = qrCard;
-
-            // Create or Reactivate
-            if (!finalCard) {
-                // Check if any card exists (even inactive) to reuse QR code
-                const { data: anyCard, error: anyCardError } = await supabase
-                    .from('parent_qr_cards')
-                    .select('*')
-                    .eq('responsavel_id', guardian.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                if (anyCardError && import.meta.env.DEV) {
-                    console.error('[QRGen] Error searching for any existing card:', anyCardError);
-                }
-
-                const newQRCodeBase = anyCard?.qr_code || `LaSalleCheguei-${guardian.id}-${Date.now()}`;
-                const expiresAt = new Date();
-                expiresAt.setMonth(expiresAt.getMonth() + 12); // Extending to 12 months as per standard
-
-                const { data: newCard, error: insertError } = await supabase
-                    .from('parent_qr_cards')
-                    .insert({
-                        responsavel_id: guardian.id,
-                        qr_code: newQRCodeBase,
-                        expires_at: expiresAt.toISOString(),
-                        active: true
-                    })
-                    .select()
-                    .maybeSingle(); // maybeSingle instead of single() to handle RLS visibility issues gracefully
-
-                if (insertError) {
-                    throw insertError;
-                }
-                finalCard = newCard;
-                // Log audit: new QR card created or reactivated
-                logAudit('GERACAO_CARTAO_QR', 'parent_qr_cards', finalCard?.id, {
-                    responsavel_nome: guardian.nome_completo,
-                    responsavel_id: guardian.id,
-                    qr_code: finalCard?.qr_code,
-                    acao: anyCard ? 'REATIVACAO' : 'CRIACAO_NOVA'
-                });
-            }
-
-            setSelectedGuardian({
-                ...guardian,
-                qr_code: finalCard?.qr_code,
-                expires_at: finalCard?.expires_at,
-                codigo_acesso: currentAccessCode
+            const { data, error } = await supabase.rpc('sisra_issue_admin_qr_card', {
+                p_escola_id: escolaId,
+                p_responsavel_id: guardian.id,
             });
+
+            if (error) throw error;
+
+            const updatedGuardian = (data as { guardian?: QrGuardian } | null)?.guardian;
+            if (!updatedGuardian?.qr_code) {
+                throw new Error('Cartao QR nao retornado pelo banco.');
+            }
+
+            setSelectedGuardian(updatedGuardian);
+            setGuardians(current => current.map(item => item.id === updatedGuardian.id ? updatedGuardian : item));
         } catch (err: any) {
             console.error('Error selecting guardian:', err);
             const errorMsg = err.message || 'Erro desconhecido';
-            toast.error('Erro ao carregar/gerar cartão', `Detalhe: ${errorMsg}. Verifique as permissões de RLS no banco.`);
+            toast.error('Erro ao carregar/gerar cartao', `Detalhe: ${errorMsg}.`);
         } finally {
             setGenerating(false);
         }
@@ -287,6 +228,10 @@ export default function AdminQRGenerator() {
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !selectedGuardian) return;
+        if (!escolaId) {
+            toast.error('Escola nao identificada', 'Entre novamente para carregar o contexto da escola.');
+            return;
+        }
 
         setUploadingPhoto(true);
         try {
@@ -299,7 +244,7 @@ export default function AdminQRGenerator() {
 
             const { error: uploadError } = await supabase.storage
                 .from('responsaveis')
-                .upload(filePath, file);
+                .upload(filePath, file, { upsert: false });
 
             if (uploadError) throw uploadError;
 
@@ -307,20 +252,20 @@ export default function AdminQRGenerator() {
                 .from('responsaveis')
                 .getPublicUrl(filePath);
 
-            const { error: updateError } = await supabase
-                .from('responsaveis')
-                .update({ foto_url: publicUrl })
-                .eq('id', selectedGuardian.id);
+            const { data, error: updateError } = await supabase.rpc('sisra_update_admin_guardian_photo', {
+                p_escola_id: escolaId,
+                p_responsavel_id: selectedGuardian.id,
+                p_foto_url: publicUrl,
+            });
 
             if (updateError) throw updateError;
 
-            logAudit('EDICAO_ESTUDANTE', 'responsaveis', selectedGuardian.id, {
-                acao: 'ATUALIZACAO_FOTO',
-                responsavel_nome: selectedGuardian.nome_completo,
-            });
-
-            setSelectedGuardian({ ...selectedGuardian, foto_url: publicUrl });
-            toast.success('Foto atualizada', 'A foto do responsável foi atualizada com sucesso.');
+            const updatedGuardian = (data as { guardian?: QrGuardian } | null)?.guardian;
+            setSelectedGuardian(updatedGuardian || { ...selectedGuardian, foto_url: publicUrl });
+            if (updatedGuardian) {
+                setGuardians(current => current.map(item => item.id === updatedGuardian.id ? updatedGuardian : item));
+            }
+            toast.success('Foto atualizada', 'A foto do responsavel foi atualizada com sucesso.');
         } catch (err) {
             console.error('Error uploading photo:', err);
             toast.error('Erro ao enviar foto', 'Tente novamente com uma imagem menor.');
@@ -331,20 +276,28 @@ export default function AdminQRGenerator() {
 
     const handleUpdateValidity = async () => {
         if (!selectedGuardian || !newValidityDate) return;
+        if (!escolaId) {
+            toast.error('Escola nao identificada', 'Entre novamente para carregar o contexto da escola.');
+            return;
+        }
 
         setUpdatingValidity(true);
         try {
-            const { error } = await supabase
-                .from('parent_qr_cards')
-                .update({ expires_at: new Date(newValidityDate).toISOString() })
-                .eq('responsavel_id', selectedGuardian.id)
-                .eq('active', true);
+            const { data, error } = await supabase.rpc('sisra_update_admin_qr_validity', {
+                p_escola_id: escolaId,
+                p_responsavel_id: selectedGuardian.id,
+                p_expires_at: new Date(newValidityDate).toISOString(),
+            });
 
             if (error) throw error;
 
-            setSelectedGuardian({ ...selectedGuardian, expires_at: new Date(newValidityDate).toISOString() });
+            const updatedGuardian = (data as { guardian?: QrGuardian } | null)?.guardian;
+            setSelectedGuardian(updatedGuardian || { ...selectedGuardian, expires_at: new Date(newValidityDate).toISOString() });
+            if (updatedGuardian) {
+                setGuardians(current => current.map(item => item.id === updatedGuardian.id ? updatedGuardian : item));
+            }
             setEditingValidity(false);
-            toast.success('Validade atualizada', 'A data de validade do cartão foi atualizada.');
+            toast.success('Validade atualizada', 'A data de validade do cartao foi atualizada.');
         } catch (err) {
             console.error('Error updating validity:', err);
             toast.error('Erro ao atualizar validade', 'Tente novamente.');
@@ -472,7 +425,10 @@ export default function AdminQRGenerator() {
                                         type="text"
                                         placeholder="Nome ou CPF..."
                                         value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setHasSearched(false);
+                                        }}
                                         style={{
                                             width: '100%', paddingLeft: 40, paddingRight: 12,
                                             paddingTop: 11, paddingBottom: 11,
@@ -486,12 +442,14 @@ export default function AdminQRGenerator() {
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={loading}
+                                    disabled={loading || !escolaId}
+                                    aria-label="Buscar responsável vinculado"
                                     style={{
                                         padding: '11px 16px',
                                         background: 'linear-gradient(135deg, #4da6ff, #0984e3)',
-                                        border: 'none', borderRadius: 10, cursor: 'pointer',
-                                        color: '#fff', display: 'flex', alignItems: 'center'
+                                        border: 'none', borderRadius: 10, cursor: loading || !escolaId ? 'not-allowed' : 'pointer',
+                                        color: '#fff', display: 'flex', alignItems: 'center',
+                                        opacity: loading || !escolaId ? 0.65 : 1
                                     }}
                                 >
                                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
@@ -530,6 +488,21 @@ export default function AdminQRGenerator() {
                                                 fontFamily: "'Roboto Mono', monospace",
                                                 color: 'rgba(255,255,255,0.3)', fontSize: 11
                                             }}>{g.cpf}</p>
+                                            <p style={{
+                                                fontFamily: "'Roboto Mono', monospace",
+                                                color: 'rgba(0,230,118,0.5)', fontSize: 10, marginTop: 4
+                                            }}>
+                                                {g.alunos_count ?? 0} aluno(s) vinculado(s)
+                                            </p>
+                                            {g.aluno_nomes && g.aluno_nomes.length > 0 && (
+                                                <p style={{
+                                                    color: 'rgba(255,255,255,0.28)', fontSize: 11, marginTop: 4,
+                                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 250
+                                                }}>
+                                                    {g.aluno_nomes.slice(0, 2).join(', ')}
+                                                    {g.aluno_nomes.length > 2 ? ` +${g.aluno_nomes.length - 2}` : ''}
+                                                </p>
+                                            )}
                                         </div>
                                         <QrCode size={16} color={selectedGuardian?.id === g.id ? '#00e676' : 'rgba(255,255,255,0.2)'} />
                                     </button>
@@ -537,12 +510,12 @@ export default function AdminQRGenerator() {
                             </div>
                         )}
 
-                        {searchTerm && !loading && guardians.length === 0 && (
+                        {hasSearched && !loading && guardians.length === 0 && (
                             <div style={{
                                 padding: '24px 16px', textAlign: 'center',
                                 color: 'rgba(255,255,255,0.25)', fontSize: 13, fontStyle: 'italic'
                             }}>
-                                Nenhum responsável encontrado.
+                                Nenhum responsável vinculado a aluno foi encontrado.
                             </div>
                         )}
                     </div>
