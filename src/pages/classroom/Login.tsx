@@ -68,11 +68,18 @@ export default function ClassroomLogin() {
                 // Verify role
                 const { data: userData, error: userError } = await supabase
                     .from('usuarios')
-                    .select('tipo_usuario, turma_atribuida')
+                    .select('tipo_usuario, turma_atribuida, ativo')
                     .eq('id', data.user.id)
-                    .single();
+                    .is('excluido_em', null)
+                    .maybeSingle();
 
                 if (userError) throw userError;
+
+                if (!userData || userData.ativo === false) {
+                    await supabase.auth.signOut();
+                    logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado', portal: 'SALA' });
+                    throw new Error('Usuario bloqueado. Contate a administracao.');
+                }
 
                 if (userData.tipo_usuario !== 'SCT' && userData.tipo_usuario !== 'ADMIN' && userData.tipo_usuario !== 'COORDENADOR') {
                     await supabase.auth.signOut();

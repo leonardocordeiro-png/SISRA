@@ -34,7 +34,8 @@
 ## Seguranca operacional
 
 - Nunca publicar `SUPABASE_SERVICE_ROLE_KEY` no frontend.
-- Usar somente `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_ESCOLA_ID` no deploy do Vite.
+- Usar `SUPABASE_SERVICE_ROLE_KEY` somente em variáveis server-side da Vercel para `/api/*`.
+- Usar somente `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_ESCOLA_ID` no bundle do Vite.
 - Revisar logs de auditoria diariamente no inicio do piloto.
 - Rotacionar codigos/cartoes em caso de perda.
 - Usar HTTPS obrigatoriamente para camera, geolocalizacao e QR.
@@ -45,4 +46,3 @@
 - Alguns bundles continuam grandes, especialmente o WASM de imagem e telas administrativas pesadas.
 - O README principal ainda deve ser substituido por documentacao completa de instalacao, deploy, suporte e LGPD.
 - O export de planilha usa formato `.xls` HTML compativel com Excel para evitar o pacote `xlsx`, que nao possui correcao de seguranca.
-
