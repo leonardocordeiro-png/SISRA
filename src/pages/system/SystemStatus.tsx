@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { systemHealthcheck } from '../../lib/publicApi';
 import { Activity, Database, Wifi, Server, ShieldCheck, Zap, Globe, RefreshCcw } from 'lucide-react';
 
 type SystemStatus = {
@@ -43,8 +44,7 @@ export default function SystemStatusPage() {
         };
 
         try {
-            const { error: dbError } = await supabase.from('escolas').select('id').limit(1);
-            checks.database = !dbError;
+            checks.database = await systemHealthcheck();
             checks.auth = !!supabase.auth;
             checks.realtime = checks.database;
 
@@ -62,7 +62,7 @@ export default function SystemStatusPage() {
                 latency,
                 lastChecked: new Date()
             });
-        } catch (err) {
+        } catch {
             setStatus(prev => ({ ...prev, overall: 'down', lastChecked: new Date() }));
         } finally {
             setChecking(false);

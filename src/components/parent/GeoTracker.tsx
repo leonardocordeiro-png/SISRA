@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getPublicSchoolProfile } from '../../lib/publicApi';
 import { Navigation, MapPin, Wifi, WifiOff, Loader2, AlertTriangle, ShieldOff, SatelliteDish, RefreshCw } from 'lucide-react';
 
 // ── Geofence thresholds (meters) ──────────────────────────────────────────────
@@ -128,9 +129,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
         async function fetchSchool() {
             setLoadingSchool(true);
             try {
-                let query = supabase.from('escolas').select('nome, latitude, longitude');
-                if (escolaId) query = query.eq('id', escolaId);
-                const { data, error } = await query.limit(1).single();
+                const data = await getPublicSchoolProfile(escolaId);
 
                 const fallback: SchoolCoords = {
                     latitude: -15.650972,
@@ -138,7 +137,7 @@ export default function GeoTracker({ pickupId, escolaId, guardianId }: Props) {
                     nome: 'La Salle Sobradinho',
                 };
 
-                if (error || !data || !data.latitude || !data.longitude) {
+                if (!data || !data.latitude || !data.longitude) {
                     setSchool({ ...fallback, nome: data?.nome ?? fallback.nome });
                 } else {
                     setSchool({ latitude: data.latitude, longitude: data.longitude, nome: data.nome ?? 'Colégio' });

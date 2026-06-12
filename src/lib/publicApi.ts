@@ -37,6 +37,17 @@ function escolaIdOrNull() {
     return (import.meta.env.VITE_ESCOLA_ID as string | undefined)?.trim() || null;
 }
 
+function normalizePublicError(error: unknown) {
+    const message = String((error as { message?: string })?.message || '');
+    if (message.includes('PORTAL_EM_MANUTENCAO')) {
+        return new Error('O portal esta temporariamente em manutencao. Tente novamente mais tarde.');
+    }
+    if (message.includes('PARADA_EMERGENCIA_ATIVA')) {
+        return new Error('As solicitacoes de retirada estao suspensas por parada de emergencia.');
+    }
+    return error;
+}
+
 function normalizeLookupPayload(data: unknown): GuardianLookupPayload {
     const payload = (data ?? {}) as Partial<GuardianLookupPayload>;
     const guardian = payload.guardian
@@ -62,7 +73,7 @@ export async function lookupGuardianByCode(code: string) {
         p_code: code.trim(),
         p_escola_id: escolaIdOrNull(),
     });
-    if (error) throw error;
+    if (error) throw normalizePublicError(error);
     return normalizeLookupPayload(data);
 }
 
@@ -72,7 +83,7 @@ export async function lookupGuardianByCpfAndCode(cpf: string, code: string) {
         p_code: code.trim(),
         p_escola_id: escolaIdOrNull(),
     });
-    if (error) throw error;
+    if (error) throw normalizePublicError(error);
     return normalizeLookupPayload(data);
 }
 
@@ -81,7 +92,7 @@ export async function lookupGuardianByQr(qr: string) {
         p_qr: qr,
         p_escola_id: escolaIdOrNull(),
     });
-    if (error) throw error;
+    if (error) throw normalizePublicError(error);
     return normalizeLookupPayload(data);
 }
 
@@ -90,7 +101,7 @@ export async function lookupGuardianByCpf(cpf: string) {
         p_cpf: cpf,
         p_escola_id: escolaIdOrNull(),
     });
-    if (error) throw error;
+    if (error) throw normalizePublicError(error);
     return normalizeLookupPayload(data);
 }
 
@@ -106,7 +117,7 @@ export async function createPickupRequests(
         p_origem: origin,
         p_mark_arrived: markArrived,
     });
-    if (error) throw error;
+    if (error) throw normalizePublicError(error);
     return (data ?? { inserted: 0, skipped: 0 }) as { inserted: number; skipped: number };
 }
 
@@ -263,4 +274,26 @@ export async function getGuardianQrCard(guardianId: string) {
         qr_code: string;
         expires_at: string;
     }) | null };
+}
+
+export type PublicSchoolProfile = {
+    id?: string;
+    nome?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    maintenanceMode?: boolean;
+};
+
+export async function getPublicSchoolProfile(escolaId?: string | null) {
+    const { data, error } = await supabase.rpc('sisra_get_public_school_profile', {
+        p_escola_id: escolaId !== undefined ? escolaId : escolaIdOrNull(),
+    });
+    if (error) throw normalizePublicError(error);
+    return (data ?? {}) as PublicSchoolProfile;
+}
+
+export async function systemHealthcheck() {
+    const { data, error } = await supabase.rpc('sisra_system_healthcheck');
+    if (error) throw error;
+    return Boolean(data);
 }
