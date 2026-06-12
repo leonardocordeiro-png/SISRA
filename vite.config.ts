@@ -32,17 +32,6 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/rest/],
         runtimeCaching: [
           {
-            // Supabase API: network-first, cache fallback 60s
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              networkTimeoutSeconds: 10,
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
             // Google Fonts
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',

@@ -255,27 +255,35 @@ function StageColumn({
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function ReceptionBoard() {
-    const [requests, setRequests] = useState<ActiveRequest[]>([]);
-    const [completedToday, setCompletedToday] = useState(0);
-    const [connected, setConnected] = useState(true);
     const escolaId = new URLSearchParams(window.location.search).get('escola')
         || import.meta.env.VITE_ESCOLA_ID as string | undefined
         || null;
 
-    // Hard block: never fetch without a school filter — prevents cross-tenant data exposure
     if (!escolaId) {
-        return (
-            <div style={{ height: '100vh', background: '#0d131f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
-                <div style={{ textAlign: 'center', color: '#f8fafc', maxWidth: 400 }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>⚙️</div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Configuração necessária</h2>
-                    <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6 }}>
-                        Acesse o painel com o parâmetro <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: 4 }}>?escola=ID</code> na URL ou configure <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: 4 }}>VITE_ESCOLA_ID</code> no ambiente.
-                    </p>
-                </div>
-            </div>
-        );
+        return <ReceptionBoardMissingConfig />;
     }
+
+    return <ReceptionBoardContent escolaId={escolaId} />;
+}
+
+function ReceptionBoardMissingConfig() {
+    return (
+        <div style={{ height: '100vh', background: '#0d131f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
+            <div style={{ textAlign: 'center', color: '#f8fafc', maxWidth: 400 }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>âš™ï¸</div>
+                <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>ConfiguraÃ§Ã£o necessÃ¡ria</h2>
+                <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6 }}>
+                    Acesse o painel com o parÃ¢metro <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: 4 }}>?escola=ID</code> na URL ou configure <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: 4 }}>VITE_ESCOLA_ID</code> no ambiente.
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function ReceptionBoardContent({ escolaId }: { escolaId: string }) {
+    const [requests, setRequests] = useState<ActiveRequest[]>([]);
+    const [completedToday, setCompletedToday] = useState(0);
+    const [connected, setConnected] = useState(true);
 
     const fetchData = useCallback(async () => {
         if (!escolaId) return;

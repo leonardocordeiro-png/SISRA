@@ -1,13 +1,16 @@
 import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Camera, Shield, CheckCircle2, AlertCircle, Loader2, ArrowRight, Image as ImageIcon, Download, Printer, Plus, Smartphone, QrCode } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { logAudit } from '../../lib/audit';
 import QRCodeStyling from 'qr-code-styling';
 import domtoimage from 'dom-to-image-more';
 import CameraCapture from '../../components/admin/CameraCapture';
 import { fileToDataUrl } from '../../lib/imageUtils';
 import { useToast } from '../../components/ui/Toast';
+import {
+    getRegistrationStudentByToken,
+    lookupRegistrationGuardianByCpf,
+    registerGuardianByToken,
+} from '../../lib/publicApi';
 
 export default function SelfRegistration() {
     const { token } = useParams<{ token: string }>();
@@ -49,14 +52,6 @@ export default function SelfRegistration() {
         }
     }, [success, lastRegisteredGuardian]);
 
-    const generateAccessCode = () => {
-        // Use CSPRNG — Math.random() is predictable and must not be used for access codes
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars like 0, O, 1, I
-        const array = new Uint8Array(8);
-        crypto.getRandomValues(array);
-        return Array.from(array, byte => chars[byte % chars.length]).join('');
-    };
-
     const generateQRCode = () => {
         if (!lastRegisteredGuardian?.qr_code) return;
 
@@ -84,18 +79,12 @@ export default function SelfRegistration() {
         }
 
         try {
-            const { data, error: tokenError } = await supabase
-                .from('tokens_acesso')
-                .select('*, alunos(*)')
-                .eq('token', token)
-                .single();
+            const { student: tokenStudent } = await getRegistrationStudentByToken(token);
 
-            if (tokenError || !data) {
+            if (!tokenStudent) {
                 setError('Link de acesso inválido ou expirado.');
-            } else if (data.expira_em && new Date(data.expira_em) < new Date()) {
-                setError('Este link de acesso expirou. Solicite um novo link ao administrador da escola.');
             } else {
-                setStudent(data.alunos);
+                setStudent(tokenStudent);
             }
         } catch (err) {
             setError('Erro ao validar acesso.');
@@ -108,12 +97,8 @@ export default function SelfRegistration() {
     const checkCpf = async (cpf: string) => {
         setCpfChecking(true);
         try {
-            const { data: found } = await supabase
-                .from('responsaveis')
-                .select('*')
-                .eq('cpf', cpf)
-                .limit(1)
-                .maybeSingle();
+            if (!token) return;
+            const { guardian: found } = await lookupRegistrationGuardianByCpf(token, cpf);
 
             if (found) {
                 setCpfLookupGuardian(found);
@@ -182,206 +167,25 @@ export default function SelfRegistration() {
 
         setLoading(true);
         try {
-            const cleanCpf = formData.cpf.replace(/\D/g, '');
-            const studentId = student.id;
-            const { data: existingGuardian } = await supabase
-                .from('responsaveis')
-                .select('*')
-                .eq('cpf', cleanCpf)
-                .maybeSingle();
+            const finalParentesco = formData.parentesco === 'Outro' ? formData.parentescoOutro : formData.parentesco;
+            if (!token) throw new Error('Token de acesso ausente.');
 
-            let guardianId = existingGuardian?.id;
-            let guardianData: any;
-
-            if (!guardianId) {
-                // Generate a unique access code for new guardian
-                let newAccessCode = '';
-                let isUnique = false;
-                let attempts = 0;
-                while (!isUnique && attempts < 5) {
-                    const candidate = generateAccessCode();
-                    const { data: check } = await supabase
-                        .from('responsaveis')
-                        .select('id')
-                        .eq('codigo_acesso', candidate)
-                        .maybeSingle();
-
-                    if (!check) {
-                        newAccessCode = candidate;
-                        isUnique = true;
-                    }
-                    attempts++;
-                }
-                if (!newAccessCode) newAccessCode = generateAccessCode();
-
-                const { data: newGuardian, error: guardianError } = await supabase
-                    .from('responsaveis')
-                    .insert({
-                        nome_completo: formData.nome,
-                        cpf: cleanCpf,
-                        telefone: formData.telefone,
-                        foto_url: photo,
-                        codigo_acesso: newAccessCode
-                    })
-                    .select()
-                    .single();
-
-                if (guardianError) throw guardianError;
-                guardianId = newGuardian.id;
-                guardianData = newGuardian;
-            } else {
-                // Ensure existing guardian has an access code
-                let accessCodeToUse = existingGuardian.codigo_acesso;
-                if (!accessCodeToUse) {
-                    // Try to generate a unique code
-                    let isUnique = false;
-                    let attempts = 0;
-                    while (!isUnique && attempts < 5) {
-                        const newCode = generateAccessCode();
-                        const { data: check } = await supabase
-                            .from('responsaveis')
-                            .select('id')
-                            .eq('codigo_acesso', newCode)
-                            .maybeSingle();
-
-                        if (!check) {
-                            accessCodeToUse = newCode;
-                            isUnique = true;
-                        }
-                        attempts++;
-                    }
-                    // Fallback to random if somehow collisions persist
-                    if (!accessCodeToUse) accessCodeToUse = generateAccessCode();
-                }
-
-                // Update existing guardian (name, phone, AND photo if changed)
-                const { data: updatedGuardian, error: updateError } = await supabase
-                    .from('responsaveis')
-                    .update({
-                        nome_completo: formData.nome,
-                        telefone: formData.telefone,
-                        foto_url: photo,
-                        codigo_acesso: accessCodeToUse
-                    })
-                    .eq('id', guardianId)
-                    .select()
-                    .single();
-
-                if (updateError) {
-                    console.warn('Falha ao atualizar dados do responsável:', updateError);
-                }
-                guardianData = updatedGuardian || existingGuardian;
-            }
-
-            // 2. Manage Linkage (Autorizações)
-            const { data: existingAuth } = await supabase
-                .from('autorizacoes')
-                .select('id')
-                .eq('aluno_id', studentId)
-                .eq('responsavel_id', guardianId)
-                .maybeSingle();
-
-            if (existingAuth) {
-                toast.warning(
-                    'Já autorizado',
-                    `${guardianData.nome_completo} já é responsável autorizado para ${student?.nome_completo}.`
-                );
-                // Even if authorized, ensure junction table link exists
-            } else {
-                const finalParentesco = formData.parentesco === 'Outro' ? formData.parentescoOutro : formData.parentesco;
-                const { error: authError } = await supabase
-                    .from('autorizacoes')
-                    .insert({
-                        aluno_id: studentId,
-                        responsavel_id: guardianId,
-                        tipo_autorizacao: 'SECUNDARIO',
-                        parentesco: finalParentesco || 'Outro',
-                        ativa: true
-                    });
-
-                if (authError) throw authError;
-            }
-
-            // 3. Ensure linkage in junction table (alunos_responsaveis)
-            const { data: existingLink } = await supabase
-                .from('alunos_responsaveis')
-                .select('id')
-                .eq('aluno_id', studentId)
-                .eq('responsavel_id', guardianId)
-                .maybeSingle();
-
-            if (!existingLink) {
-                const { error: linkError } = await supabase
-                    .from('alunos_responsaveis')
-                    .insert({
-                        aluno_id: studentId,
-                        responsavel_id: guardianId
-                    });
-
-                if (linkError) {
-                    console.error('Error in junction table link (alunos_responsaveis):', linkError);
-                }
-            }
-
-            // 4. Manage QR Card (Synchronized with QRGenerator.tsx)
-            const { data: activeCard } = await supabase
-                .from('parent_qr_cards')
-                .select('*')
-                .eq('responsavel_id', guardianId)
-                .eq('active', true)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            let qrValue: string;
-            let expiresAt: string;
-
-            if (activeCard) {
-                qrValue = activeCard.qr_code;
-                expiresAt = activeCard.expires_at;
-            } else {
-                // Look for ANY existing card (even inactive) to reuse string
-                const { data: anyCard } = await supabase
-                    .from('parent_qr_cards')
-                    .select('qr_code')
-                    .eq('responsavel_id', guardianId)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                qrValue = anyCard?.qr_code || `LaSalleCheguei-${guardianId}-${Date.now()}`;
-                const expDate = new Date();
-                expDate.setMonth(expDate.getMonth() + 12);
-                expiresAt = expDate.toISOString();
-
-                const { error: qrError } = await supabase
-                    .from('parent_qr_cards')
-                    .insert({
-                        responsavel_id: guardianId,
-                        qr_code: qrValue,
-                        expires_at: expiresAt,
-                        active: true
-                    });
-                if (qrError) throw qrError;
-            }
-
-            // 5. Audit Log
-            await logAudit('CADASTRO_RESPONSAVEL', 'responsaveis', guardianId, {
-                aluno_id: studentId,
-                parentesco: formData.parentesco,
-                metodo: 'AUTO_CADASTRO'
-            }, undefined, student?.escola_id || undefined);
-
-            // 6. Invalidate token after successful registration
-            await supabase.from('tokens_acesso').delete().eq('token', token);
-
-            setLastRegisteredGuardian({
-                ...guardianData,
-                qr_code: qrValue,
-                expires_at: expiresAt
+            const { guardian } = await registerGuardianByToken({
+                token,
+                nome: formData.nome,
+                cpf: formData.cpf,
+                telefone: formData.telefone,
+                parentesco: finalParentesco || 'Outro',
+                fotoUrl: photo,
             });
+
+            if (!guardian) {
+                throw new Error('Nao foi possivel concluir o cadastro.');
+            }
+
+            setLastRegisteredGuardian(guardian);
             setSuccess(true);
-            toast.success('Cadastro concluído', 'Responsável autorizado com sucesso.');
+            toast.success('Cadastro concluido', 'Responsavel autorizado com sucesso.');
         } catch (err: any) {
             console.error('Submit Error:', err);
             toast.error('Erro no cadastro', err.message);

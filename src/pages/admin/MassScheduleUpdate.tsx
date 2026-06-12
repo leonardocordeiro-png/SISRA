@@ -56,11 +56,7 @@ export default function MassScheduleUpdate() {
     const afternoonConflict = afternoonStart >= afternoonEnd;
     const anyConflict = morningConflict || afternoonConflict;
 
-    useEffect(() => {
-        loadStudents();
-    }, []);
-
-    const loadStudents = async () => {
+    async function loadStudents() {
         setLoading(true);
         setDone(false);
         setResults(null);
@@ -83,7 +79,11 @@ export default function MassScheduleUpdate() {
         }
 
         setLoading(false);
-    };
+    }
+
+    useEffect(() => {
+        loadStudents();
+    }, []);
 
     const morning = students.filter(s => s.period === 'manha');
     const afternoon = students.filter(s => s.period === 'tarde');

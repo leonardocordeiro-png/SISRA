@@ -528,32 +528,27 @@ export default function AdminDashboard() {
                         { icon: FileText,   label: 'Histórico',    path: '/admin/historico-retiradas' },
                         { icon: UserCheck,  label: 'Funcionários', path: '/admin/staff' },
                         { icon: TrendingUp, label: 'Relatórios',   path: '/admin/exportar-dados' },
-                    ].map((item, i) => {
-                        const [hov, setHov] = useState(false);
-                        return (
-                            <button
-                                key={i}
-                                onClick={() => navigate(item.path)}
-                                onMouseEnter={() => setHov(true)}
-                                onMouseLeave={() => setHov(false)}
-                                style={{
-                                    background: hov ? 'rgba(255,255,255,0.03)' : 'none',
-                                    border: 'none',
-                                    color: hov ? D.textMain : D.textMuted,
-                                    padding: '1rem',
-                                    cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                                    borderRadius: 8, transition: 'all 0.2s',
-                                    borderBottom: hov ? `2px solid ${D.gold}` : '2px solid transparent',
-                                    fontSize: '0.8rem', fontWeight: 500, letterSpacing: '0.1em',
-                                    textTransform: 'uppercase',
-                                }}
-                            >
-                                <item.icon size={16} style={{ color: hov ? D.gold : D.textMuted, transition: 'color 0.2s' }} />
-                                <span>{item.label}</span>
-                            </button>
-                        );
-                    })}
+                    ].map((item, i) => (
+                        <button
+                            key={i}
+                            onClick={() => navigate(item.path)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: D.textMuted,
+                                padding: '1rem',
+                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                borderRadius: 8, transition: 'all 0.2s',
+                                borderBottom: '2px solid transparent',
+                                fontSize: '0.8rem', fontWeight: 500, letterSpacing: '0.1em',
+                                textTransform: 'uppercase',
+                            }}
+                        >
+                            <item.icon size={16} style={{ color: D.textMuted, transition: 'color 0.2s' }} />
+                            <span>{item.label}</span>
+                        </button>
+                    ))}
                 </nav>
             </main>
 

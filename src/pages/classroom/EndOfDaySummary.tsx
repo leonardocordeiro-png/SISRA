@@ -59,7 +59,7 @@ export default function EndOfDaySummary() {
             todayStart.setHours(0, 0, 0, 0);
 
             // Build base query for today
-            let baseQuery = () => supabase
+            const baseQuery = () => supabase
                 .from('solicitacoes_retirada')
                 .select('id, status, tipo_solicitacao, horario_solicitacao, horario_liberacao, mensagem_sala')
                 .eq('escola_id', escolaId)

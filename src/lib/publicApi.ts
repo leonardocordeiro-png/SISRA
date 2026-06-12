@@ -203,3 +203,64 @@ export async function getSchoolActiveRequests(escolaId: string) {
     if (error) throw error;
     return (data ?? { requests: [], completed_today: 0 }) as SchoolActiveRequestsPayload;
 }
+
+export async function getRegistrationStudentByToken(token: string) {
+    const { data, error } = await supabase.rpc('sisra_registration_student_by_token', {
+        p_token: token,
+    });
+    if (error) throw error;
+    return (data ?? { student: null }) as { student: PublicStudent | null };
+}
+
+export async function lookupRegistrationGuardianByCpf(token: string, cpf: string) {
+    const { data, error } = await supabase.rpc('sisra_registration_guardian_by_cpf', {
+        p_token: token,
+        p_cpf: cpf,
+    });
+    if (error) throw error;
+    return (data ?? { guardian: null }) as { guardian: (PublicGuardian & {
+        cpf?: string;
+        telefone?: string | null;
+        codigo_acesso?: string | null;
+    }) | null };
+}
+
+export async function registerGuardianByToken(input: {
+    token: string;
+    nome: string;
+    cpf: string;
+    telefone: string;
+    parentesco: string;
+    fotoUrl?: string | null;
+}) {
+    const { data, error } = await supabase.rpc('sisra_register_guardian_by_token', {
+        p_token: input.token,
+        p_nome: input.nome,
+        p_cpf: input.cpf,
+        p_telefone: input.telefone,
+        p_parentesco: input.parentesco,
+        p_foto_url: input.fotoUrl ?? null,
+    });
+    if (error) throw error;
+    return (data ?? { guardian: null }) as { guardian: (PublicGuardian & {
+        cpf: string;
+        telefone: string | null;
+        codigo_acesso: string | null;
+        qr_code: string;
+        expires_at: string;
+    }) | null };
+}
+
+export async function getGuardianQrCard(guardianId: string) {
+    const { data, error } = await supabase.rpc('sisra_get_guardian_qr_card', {
+        p_responsavel_id: guardianId,
+    });
+    if (error) throw error;
+    return (data ?? { guardian: null }) as { guardian: (PublicGuardian & {
+        cpf: string;
+        telefone: string | null;
+        codigo_acesso: string | null;
+        qr_code: string;
+        expires_at: string;
+    }) | null };
+}

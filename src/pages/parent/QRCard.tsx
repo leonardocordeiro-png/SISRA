@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { QrCode, Download, RefreshCw, Printer, ShieldCheck, User as UserIcon, Calendar, Smartphone, Info, Loader2, Camera } from 'lucide-react';
 import QRCodeStyling from 'qr-code-styling';
 import domtoimage from 'dom-to-image-more';
 import { useRef } from 'react';
 import { useToast } from '../../components/ui/Toast';
+import { getGuardianQrCard } from '../../lib/publicApi';
 
 type GuardianData = {
     id: string;
     nome_completo: string;
     cpf: string;
-    telefone: string;
-    foto_url?: string;
+    telefone: string | null;
+    foto_url?: string | null;
     qr_code: string;
     expires_at: string;
-    codigo_acesso?: string;
+    codigo_acesso?: string | null;
 };
 
 export default function ParentQRCard() {
@@ -38,59 +38,22 @@ export default function ParentQRCard() {
 
     const fetchGuardianData = async () => {
         try {
-            // In a real app, this would get the logged-in guardian's ID
-            // For demo, we'll get the first guardian
-            const { data: guardianData } = await supabase
-                .from('responsaveis')
-                .select('*')
-                .limit(1)
-                .single();
+            const saved = localStorage.getItem('sisra_parent_session');
+            const session = saved ? JSON.parse(saved) : null;
+            const guardianId = session?.id;
 
-            if (!guardianData) return;
-
-            // Check if QR card exists
-            let { data: qrCard } = await supabase
-                .from('parent_qr_cards')
-                .select('*')
-                .eq('responsavel_id', guardianData.id)
-                .eq('active', true)
-                .single();
-
-            // Create or Reactivate
-            if (!qrCard) {
-                // Check if any card exists (even inactive) to reuse QR code
-                const { data: anyCard } = await supabase
-                    .from('parent_qr_cards')
-                    .select('*')
-                    .eq('responsavel_id', guardianData.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                const newQRCode = anyCard?.qr_code || `LaSalleCheguei-${guardianData.id}-${Date.now()}`;
-                const expiresAt = new Date();
-                expiresAt.setMonth(expiresAt.getMonth() + 6); // Valid for 6 months
-
-                const { data: newCard } = await supabase
-                    .from('parent_qr_cards')
-                    .insert({
-                        responsavel_id: guardianData.id,
-                        qr_code: newQRCode,
-                        expires_at: expiresAt.toISOString(),
-                        active: true
-                    })
-                    .select()
-                    .single();
-
-                qrCard = newCard;
+            if (!guardianId) {
+                toast.error('SessÃ£o expirada', 'Entre novamente para acessar seu cartÃ£o QR.');
+                return;
             }
 
-            setGuardian({
-                ...guardianData,
-                qr_code: qrCard?.qr_code || '',
-                expires_at: qrCard?.expires_at || '',
-                codigo_acesso: guardianData.codigo_acesso
-            });
+            const { guardian: guardianData } = await getGuardianQrCard(guardianId);
+            if (!guardianData) {
+                toast.error('CartÃ£o indisponÃ­vel', 'NÃ£o foi possÃ­vel localizar seus dados.');
+                return;
+            }
+
+            setGuardian(guardianData);
         } catch (err) {
             console.error('Error fetching guardian data:', err);
         } finally {
@@ -226,40 +189,9 @@ export default function ParentQRCard() {
     };
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !guardian) return;
-
-        setUploadingPhoto(true);
-        try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${guardian.id}-${Math.random()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('responsaveis')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('responsaveis')
-                .getPublicUrl(filePath);
-
-            const { error: updateError } = await supabase
-                .from('responsaveis')
-                .update({ foto_url: publicUrl })
-                .eq('id', guardian.id);
-
-            if (updateError) throw updateError;
-
-            setGuardian({ ...guardian, foto_url: publicUrl });
-            toast.success('Foto atualizada', 'Sua foto de identificação foi atualizada com sucesso.');
-        } catch (err) {
-            console.error('Error uploading photo:', err);
-            toast.error('Erro ao enviar foto', 'Tente novamente.');
-        } finally {
-            setUploadingPhoto(false);
-        }
+        e.currentTarget.value = '';
+        setUploadingPhoto(false);
+        toast.warning('Atualizacao indisponivel', 'Atualize sua foto pelo cadastro ou solicite apoio da escola.');
     };
 
     const handlePrint = () => {

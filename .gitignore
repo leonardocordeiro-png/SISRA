@@ -63,6 +63,7 @@ create-admin.ts
 .agent/
 .agents/
 skills-lock.json
+supabase/.temp/
 
 # Outputs de build e verificação
 verify_output.txt
