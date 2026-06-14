@@ -1,25 +1,52 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
-import { logAudit } from '../../lib/audit';
-import { useAuth } from '../../context/AuthContext';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import {
-    BarChart2, Calendar, Clock, User, Shield, CheckCircle2,
-    AlertCircle, Search, Download, TrendingUp,
-    TrendingDown, Minus, Filter, Eye, X, AlertTriangle,
-    Activity, FileText, Users, RefreshCw, ArrowLeft, ArrowRight, Printer,
-    Table2, ChevronDown
+    Activity,
+    AlertTriangle,
+    ArrowLeft,
+    ArrowRight,
+    BarChart3,
+    CalendarDays,
+    CheckCircle2,
+    ChevronDown,
+    Clock3,
+    Download,
+    Eye,
+    FileSpreadsheet,
+    FileText,
+    Filter,
+    Loader2,
+    Printer,
+    RefreshCcw,
+    Search,
+    ShieldCheck,
+    Users,
+    X,
+    XCircle,
 } from 'lucide-react';
-import NavigationControls from '../../components/NavigationControls';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import NavigationControls from '../../components/NavigationControls';
+import { useAuth } from '../../context/AuthContext';
+import { logAudit } from '../../lib/audit';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/ui/Toast';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+type PickupStatus =
+    | 'SOLICITADO'
+    | 'NOTIFICADO'
+    | 'AGUARDANDO'
+    | 'CONFIRMADO'
+    | 'LIBERADO'
+    | 'CONCLUIDO'
+    | 'FINALIZADO'
+    | 'CANCELADO';
 
 type PickupRecord = {
     id: string;
-    status: string;
-    tipo_solicitacao: string;
-    horario_solicitacao: string;
+    status: PickupStatus | string;
+    tipo_solicitacao: string | null;
+    horario_solicitacao: string | null;
     horario_notificacao: string | null;
     horario_confirmacao: string | null;
     horario_liberacao: string | null;
@@ -27,373 +54,402 @@ type PickupRecord = {
     observacoes: string | null;
     mensagem_sala: string | null;
     mensagem_recepcao: string | null;
-    aluno: { nome_completo: string; matricula: string; turma: string; sala: string; foto_url: string | null } | null;
-    responsavel: { nome_completo: string; cpf: string; foto_url: string | null } | null;
+    aluno: {
+        nome_completo: string | null;
+        matricula: string | null;
+        turma: string | null;
+        sala: string | null;
+    } | null;
+    responsavel: {
+        nome_completo: string | null;
+        cpf: string | null;
+    } | null;
 };
 
-type Period = 'day' | 'week' | 'month' | 'year' | 'custom' | 'pick-day' | 'pick-month' | 'pick-year';
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const fmt = (iso: string | null, opts: Intl.DateTimeFormatOptions) =>
-    iso ? new Date(iso).toLocaleString('pt-BR', opts) : '—';
-
-const fmtTime = (iso: string | null) => fmt(iso, { hour: '2-digit', minute: '2-digit' });
-const fmtDate = (iso: string | null) => fmt(iso, { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-const waitLabel = (secs: number | null) => {
-    if (!secs) return '—';
-    const m = Math.floor(secs / 60), s = secs % 60;
-    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+type HistoryPayload = {
+    records: PickupRecord[];
+    total_count: number;
+    returned_count: number;
+    limit: number;
+    truncated: boolean;
 };
 
-// LGPD Art. 46 — mask CPF in all display and export contexts
-const maskCpf = (cpf: string | null | undefined): string => {
-    if (!cpf) return '—';
-    const d = cpf.replace(/\D/g, '');
-    if (d.length === 11) return `${d.slice(0, 3)}.***.***-${d.slice(9)}`;
-    return '***.***.***-**';
+type Period = 'day' | 'week' | 'month' | 'year' | 'pick-day' | 'pick-month' | 'pick-year' | 'custom';
+type ViewMode = 'records' | 'analysis';
+
+const PAGE_SIZE = 25;
+const REPORT_LIMIT = 2000;
+
+const PERIOD_LABELS: Record<Period, string> = {
+    day: 'Hoje',
+    week: 'Semana',
+    month: 'Mes',
+    year: 'Ano',
+    'pick-day': 'Dia',
+    'pick-month': 'Mes escolhido',
+    'pick-year': 'Ano escolhido',
+    custom: 'Intervalo',
 };
 
-// Status color mapping (dark theme) — all 8 states of the status machine
-const STATUS_COLOR: Record<string, { color: string; border: string; bg: string }> = {
-    SOLICITADO: { color: '#4da6ff', border: 'rgba(77,166,255,0.4)',  bg: 'rgba(77,166,255,0.08)'  },
-    NOTIFICADO: { color: '#fbbf24', border: 'rgba(251,191,36,0.4)',  bg: 'rgba(251,191,36,0.08)'  },
-    AGUARDANDO: { color: '#fb923c', border: 'rgba(251,146,60,0.4)',  bg: 'rgba(251,146,60,0.08)'  },
-    CONFIRMADO: { color: '#a64dff', border: 'rgba(166,77,255,0.4)',  bg: 'rgba(166,77,255,0.08)'  },
-    LIBERADO:   { color: '#00e676', border: 'rgba(0,230,118,0.4)',   bg: 'rgba(0,230,118,0.08)'   },
-    CONCLUIDO:  { color: '#34d399', border: 'rgba(52,211,153,0.4)',  bg: 'rgba(52,211,153,0.08)'  },
-    FINALIZADO: { color: '#34d399', border: 'rgba(52,211,153,0.4)',  bg: 'rgba(52,211,153,0.08)'  },
-    CANCELADO:  { color: 'rgba(255,69,0,0.9)', border: 'rgba(255,69,0,0.4)', bg: 'rgba(255,69,0,0.08)' },
+const MONTH_NAMES = [
+    'Janeiro',
+    'Fevereiro',
+    'Marco',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
+];
+
+const STATUS_LABELS: Record<string, string> = {
+    SOLICITADO: 'Solicitado',
+    NOTIFICADO: 'Notificado',
+    AGUARDANDO: 'Aguardando',
+    CONFIRMADO: 'Na recepcao',
+    LIBERADO: 'Liberado',
+    CONCLUIDO: 'Concluido',
+    FINALIZADO: 'Finalizado',
+    CANCELADO: 'Cancelado',
 };
 
-const STATUS_PT: Record<string, string> = {
-    SOLICITADO: 'Solicitado',  NOTIFICADO: 'Notificado',
-    AGUARDANDO: 'Aguardando',  CONFIRMADO: 'Na Recepção',
-    LIBERADO: 'Liberado',      CONCLUIDO: 'Concluído',
-    FINALIZADO: 'Finalizado',  CANCELADO: 'Cancelado',
+const STATUS_STYLES: Record<string, { className: string; dot: string }> = {
+    SOLICITADO: { className: 'border-sky-200 bg-sky-50 text-sky-800', dot: 'bg-sky-500' },
+    NOTIFICADO: { className: 'border-amber-200 bg-amber-50 text-amber-800', dot: 'bg-amber-500' },
+    AGUARDANDO: { className: 'border-orange-200 bg-orange-50 text-orange-800', dot: 'bg-orange-500' },
+    CONFIRMADO: { className: 'border-violet-200 bg-violet-50 text-violet-800', dot: 'bg-violet-500' },
+    LIBERADO: { className: 'border-emerald-200 bg-emerald-50 text-emerald-800', dot: 'bg-emerald-500' },
+    CONCLUIDO: { className: 'border-teal-200 bg-teal-50 text-teal-800', dot: 'bg-teal-500' },
+    FINALIZADO: { className: 'border-teal-200 bg-teal-50 text-teal-800', dot: 'bg-teal-500' },
+    CANCELADO: { className: 'border-rose-200 bg-rose-50 text-rose-800', dot: 'bg-rose-500' },
 };
+
+const STATUS_OPTIONS = ['CONCLUIDO', 'FINALIZADO', 'LIBERADO', 'CONFIRMADO', 'NOTIFICADO', 'SOLICITADO', 'CANCELADO'];
+const DONE_STATUSES = new Set(['LIBERADO', 'CONCLUIDO', 'FINALIZADO']);
+const OPEN_STATUSES = new Set(['SOLICITADO', 'NOTIFICADO', 'AGUARDANDO', 'CONFIRMADO']);
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const toDateInput = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
 function periodRange(
     period: Period,
-    customStart?: string,
-    customEnd?: string,
-    pickDay?: string,
-    pickMonth?: number,
-    pickMonthYear?: number,
-    pickYear?: number
-): { from: string; to: string } {
+    customStart: string,
+    customEnd: string,
+    pickDay: string,
+    pickMonth: number,
+    pickMonthYear: number,
+    pickYear: number
+) {
     const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const currentDay = toDateInput(now);
 
     if (period === 'custom' && customStart && customEnd) {
         return { from: `${customStart}T00:00:00`, to: `${customEnd}T23:59:59` };
     }
+
     if (period === 'pick-day' && pickDay) {
         return { from: `${pickDay}T00:00:00`, to: `${pickDay}T23:59:59` };
     }
+
     if (period === 'pick-month') {
-        const y = pickMonthYear ?? now.getFullYear();
-        const m = pickMonth ?? now.getMonth();
-        const first = new Date(y, m, 1);
-        const last = new Date(y, m + 1, 0);
-        return { from: `${toISO(first)}T00:00:00`, to: `${toISO(last)}T23:59:59` };
+        const first = new Date(pickMonthYear, pickMonth, 1);
+        const last = new Date(pickMonthYear, pickMonth + 1, 0);
+        return { from: `${toDateInput(first)}T00:00:00`, to: `${toDateInput(last)}T23:59:59` };
     }
+
     if (period === 'pick-year') {
-        const y = pickYear ?? now.getFullYear();
-        return { from: `${y}-01-01T00:00:00`, to: `${y}-12-31T23:59:59` };
+        return { from: `${pickYear}-01-01T00:00:00`, to: `${pickYear}-12-31T23:59:59` };
     }
-    if (period === 'day') {
-        const d = toISO(now);
-        return { from: `${d}T00:00:00`, to: `${d}T23:59:59` };
-    }
+
     if (period === 'week') {
         const dow = now.getDay();
-        const mon = new Date(now); mon.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
-        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-        return { from: `${toISO(mon)}T00:00:00`, to: `${toISO(sun)}T23:59:59` };
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return { from: `${toDateInput(monday)}T00:00:00`, to: `${toDateInput(sunday)}T23:59:59` };
     }
+
     if (period === 'month') {
         const first = new Date(now.getFullYear(), now.getMonth(), 1);
         const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        return { from: `${toISO(first)}T00:00:00`, to: `${toISO(last)}T23:59:59` };
+        return { from: `${toDateInput(first)}T00:00:00`, to: `${toDateInput(last)}T23:59:59` };
     }
-    // year
-    const first = new Date(now.getFullYear(), 0, 1);
-    const last = new Date(now.getFullYear(), 11, 31);
-    return { from: `${toISO(first)}T00:00:00`, to: `${toISO(last)}T23:59:59` };
+
+    if (period === 'year') {
+        return { from: `${now.getFullYear()}-01-01T00:00:00`, to: `${now.getFullYear()}-12-31T23:59:59` };
+    }
+
+    return { from: `${currentDay}T00:00:00`, to: `${currentDay}T23:59:59` };
 }
 
-// ─── Mini bar chart (SVG) ───────────────────────────────────────────────────
+function formatDate(iso: string | null | undefined) {
+    if (!iso) return '-';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 
-function MiniBarChart({ data, color = '#4da6ff' }: { data: { label: string; value: number }[]; color?: string }) {
-    const max = Math.max(...data.map(d => d.value), 1);
+function formatTime(iso: string | null | undefined) {
+    if (!iso) return '-';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function waitLabel(seconds: number | null | undefined) {
+    if (!seconds || seconds <= 0) return '-';
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const min = minutes % 60;
+        return `${hours}h ${min}min`;
+    }
+    return minutes > 0 ? `${minutes}min ${rest}s` : `${rest}s`;
+}
+
+function normalizePayload(data: unknown): HistoryPayload {
+    const payload = (data ?? {}) as Partial<HistoryPayload>;
+    return {
+        records: Array.isArray(payload.records) ? payload.records : [],
+        total_count: Number(payload.total_count ?? 0),
+        returned_count: Number(payload.returned_count ?? 0),
+        limit: Number(payload.limit ?? REPORT_LIMIT),
+        truncated: Boolean(payload.truncated),
+    };
+}
+
+function friendlyError(error: unknown) {
+    const message = String((error as { message?: string })?.message ?? error ?? '');
+    if (message.includes('ACESSO_NEGADO')) return 'Apenas administradores ativos podem consultar este relatorio.';
+    if (message.includes('PERIODO_INVALIDO')) return 'O periodo informado e invalido.';
+    return message || 'Nao foi possivel carregar o historico de retiradas.';
+}
+
+function methodLabel(value: string | null | undefined) {
+    return value === 'ROTINA' ? 'Totem' : 'Recepcao';
+}
+
+function initials(name: string | null | undefined) {
+    const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
+}
+
+function statusLabel(status: string | null | undefined) {
+    return STATUS_LABELS[String(status ?? '')] ?? String(status ?? '-');
+}
+
+function StatusBadge({ status }: { status: string }) {
+    const style = STATUS_STYLES[status] ?? { className: 'border-slate-200 bg-slate-50 text-slate-700', dot: 'bg-slate-400' };
     return (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px' }}>
-            {data.map((d, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', position: 'relative' }}
-                    className="group">
-                    <div style={{
-                        width: '100%',
-                        borderRadius: '3px 3px 0 0',
-                        height: `${(d.value / max) * 56}px`,
-                        backgroundColor: color,
-                        opacity: 0.4 + (d.value / max) * 0.6,
-                        transition: 'height 0.5s',
-                    }} />
-                    <span style={{ fontSize: '8px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace', whiteSpace: 'nowrap' }}>{d.label}</span>
-                    <div style={{
-                        position: 'absolute', top: '-28px', left: '50%', transform: 'translateX(-50%)',
-                        background: 'rgba(10,15,30,0.95)', color: '#e0e6ed', fontSize: '10px',
-                        padding: '2px 6px', borderRadius: '4px', pointerEvents: 'none', whiteSpace: 'nowrap',
-                        border: '1px solid rgba(77,166,255,0.3)', zIndex: 10,
-                    }} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        {d.value} retirada{d.value !== 1 ? 's' : ''}
+        <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${style.className}`}>
+            <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+            {statusLabel(status)}
+        </span>
+    );
+}
+
+function StatCard({
+    label,
+    value,
+    sub,
+    icon: Icon,
+    tone,
+}: {
+    label: string;
+    value: string | number;
+    sub?: string;
+    icon: ComponentType<{ className?: string }>;
+    tone: 'blue' | 'green' | 'rose' | 'amber';
+}) {
+    const tones = {
+        blue: 'border-blue-200 bg-blue-50 text-blue-700',
+        green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        rose: 'border-rose-200 bg-rose-50 text-rose-700',
+        amber: 'border-amber-200 bg-amber-50 text-amber-700',
+    };
+
+    return (
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">{value}</p>
+                    {sub && <p className="mt-2 text-sm font-medium text-slate-500">{sub}</p>}
+                </div>
+                <div className={`rounded-lg border p-3 ${tones[tone]}`}>
+                    <Icon className="h-5 w-5" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
+                active
+                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-700'
+            }`}
+        >
+            {children}
+        </button>
+    );
+}
+
+function MiniBars({ data, color }: { data: { label: string; value: number }[]; color: string }) {
+    const max = Math.max(...data.map(item => item.value), 1);
+    return (
+        <div className="flex h-48 items-end gap-2 rounded-lg border border-slate-200 bg-white p-4">
+            {data.map(item => (
+                <div key={item.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                    <div className="flex h-32 w-full items-end rounded bg-slate-100">
+                        <div
+                            className="w-full rounded-t"
+                            style={{ height: `${Math.max((item.value / max) * 100, item.value > 0 ? 8 : 0)}%`, background: color }}
+                            title={`${item.label}: ${item.value}`}
+                        />
                     </div>
+                    <span className="text-[11px] font-bold text-slate-500">{item.label}</span>
                 </div>
             ))}
         </div>
     );
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-    const s = STATUS_COLOR[status] || { color: '#8892b0', border: 'rgba(136,146,176,0.4)', bg: 'rgba(136,146,176,0.08)' };
-    return (
-        <span style={{
-            display: 'inline-flex', alignItems: 'center',
-            padding: '3px 10px', borderRadius: '4px',
-            border: `1px solid ${s.border}`,
-            background: s.bg,
-            color: s.color,
-            fontSize: '10px', fontFamily: 'Roboto Mono, monospace',
-            fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-            boxShadow: `0 0 6px ${s.border}`,
-        }}>
-            {STATUS_PT[status] || status}
-        </span>
-    );
-}
-
-// ─── Summary Card ─────────────────────────────────────────────────────────────
-
-function SummaryCard({ label, value, icon: Icon, glowColor, sub, trend }: {
-    label: string; value: string | number; sub?: string;
-    icon: React.ComponentType<{ size?: number; color?: string }>;
-    glowColor: string; trend?: 'up' | 'down' | 'neutral';
-}) {
-    const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-    const trendColor = trend === 'up' ? '#00e676' : trend === 'down' ? 'rgba(255,69,0,0.9)' : '#8892b0';
-    return (
-        <div style={{
-            background: 'rgba(10,15,30,0.6)',
-            border: `1px solid ${glowColor}`,
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: `0 0 18px ${glowColor}`,
-            backdropFilter: 'blur(12px)',
-            display: 'flex', flexDirection: 'column', gap: '14px',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{
-                    width: 60, height: 60, borderRadius: '10px',
-                    border: `1px solid ${glowColor}`,
-                    background: 'rgba(255,255,255,0.04)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: `0 0 12px ${glowColor}`,
-                }}>
-                    <Icon size={24} color={glowColor.replace('rgba(', '').split(',').slice(0, 3).join(',').replace(',', 'rgb(') || '#4da6ff'} />
-                </div>
-                {trend && <TrendIcon size={16} color={trendColor} />}
-            </div>
-            <div>
-                <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>{label}</p>
-                <p style={{ fontSize: '28px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', animation: 'pulse 3s ease-in-out infinite' }}>{value}</p>
-                {sub && <p style={{ fontSize: '10px', color: '#8892b0', marginTop: '2px' }}>{sub}</p>}
-            </div>
-        </div>
-    );
-}
-
-// ─── Record Detail Modal ─────────────────────────────────────────────────────
-
-function RecordDetail({ record, onClose }: { record: PickupRecord; onClose: () => void }) {
+function DetailModal({ record, onClose }: { record: PickupRecord; onClose: () => void }) {
     const stages = [
-        { label: 'Solicitação', time: record.horario_solicitacao, color: '#8892b0' },
-        { label: 'Notificação Sala', time: record.horario_notificacao, color: '#b0914f' },
-        { label: 'Chegou na Recepção', time: record.horario_confirmacao, color: '#a64dff' },
-        { label: 'Liberado', time: record.horario_liberacao, color: '#00e676' },
+        { label: 'Solicitado', time: record.horario_solicitacao },
+        { label: 'Sala notificada', time: record.horario_notificacao },
+        { label: 'Na recepcao', time: record.horario_confirmacao },
+        { label: 'Liberado', time: record.horario_liberacao },
     ];
 
     return (
-        <div
-            style={{
-                position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '16px', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
-            }}
-            onClick={onClose}
-        >
-            <div
-                style={{
-                    background: 'rgba(10,15,30,0.97)', border: '1px solid rgba(255,215,0,0.2)',
-                    borderRadius: '16px', width: '100%', maxWidth: '520px', overflow: 'hidden',
-                    boxShadow: '0 0 40px rgba(77,166,255,0.15)',
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div style={{
-                    background: 'linear-gradient(135deg, rgba(77,166,255,0.15) 0%, rgba(166,77,255,0.15) 100%)',
-                    borderBottom: '1px solid rgba(255,215,0,0.2)',
-                    padding: '24px 32px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        {record.aluno?.foto_url ? (
-                            <img src={record.aluno.foto_url} style={{ width: 48, height: 48, borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,215,0,0.3)' }} alt="" />
-                        ) : (
-                            <div style={{
-                                width: 48, height: 48, borderRadius: '8px', background: 'rgba(77,166,255,0.15)',
-                                border: '1px solid rgba(77,166,255,0.3)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: '#4da6ff', fontFamily: 'Roboto Mono, monospace', fontSize: '20px', fontWeight: 700,
-                            }}>
-                                {record.aluno?.nome_completo?.[0] || '?'}
-                            </div>
-                        )}
-                        <div>
-                            <p style={{ color: '#e0e6ed', fontWeight: 700, fontSize: '14px', lineHeight: '1.3' }}>{record.aluno?.nome_completo}</p>
-                            <p style={{ color: '#8892b0', fontSize: '11px', fontFamily: 'Roboto Mono, monospace' }}>{record.aluno?.turma} · Sala {record.aluno?.sala}</p>
-                        </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
+                <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Detalhe da retirada</p>
+                        <h2 className="mt-1 text-xl font-black text-slate-950">{record.aluno?.nome_completo || 'Aluno nao identificado'}</h2>
+                        <p className="mt-1 text-sm font-medium text-slate-500">
+                            {record.aluno?.turma || 'Turma nao informada'} · Sala {record.aluno?.sala || '-'}
+                        </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '8px', padding: '8px', cursor: 'pointer', color: '#8892b0',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}
-                        onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.color = '#e0e6ed'; }}
-                        onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.color = '#8892b0'; }}
-                    >
-                        <X size={18} />
+                    <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-900">
+                        <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Status */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <StatusBadge status={record.status} />
-                        <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{fmtDate(record.horario_solicitacao)}</span>
-                    </div>
+                <div className="grid gap-6 p-6 lg:grid-cols-[1fr_280px]">
+                    <div className="space-y-5">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <StatusBadge status={record.status} />
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                {methodLabel(record.tipo_solicitacao)}
+                            </span>
+                            <span className="text-sm font-semibold text-slate-500">{formatDate(record.horario_solicitacao)} às {formatTime(record.horario_solicitacao)}</span>
+                        </div>
 
-                    {/* Guardian */}
-                    <div style={{
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.15)',
-                        borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px',
-                    }}>
-                        {record.responsavel?.foto_url ? (
-                            <img src={record.responsavel.foto_url} style={{ width: 40, height: 40, borderRadius: '8px', objectFit: 'cover' }} alt="" />
-                        ) : (
-                            <div style={{
-                                width: 40, height: 40, borderRadius: '8px', background: 'rgba(77,166,255,0.1)',
-                                border: '1px solid rgba(77,166,255,0.3)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                                <User size={18} color="#4da6ff" />
+                        <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Responsavel</p>
+                            <p className="mt-2 text-base font-black text-slate-950">{record.responsavel?.nome_completo || 'Nao informado'}</p>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">CPF: {record.responsavel?.cpf || '***.***.***-**'}</p>
+                        </section>
+
+                        <section>
+                            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Linha do tempo</p>
+                            <div className="space-y-3">
+                                {stages.map((stage, index) => (
+                                    <div key={stage.label} className="flex items-center gap-3">
+                                        <div className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black ${
+                                            stage.time ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'
+                                        }`}>
+                                            {index + 1}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-bold text-slate-900">{stage.label}</p>
+                                            <p className="text-xs font-semibold text-slate-500">{formatDate(stage.time)} · {formatTime(stage.time)}</p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+                        </section>
+
+                        {(record.mensagem_sala || record.mensagem_recepcao || record.observacoes) && (
+                            <section className="space-y-3">
+                                {record.mensagem_sala && (
+                                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Mensagem da sala</p>
+                                        <p className="mt-2 text-sm font-semibold text-slate-800">{record.mensagem_sala}</p>
+                                    </div>
+                                )}
+                                {record.mensagem_recepcao && (
+                                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-indigo-700">Mensagem da recepcao</p>
+                                        <p className="mt-2 text-sm font-semibold text-slate-800">{record.mensagem_recepcao}</p>
+                                    </div>
+                                )}
+                                {record.observacoes && (
+                                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Observacoes</p>
+                                        <p className="mt-2 text-sm font-semibold text-slate-800">{record.observacoes}</p>
+                                    </div>
+                                )}
+                            </section>
                         )}
-                        <div>
-                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#e0e6ed' }}>{record.responsavel?.nome_completo || '—'}</p>
-                            <p style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>CPF: {maskCpf(record.responsavel?.cpf)}</p>
-                        </div>
                     </div>
 
-                    {/* Timeline */}
-                    <div>
-                        <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>Linha do Tempo da Retirada</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {stages.map((s, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{
-                                        width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-                                        background: s.time ? s.color : 'rgba(136,146,176,0.3)',
-                                        boxShadow: s.time ? `0 0 6px ${s.color}` : 'none',
-                                    }} />
-                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#8892b0', flex: 1 }}>{s.label}</span>
-                                    <span style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: s.time ? '#e0e6ed' : 'rgba(136,146,176,0.4)' }}>
-                                        {fmtTime(s.time)}
-                                    </span>
-                                </div>
-                            ))}
+                    <aside className="rounded-lg border border-slate-200 bg-white p-5">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Tempo de espera</p>
+                        <p className="mt-2 text-3xl font-black text-blue-700">{waitLabel(record.tempo_espera_segundos)}</p>
+                        <div className="mt-5 border-t border-slate-200 pt-5">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Matricula</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">{record.aluno?.matricula || '-'}</p>
                         </div>
-                    </div>
-
-                    {/* Wait time */}
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        background: 'rgba(77,166,255,0.06)', border: '1px solid rgba(77,166,255,0.2)',
-                        borderRadius: '10px', padding: '14px 18px',
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4da6ff' }}>
-                            <Clock size={16} />
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#4da6ff' }}>Tempo Total de Espera</span>
-                        </div>
-                        <span style={{ fontSize: '18px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff' }}>{waitLabel(record.tempo_espera_segundos)}</span>
-                    </div>
-
-                    {/* Classroom teacher message */}
-                    {record.mensagem_sala && (
-                        <div style={{
-                            background: 'rgba(77,166,255,0.06)', border: '1px solid rgba(77,166,255,0.2)',
-                            borderRadius: '10px', padding: '14px 16px',
-                        }}>
-                            <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#4da6ff', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Mensagem da Sala</p>
-                            <p style={{ fontSize: '12px', color: '#e0e6ed', lineHeight: '1.6' }}>{record.mensagem_sala}</p>
-                        </div>
-                    )}
-
-                    {/* Notes */}
-                    {record.observacoes && (
-                        <div style={{
-                            background: 'rgba(176,145,79,0.06)', border: '1px solid rgba(176,145,79,0.25)',
-                            borderRadius: '10px', padding: '14px 16px',
-                        }}>
-                            <p style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#b0914f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Observações da Recepção</p>
-                            <p style={{ fontSize: '12px', color: '#e0e6ed', lineHeight: '1.6' }}>{record.observacoes}</p>
-                        </div>
-                    )}
+                    </aside>
                 </div>
             </div>
         </div>
     );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
-
 export default function PickupHistoryView() {
-    const { escolaId } = useAuth();
+    const { user, escolaId } = useAuth();
+    const toast = useToast();
+
     const [records, setRecords] = useState<PickupRecord[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [truncated, setTruncated] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [period, setPeriod] = useState<Period>('day');
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
-    // granular pickers
-    const [pickDay, setPickDay] = useState(() => new Date().toISOString().split('T')[0]);
+    const [pickDay, setPickDay] = useState(() => toDateInput(new Date()));
     const [pickMonth, setPickMonth] = useState(() => new Date().getMonth());
     const [pickMonthYear, setPickMonthYear] = useState(() => new Date().getFullYear());
     const [pickYear, setPickYear] = useState(() => new Date().getFullYear());
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [methodFilter, setMethodFilter] = useState('all');
-    const [detailRecord, setDetailRecord] = useState<PickupRecord | null>(null);
-    const [activeView, setActiveView] = useState<'list' | 'analytics'>('list');
+    const [view, setView] = useState<ViewMode>('records');
     const [page, setPage] = useState(0);
-    const [exportMenuOpen, setExportMenuOpen] = useState(false);
-    const PAGE_SIZE = 20;
+    const [exportOpen, setExportOpen] = useState(false);
+    const [detailRecord, setDetailRecord] = useState<PickupRecord | null>(null);
+
+    const currentYear = new Date().getFullYear();
+    const yearOptions = useMemo(() => Array.from({ length: 7 }, (_, index) => currentYear - index), [currentYear]);
 
     const { from, to } = useMemo(
         () => periodRange(period, customStart, customEnd, pickDay, pickMonth, pickMonthYear, pickYear),
@@ -401,522 +457,349 @@ export default function PickupHistoryView() {
     );
 
     const fetchRecords = useCallback(async (silent = false) => {
-        if (!silent) setLoading(true);
-        else setRefreshing(true);
+        if (!escolaId) {
+            setLoading(false);
+            toast.error('Escola nao identificada', 'Faca login novamente para consultar os relatorios.');
+            return;
+        }
+
+        if (period === 'custom' && (!customStart || !customEnd)) {
+            setRecords([]);
+            setTotalCount(0);
+            setTruncated(false);
+            setLoading(false);
+            return;
+        }
+
+        if (period === 'custom' && customStart > customEnd) {
+            setRecords([]);
+            setTotalCount(0);
+            setTruncated(false);
+            setLoading(false);
+            toast.warning('Periodo invalido', 'A data inicial precisa ser anterior ou igual a data final.');
+            return;
+        }
+
+        if (silent) setRefreshing(true);
+        else setLoading(true);
+
         try {
-            let historyQ = supabase
-                .from('solicitacoes_retirada')
-                .select(`
-                    id, status, tipo_solicitacao, horario_solicitacao,
-                    horario_notificacao, horario_confirmacao, horario_liberacao,
-                    tempo_espera_segundos, observacoes, mensagem_sala, mensagem_recepcao,
-                    aluno:alunos(nome_completo, matricula, turma, sala, foto_url),
-                    responsavel:responsaveis(nome_completo, cpf, foto_url)
-                `)
-                .gte('horario_solicitacao', from)
-                .lte('horario_solicitacao', to)
-                .order('horario_solicitacao', { ascending: false })
-                .limit(500);
-            if (escolaId) historyQ = historyQ.eq('escola_id', escolaId);
-            const { data, error } = await historyQ;
+            const { data, error } = await supabase.rpc('sisra_admin_pickup_history', {
+                p_escola_id: escolaId,
+                p_from: from,
+                p_to: to,
+                p_limit: REPORT_LIMIT,
+            });
 
             if (error) throw error;
-            setRecords((data as any[]) || []);
+
+            const payload = normalizePayload(data);
+            setRecords(payload.records);
+            setTotalCount(payload.total_count);
+            setTruncated(payload.truncated);
             setPage(0);
-        } catch (err) {
-            console.error('Erro ao buscar registros:', err);
+        } catch (error) {
+            console.error('Erro ao carregar historico de retiradas:', error);
+            toast.error('Erro ao carregar historico', friendlyError(error));
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [from, to, escolaId]);
+    }, [customEnd, customStart, escolaId, from, period, to, toast]);
 
-    useEffect(() => { fetchRecords(); }, [fetchRecords]);
+    useEffect(() => {
+        fetchRecords();
+    }, [fetchRecords]);
 
-    // ── Filtered records ──
     const filtered = useMemo(() => {
-        let r = records;
-        if (statusFilter !== 'all') r = r.filter(x => x.status === statusFilter);
-        if (methodFilter !== 'all') {
-            r = r.filter(x => methodFilter === 'TOTEM' ? x.tipo_solicitacao === 'ROTINA' : x.tipo_solicitacao !== 'ROTINA');
-        }
-        if (searchTerm.trim()) {
-            const s = searchTerm.toLowerCase();
-            r = r.filter(x =>
-                x.aluno?.nome_completo?.toLowerCase().includes(s) ||
-                x.responsavel?.nome_completo?.toLowerCase().includes(s) ||
-                x.aluno?.matricula?.includes(searchTerm) ||
-                x.aluno?.turma?.toLowerCase().includes(s)
-            );
-        }
-        return r;
-    }, [records, statusFilter, methodFilter, searchTerm]);
+        const term = searchTerm.trim().toLowerCase();
+        return records.filter(record => {
+            if (statusFilter !== 'all' && record.status !== statusFilter) return false;
+            if (methodFilter === 'totem' && record.tipo_solicitacao !== 'ROTINA') return false;
+            if (methodFilter === 'reception' && record.tipo_solicitacao === 'ROTINA') return false;
+            if (!term) return true;
 
-    const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+            const haystack = [
+                record.aluno?.nome_completo,
+                record.aluno?.matricula,
+                record.aluno?.turma,
+                record.aluno?.sala,
+                record.responsavel?.nome_completo,
+                record.responsavel?.cpf,
+                statusLabel(record.status),
+                methodLabel(record.tipo_solicitacao),
+            ].join(' ').toLowerCase();
 
-    // ── Analytics ──
+            return haystack.includes(term);
+        });
+    }, [methodFilter, records, searchTerm, statusFilter]);
+
     const analytics = useMemo(() => {
         const total = records.length;
-        const liberados = records.filter(r => r.status === 'LIBERADO');
-        const cancelados = records.filter(r => r.status === 'CANCELADO');
-        // Use all records that have a measured wait time (set when the pickup is finalized)
-        const completedWithTime = records.filter(r => (r.tempo_espera_segundos || 0) > 0);
-        const avgWait = completedWithTime.length
-            ? Math.round(completedWithTime.reduce((a, r) => a + (r.tempo_espera_segundos || 0), 0) / completedWithTime.length)
+        const done = records.filter(record => DONE_STATUSES.has(record.status)).length;
+        const open = records.filter(record => OPEN_STATUSES.has(record.status)).length;
+        const cancelled = records.filter(record => record.status === 'CANCELADO').length;
+        const withWait = records.filter(record => Number(record.tempo_espera_segundos ?? 0) > 0);
+        const avgWait = withWait.length
+            ? Math.round(withWait.reduce((sum, record) => sum + Number(record.tempo_espera_segundos ?? 0), 0) / withWait.length)
             : 0;
 
-        // Pickups by hour bucket (6 buckets: 6h-23h)
-        const hours: Record<number, number> = {};
-        records.forEach(r => {
-            if (r.horario_solicitacao) {
-                const h = new Date(r.horario_solicitacao).getHours();
-                hours[h] = (hours[h] || 0) + 1;
-            }
+        const byHourMap = new Map<number, number>();
+        records.forEach(record => {
+            if (!record.horario_solicitacao) return;
+            const hour = new Date(record.horario_solicitacao).getHours();
+            byHourMap.set(hour, (byHourMap.get(hour) ?? 0) + 1);
         });
-        const hourBuckets = Array.from({ length: 18 }, (_, i) => i + 6).map(h => ({
-            label: `${String(h).padStart(2, '0')}h`,
-            value: hours[h] || 0,
+        const byHour = Array.from({ length: 15 }, (_, index) => index + 6).map(hour => ({
+            label: `${pad(hour)}h`,
+            value: byHourMap.get(hour) ?? 0,
         }));
 
-        // Top guardians
-        const guardianMap: Record<string, { name: string; count: number }> = {};
-        records.forEach(r => {
-            if (r.responsavel?.cpf) {
-                const key = r.responsavel.cpf;
-                if (!guardianMap[key]) guardianMap[key] = { name: r.responsavel.nome_completo, count: 0 };
-                guardianMap[key].count++;
+        const byStatus = STATUS_OPTIONS.map(status => ({
+            label: statusLabel(status),
+            value: records.filter(record => record.status === status).length,
+        })).filter(item => item.value > 0);
+
+        const students = new Map<string, { name: string; sub: string; count: number }>();
+        const guardians = new Map<string, { name: string; sub: string; count: number }>();
+        records.forEach(record => {
+            const studentKey = record.aluno?.matricula || record.aluno?.nome_completo;
+            if (studentKey) {
+                const current = students.get(studentKey) ?? {
+                    name: record.aluno?.nome_completo || 'Aluno nao identificado',
+                    sub: record.aluno?.turma || 'Turma nao informada',
+                    count: 0,
+                };
+                current.count += 1;
+                students.set(studentKey, current);
+            }
+
+            const guardianKey = record.responsavel?.nome_completo || record.responsavel?.cpf;
+            if (guardianKey) {
+                const current = guardians.get(guardianKey) ?? {
+                    name: record.responsavel?.nome_completo || 'Responsavel nao identificado',
+                    sub: record.responsavel?.cpf || 'CPF mascarado',
+                    count: 0,
+                };
+                current.count += 1;
+                guardians.set(guardianKey, current);
             }
         });
-        const topGuardians = Object.values(guardianMap).sort((a, b) => b.count - a.count).slice(0, 5);
 
-        // Top students (most pickups)
-        const studentMap: Record<string, { name: string; turma: string; count: number }> = {};
-        records.forEach(r => {
-            if (r.aluno?.matricula) {
-                const key = r.aluno.matricula;
-                if (!studentMap[key]) studentMap[key] = { name: r.aluno.nome_completo, turma: r.aluno.turma, count: 0 };
-                studentMap[key].count++;
-            }
-        });
-        const topStudents = Object.values(studentMap).sort((a, b) => b.count - a.count).slice(0, 5);
-
-        // By day (for week/month/year periods)
-        const dayMap: Record<string, number> = {};
-        records.forEach(r => {
-            if (r.horario_solicitacao) {
-                const d = new Date(r.horario_solicitacao).toLocaleDateString('pt-BR', { weekday: 'short' });
-                dayMap[d] = (dayMap[d] || 0) + 1;
-            }
-        });
-        const weekDays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-        const dayBuckets = weekDays.map(d => ({ label: d, value: dayMap[d] || 0 }));
-
-        return { total, liberados: liberados.length, cancelados: cancelados.length, avgWait, hourBuckets, dayBuckets, topGuardians, topStudents };
+        return {
+            total,
+            done,
+            open,
+            cancelled,
+            avgWait,
+            byHour,
+            byStatus,
+            topStudents: Array.from(students.values()).sort((a, b) => b.count - a.count).slice(0, 6),
+            topGuardians: Array.from(guardians.values()).sort((a, b) => b.count - a.count).slice(0, 6),
+        };
     }, [records]);
 
-    // ── Export CSV ──
-    const exportCSV = () => {
-        const header = ['Data', 'Hora Solicitação', 'Hora Liberação', 'Aluno', 'Matrícula', 'Turma', 'Sala', 'Responsável', 'CPF', 'Status', 'Método', 'Tempo Espera (seg)', 'Msg Sala', 'Observações'];
-        const rows = filtered.map(r => [
-            fmtDate(r.horario_solicitacao),
-            fmtTime(r.horario_solicitacao),
-            fmtTime(r.horario_liberacao),
-            r.aluno?.nome_completo || '',
-            r.aluno?.matricula || '',
-            r.aluno?.turma || '',
-            r.aluno?.sala || '',
-            r.responsavel?.nome_completo || '',
-            maskCpf(r.responsavel?.cpf),
-            STATUS_PT[r.status] || r.status,
-            r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
-            r.tempo_espera_segundos?.toString() || '',
-            r.mensagem_sala || '',
-            r.observacoes || '',
-        ]);
-        const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url;
-        a.download = `retiradas_${period}_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click(); URL.revokeObjectURL(url);
+    const totalPages = Math.max(Math.ceil(filtered.length / PAGE_SIZE), 1);
+    const safePage = Math.min(page, totalPages - 1);
+    const paginated = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
+    const dateRangeLabel = `${formatDate(from)} ate ${formatDate(to)}`;
+    const hasFilters = searchTerm.trim() || statusFilter !== 'all' || methodFilter !== 'all';
+
+    const logExport = useCallback((format: string) => {
         logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
-            formato: 'CSV',
+            formato: format,
             periodo: period,
             de: from,
             ate: to,
             registros: filtered.length,
-        });
+        }, user?.id, escolaId || undefined);
+    }, [escolaId, filtered.length, from, period, to, user?.id]);
+
+    const exportRows = useMemo(() => filtered.map(record => [
+        formatDate(record.horario_solicitacao),
+        formatTime(record.horario_solicitacao),
+        formatTime(record.horario_liberacao),
+        record.aluno?.nome_completo || '',
+        record.aluno?.matricula || '',
+        record.aluno?.turma || '',
+        record.aluno?.sala || '',
+        record.responsavel?.nome_completo || '',
+        record.responsavel?.cpf || '',
+        methodLabel(record.tipo_solicitacao),
+        statusLabel(record.status),
+        waitLabel(record.tempo_espera_segundos),
+        record.mensagem_sala || '',
+        record.mensagem_recepcao || '',
+        record.observacoes || '',
+    ]), [filtered]);
+
+    const downloadBlob = (blob: Blob, extension: string) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `retiradas_${period}_${new Date().toISOString().slice(0, 10)}.${extension}`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
 
-    // Excel-compatible export without the vulnerable xlsx package.
+    const exportCSV = () => {
+        const header = ['Data', 'Solicitado', 'Liberado', 'Aluno', 'Matricula', 'Turma', 'Sala', 'Responsavel', 'CPF', 'Metodo', 'Status', 'Espera', 'Mensagem sala', 'Mensagem recepcao', 'Observacoes'];
+        const csv = [header, ...exportRows]
+            .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        downloadBlob(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }), 'csv');
+        logExport('CSV');
+    };
+
     const exportSpreadsheet = () => {
-        const header = ['Data', 'Hora Solicitacao', 'Hora Liberacao', 'Aluno', 'Matricula', 'Turma', 'Sala', 'Responsavel', 'CPF', 'Status', 'Metodo', 'Tempo Espera (seg)', 'Msg Sala', 'Observacoes'];
-        const rows = filtered.map(r => [
-            fmtDate(r.horario_solicitacao),
-            fmtTime(r.horario_solicitacao),
-            fmtTime(r.horario_liberacao),
-            r.aluno?.nome_completo || '',
-            r.aluno?.matricula || '',
-            r.aluno?.turma || '',
-            r.aluno?.sala || '',
-            r.responsavel?.nome_completo || '',
-            maskCpf(r.responsavel?.cpf),
-            STATUS_PT[r.status] || r.status,
-            r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepcao',
-            r.tempo_espera_segundos ?? '',
-            r.mensagem_sala || '',
-            r.observacoes || '',
-        ]);
-
-        const summaryData = [
-            ['Relatorio de Retiradas - La Salle, Cheguei!'],
-            ['Periodo:', `${fmtDate(from)} ate ${fmtDate(to)}`],
-            ['Gerado em:', new Date().toLocaleString('pt-BR')],
-            [],
-            ['Total de Registros', analytics.total],
-            ['Liberados', analytics.liberados],
-            ['Cancelados / Alertas', analytics.cancelados],
-            ['Tempo Medio de Espera', waitLabel(analytics.avgWait)],
-        ];
-
+        const header = ['Data', 'Solicitado', 'Liberado', 'Aluno', 'Matricula', 'Turma', 'Sala', 'Responsavel', 'CPF', 'Metodo', 'Status', 'Espera', 'Mensagem sala', 'Mensagem recepcao', 'Observacoes'];
         const escapeCell = (value: unknown) => String(value ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
-        const renderTable = (title: string, data: unknown[][]) => {
-            const rowsHtml = data.map(row => `<tr>${row.map(cell => `<td>${escapeCell(cell)}</td>`).join('')}</tr>`).join('');
-            return `<h2>${escapeCell(title)}</h2><table border="1"><tbody>${rowsHtml}</tbody></table>`;
-        };
-        const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body>${renderTable('Resumo', summaryData)}${renderTable('Registros', [header, ...rows])}</body></html>`;
-
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `retiradas_${period}_${new Date().toISOString().split('T')[0]}.xls`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
-            formato: 'XLS',
-            periodo: period,
-            de: from,
-            ate: to,
-            registros: filtered.length,
-        });
+        const rows = [header, ...exportRows]
+            .map(row => `<tr>${row.map(cell => `<td>${escapeCell(cell)}</td>`).join('')}</tr>`)
+            .join('');
+        const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body><h1>Historico de Retiradas</h1><p>${escapeCell(dateRangeLabel)}</p><table border="1"><tbody>${rows}</tbody></table></body></html>`;
+        downloadBlob(new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' }), 'xls');
+        logExport('XLS');
     };
 
-    // ── Export PDF ──
     const exportPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-        // Header
-        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('La Salle, Cheguei! — Relatório de Retiradas', 14, 18);
-
-        doc.setFontSize(9);
+        doc.setFontSize(16);
+        doc.text('La Salle, Cheguei! - Historico de Retiradas', 14, 16);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100);
-        doc.text(`Período: ${fmtDate(from)} até ${fmtDate(to)}`, 14, 26);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 31);
-
-        // KPI summary row
         doc.setFontSize(9);
-        doc.setTextColor(50);
-        const kpis = [
-            `Total: ${analytics.total}`,
-            `Liberados: ${analytics.liberados}`,
-            `Cancelados: ${analytics.cancelados}`,
-            `Tempo Médio: ${waitLabel(analytics.avgWait)}`,
-        ];
-        kpis.forEach((k, i) => doc.text(k, 14 + i * 65, 38));
+        doc.text(`Periodo: ${dateRangeLabel}`, 14, 24);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 30);
 
-        // Table
         autoTable(doc, {
-            startY: 44,
-            head: [['Data', 'Hora', 'Aluno', 'Turma', 'Responsável', 'Método', 'Status', 'Espera', 'Observações']],
-            body: filtered.map(r => [
-                fmtDate(r.horario_solicitacao),
-                fmtTime(r.horario_solicitacao),
-                r.aluno?.nome_completo || '—',
-                r.aluno?.turma || '—',
-                r.responsavel?.nome_completo || '—',
-                r.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção',
-                STATUS_PT[r.status] || r.status,
-                waitLabel(r.tempo_espera_segundos),
-                r.observacoes || '',
+            startY: 38,
+            head: [['Data', 'Hora', 'Aluno', 'Turma', 'Responsavel', 'Metodo', 'Status', 'Espera']],
+            body: filtered.map(record => [
+                formatDate(record.horario_solicitacao),
+                formatTime(record.horario_solicitacao),
+                record.aluno?.nome_completo || '-',
+                record.aluno?.turma || '-',
+                record.responsavel?.nome_completo || '-',
+                methodLabel(record.tipo_solicitacao),
+                statusLabel(record.status),
+                waitLabel(record.tempo_espera_segundos),
             ]),
             styles: { fontSize: 7, cellPadding: 2 },
-            headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+            headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
             alternateRowStyles: { fillColor: [248, 250, 252] },
-            columnStyles: {
-                0: { cellWidth: 22 },
-                1: { cellWidth: 14 },
-                2: { cellWidth: 44 },
-                3: { cellWidth: 32 },
-                4: { cellWidth: 44 },
-                5: { cellWidth: 18 },
-                6: { cellWidth: 20 },
-                7: { cellWidth: 14 },
-                8: { cellWidth: 'auto' },
-            },
-            didDrawPage: (data: any) => {
-                const pageCount = (doc as any).internal.getNumberOfPages();
-                doc.setFontSize(7);
-                doc.setTextColor(150);
-                doc.text(
-                    `Página ${data.pageNumber} de ${pageCount}`,
-                    doc.internal.pageSize.getWidth() - 14,
-                    doc.internal.pageSize.getHeight() - 8,
-                    { align: 'right' }
-                );
-            },
         });
 
-        doc.save(`retiradas_${period}_${new Date().toISOString().split('T')[0]}.pdf`);
-
-        logAudit('EXPORTACAO_DADOS', 'solicitacoes_retirada', undefined, {
-            formato: 'PDF',
-            periodo: period,
-            de: from,
-            ate: to,
-            registros: filtered.length,
-        });
+        doc.save(`retiradas_${period}_${new Date().toISOString().slice(0, 10)}.pdf`);
+        logExport('PDF');
     };
 
-    const PERIOD_LABELS: Record<Period, string> = {
-        day: 'Hoje', week: 'Esta Semana', month: 'Este Mês', year: 'Este Ano',
-        custom: 'Intervalo', 'pick-day': 'Dia', 'pick-month': 'Mês', 'pick-year': 'Ano'
-    };
-
-    const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    const currentYear = new Date().getFullYear();
-    const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
-    // ── Shared style helpers ──
-    const darkBtn = (active: boolean, activeColor = '#4da6ff'): React.CSSProperties => ({
-        padding: '6px 14px',
-        borderRadius: '6px',
-        border: active ? `1px solid ${activeColor}` : '1px solid rgba(255,215,0,0.2)',
-        background: active ? `rgba(77,166,255,0.12)` : 'rgba(255,255,255,0.03)',
-        color: active ? activeColor : '#8892b0',
-        fontFamily: 'Roboto Mono, monospace',
-        fontSize: '10px',
-        fontWeight: 700,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase' as const,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        boxShadow: active ? `0 0 8px ${activeColor}40` : 'none',
-        whiteSpace: 'nowrap' as const,
-    });
-
-    const inputStyle: React.CSSProperties = {
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(77,166,255,0.25)',
-        borderRadius: '6px',
-        color: '#e0e6ed',
-        fontFamily: 'Roboto Mono, monospace',
-        fontSize: '12px',
-        fontWeight: 700,
-        padding: '4px 8px',
-        outline: 'none',
-    };
-
-    const selectStyle: React.CSSProperties = {
-        background: 'rgba(10,15,30,0.95)',
-        border: '1px solid rgba(77,166,255,0.25)',
-        borderRadius: '6px',
-        color: '#e0e6ed',
-        fontFamily: 'Roboto Mono, monospace',
-        fontSize: '12px',
-        fontWeight: 700,
-        padding: '4px 8px',
-        outline: 'none',
-        cursor: 'pointer',
-    };
+    const actionButtonStyle: CSSProperties = { minHeight: 42 };
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050b1d' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                        width: 48, height: 48,
-                        border: '3px solid rgba(77,166,255,0.2)',
-                        borderTop: '3px solid #4da6ff',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite',
-                    }} />
-                    <p style={{ fontFamily: 'Roboto Mono, monospace', color: '#8892b0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Carregando Relatórios...</p>
+            <div className="flex min-h-screen items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Carregando historico</p>
                 </div>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }`}</style>
             </div>
         );
     }
 
     return (
-        <div style={{ background: '#050b1d', minHeight: '100vh', color: '#e0e6ed', fontFamily: 'Roboto, sans-serif' }}>
+        <div className="min-h-screen bg-slate-50 text-slate-950">
             <style>{`
-                @keyframes spin { to { transform: rotate(360deg); } }
-                @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.75} }
-                @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
-                .ph-hover-row:hover { background: rgba(77,166,255,0.05) !important; }
-                .ph-btn-icon:hover { color: #4da6ff !important; border-color: rgba(77,166,255,0.4) !important; }
-                .ph-export-item:hover { background: rgba(77,166,255,0.08) !important; }
-                .ph-filter-btn:hover { color: #e0e6ed !important; border-color: rgba(77,166,255,0.35) !important; }
+                @media print {
+                    .no-print { display: none !important; }
+                    body { background: white !important; }
+                    .print-panel { box-shadow: none !important; border-color: #cbd5e1 !important; }
+                }
             `}</style>
 
-            {/* ── Header ── */}
-            <header style={{
-                position: 'sticky', top: 0, zIndex: 30,
-                background: 'rgba(5,11,29,0.97)', backdropFilter: 'blur(12px)',
-                borderBottom: '1px solid rgba(255,215,0,0.2)',
-                boxShadow: '0 2px 20px rgba(0,0,0,0.5)',
-            }}>
-                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                    {/* Left: title */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{
-                            width: 40, height: 40, borderRadius: '8px',
-                            border: '1px solid rgba(255,215,0,0.3)',
-                            background: 'rgba(255,215,0,0.06)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 0 14px rgba(255,215,0,0.15)',
-                        }}>
-                            <BarChart2 size={20} color="#b0914f" />
+            <header className="border-b border-slate-200 bg-white shadow-sm">
+                <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-white">
+                            <BarChart3 className="h-6 w-6" />
                         </div>
                         <div>
-                            <span style={{ display: 'block', fontFamily: 'Roboto Mono, monospace', fontSize: '13px', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: '1.2' }}>
-                                Central de Relatórios
-                            </span>
-                            <span style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Relatórios · Auditoria · Análise</span>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Central de relatorios</p>
+                            <h1 className="text-2xl font-black tracking-tight text-slate-950">Historico de retiradas</h1>
+                            <p className="mt-1 text-sm font-medium text-slate-500">Consulta operacional, auditoria e exportacao de registros.</p>
                         </div>
                     </div>
 
-                    {/* Right: action buttons */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        {/* View toggle */}
-                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: '8px', padding: '3px', gap: '3px' }}>
+                    <div className="no-print flex flex-wrap items-center gap-2">
+                        <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-1">
                             <button
-                                onClick={() => setActiveView('list')}
-                                style={{
-                                    padding: '5px 14px', borderRadius: '5px', border: 'none',
-                                    background: activeView === 'list' ? 'rgba(77,166,255,0.15)' : 'transparent',
-                                    color: activeView === 'list' ? '#4da6ff' : '#8892b0',
-                                    fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                    textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    transition: 'all 0.2s',
-                                }}
+                                type="button"
+                                onClick={() => setView('records')}
+                                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold ${view === 'records' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-950'}`}
                             >
-                                <FileText size={13} /> Registros
+                                <FileText className="h-4 w-4" />
+                                Registros
                             </button>
                             <button
-                                onClick={() => setActiveView('analytics')}
-                                style={{
-                                    padding: '5px 14px', borderRadius: '5px', border: 'none',
-                                    background: activeView === 'analytics' ? 'rgba(77,166,255,0.15)' : 'transparent',
-                                    color: activeView === 'analytics' ? '#4da6ff' : '#8892b0',
-                                    fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                    textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    transition: 'all 0.2s',
-                                }}
+                                type="button"
+                                onClick={() => setView('analysis')}
+                                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold ${view === 'analysis' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-950'}`}
                             >
-                                <Activity size={13} /> Análise
+                                <Activity className="h-4 w-4" />
+                                Analise
                             </button>
                         </div>
 
-                        {/* Refresh */}
                         <button
+                            type="button"
                             onClick={() => fetchRecords(true)}
-                            className="ph-btn-icon"
-                            style={{
-                                width: 36, height: 36, borderRadius: '7px',
-                                border: '1px solid rgba(255,215,0,0.2)',
-                                background: 'rgba(255,255,255,0.03)',
-                                color: '#8892b0', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                animation: refreshing ? 'spin 0.8s linear infinite' : 'none',
-                                transition: 'all 0.2s',
-                            }}
+                            className="rounded-lg border border-slate-200 bg-white p-3 text-slate-700 shadow-sm hover:border-blue-300 hover:text-blue-700"
+                            style={actionButtonStyle}
+                            title="Atualizar"
                         >
-                            <RefreshCw size={15} />
+                            <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                         </button>
-
-                        {/* Print */}
                         <button
+                            type="button"
                             onClick={() => window.print()}
-                            className="ph-btn-icon"
-                            style={{
-                                padding: '7px 14px', borderRadius: '7px',
-                                border: '1px solid rgba(255,215,0,0.2)',
-                                background: 'rgba(255,255,255,0.03)',
-                                color: '#8892b0', cursor: 'pointer',
-                                fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                textTransform: 'uppercase', letterSpacing: '0.06em',
-                                display: 'flex', alignItems: 'center', gap: '7px',
-                                transition: 'all 0.2s',
-                            }}
+                            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm hover:border-blue-300 hover:text-blue-700"
+                            style={actionButtonStyle}
                         >
-                            <Printer size={14} /> <span>Imprimir</span>
+                            <Printer className="h-4 w-4" />
+                            Imprimir
                         </button>
 
-                        {/* Export dropdown */}
-                        <div style={{ position: 'relative' }}>
+                        <div className="relative">
                             <button
-                                onClick={() => setExportMenuOpen(o => !o)}
-                                style={{
-                                    padding: '7px 14px', borderRadius: '7px',
-                                    border: '1px solid rgba(255,215,0,0.35)',
-                                    background: 'rgba(255,215,0,0.07)',
-                                    color: '#b0914f', cursor: 'pointer',
-                                    fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                    textTransform: 'uppercase', letterSpacing: '0.06em',
-                                    display: 'flex', alignItems: 'center', gap: '7px',
-                                    boxShadow: '0 0 10px rgba(255,215,0,0.1)',
-                                }}
+                                type="button"
+                                onClick={() => setExportOpen(open => !open)}
+                                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+                                style={actionButtonStyle}
                             >
-                                <Download size={14} /> Exportar <ChevronDown size={11} />
+                                <Download className="h-4 w-4" />
+                                Exportar
+                                <ChevronDown className="h-4 w-4" />
                             </button>
-
-                            {exportMenuOpen && (
+                            {exportOpen && (
                                 <>
-                                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setExportMenuOpen(false)} />
-                                    <div style={{
-                                        position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 50,
-                                        background: 'rgba(10,15,30,0.98)', border: '1px solid rgba(255,215,0,0.2)',
-                                        borderRadius: '10px', overflow: 'hidden', minWidth: '168px',
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                                    }}>
-                                        <button
-                                            onClick={() => { exportPDF(); setExportMenuOpen(false); }}
-                                            className="ph-export-item"
-                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
-                                        >
-                                            <FileText size={14} color="rgba(255,69,0,0.85)" />
-                                            Exportar PDF
+                                    <button type="button" aria-label="Fechar menu" className="fixed inset-0 z-10 cursor-default" onClick={() => setExportOpen(false)} />
+                                    <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+                                        <button type="button" onClick={() => { exportPDF(); setExportOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50">
+                                            <FileText className="h-4 w-4 text-rose-600" />
+                                            PDF
                                         </button>
-                                        <button
-                                            onClick={() => { exportSpreadsheet(); setExportMenuOpen(false); }}
-                                            className="ph-export-item"
-                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
-                                        >
-                                            <Table2 size={14} color="#00e676" />
-                                            Exportar Planilha
+                                        <button type="button" onClick={() => { exportSpreadsheet(); setExportOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50">
+                                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                                            Planilha
                                         </button>
-                                        <div style={{ borderTop: '1px solid rgba(255,215,0,0.1)' }} />
-                                        <button
-                                            onClick={() => { exportCSV(); setExportMenuOpen(false); }}
-                                            className="ph-export-item"
-                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 16px', background: 'transparent', border: 'none', color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
-                                        >
-                                            <Download size={14} color="#8892b0" />
-                                            Exportar CSV
+                                        <button type="button" onClick={() => { exportCSV(); setExportOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50">
+                                            <Download className="h-4 w-4 text-blue-600" />
+                                            CSV
                                         </button>
                                     </div>
                                 </>
@@ -926,523 +809,364 @@ export default function PickupHistoryView() {
                 </div>
             </header>
 
-            <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                <NavigationControls />
-
-                {/* ── Period Selector ── */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Quick presets + custom pickers row */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '9px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.12em', flexShrink: 0 }}>Período:</span>
-                        {(['day', 'week', 'month', 'year'] as Period[]).map(p => (
-                            <button
-                                key={p}
-                                onClick={() => { setPeriod(p); setPage(0); }}
-                                className="ph-filter-btn"
-                                style={darkBtn(period === p, '#4da6ff')}
-                            >
-                                {PERIOD_LABELS[p]}
-                            </button>
-                        ))}
-                        <div style={{ width: '1px', height: '18px', background: 'rgba(255,215,0,0.2)', margin: '0 4px' }} />
-                        {(['pick-day', 'pick-month', 'pick-year', 'custom'] as Period[]).map(p => (
-                            <button
-                                key={p}
-                                onClick={() => { setPeriod(p); setPage(0); }}
-                                className="ph-filter-btn"
-                                style={darkBtn(period === p, '#a64dff')}
-                            >
-                                {PERIOD_LABELS[p]}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Contextual sub-picker */}
-                    {period === 'pick-day' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content' }}>
-                            <Calendar size={15} color="#a64dff" />
-                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Selecione o dia:</span>
-                            <input
-                                type="date"
-                                value={pickDay}
-                                max={new Date().toISOString().split('T')[0]}
-                                onChange={e => { setPickDay(e.target.value); setPage(0); }}
-                                style={inputStyle}
-                            />
-                        </div>
-                    )}
-
-                    {period === 'pick-month' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content', flexWrap: 'wrap' }}>
-                            <Calendar size={15} color="#a64dff" />
-                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Mês:</span>
-                            <select value={pickMonth} onChange={e => { setPickMonth(Number(e.target.value)); setPage(0); }} style={selectStyle}>
-                                {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                            </select>
-                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Ano:</span>
-                            <select value={pickMonthYear} onChange={e => { setPickMonthYear(Number(e.target.value)); setPage(0); }} style={selectStyle}>
-                                {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                            </select>
-                        </div>
-                    )}
-
-                    {period === 'pick-year' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content' }}>
-                            <Calendar size={15} color="#a64dff" />
-                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Ano:</span>
-                            <select value={pickYear} onChange={e => { setPickYear(Number(e.target.value)); setPage(0); }} style={selectStyle}>
-                                {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                            </select>
-                        </div>
-                    )}
-
-                    {period === 'custom' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(166,77,255,0.25)', borderRadius: '8px', padding: '10px 16px', width: 'fit-content', flexWrap: 'wrap' }}>
-                            <Calendar size={15} color="#a64dff" />
-                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>De:</span>
-                            <input type="date" value={customStart} max={new Date().toISOString().split('T')[0]} onChange={e => setCustomStart(e.target.value)} style={inputStyle} />
-                            <span style={{ fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>até:</span>
-                            <input type="date" value={customEnd} max={new Date().toISOString().split('T')[0]} onChange={e => setCustomEnd(e.target.value)} style={inputStyle} />
-                            <button
-                                onClick={() => { setPage(0); fetchRecords(); }}
-                                disabled={!customStart || !customEnd}
-                                style={{
-                                    padding: '5px 14px', borderRadius: '6px',
-                                    border: '1px solid rgba(166,77,255,0.4)',
-                                    background: 'rgba(166,77,255,0.12)',
-                                    color: '#a64dff', fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                    cursor: 'pointer', opacity: (!customStart || !customEnd) ? 0.4 : 1,
-                                }}
-                            >
-                                Aplicar
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Active range label */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>
-                        <Clock size={13} />
-                        <span>Exibindo: <strong style={{ color: '#e0e6ed' }}>{fmtDate(from)}</strong> até <strong style={{ color: '#e0e6ed' }}>{fmtDate(to)}</strong></span>
-                    </div>
+            <main className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-6">
+                <div className="no-print">
+                    <NavigationControls />
                 </div>
 
-                {/* ── Summary Cards ── */}
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '14px', padding: '24px', backdropFilter: 'blur(12px)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                        <SummaryCard
-                            label="Total Retiradas"
-                            value={analytics.total}
-                            icon={Activity}
-                            glowColor="rgba(77,166,255,0.35)"
-                            sub={period === 'day' ? 'neste dia' : undefined}
-                        />
-                        <SummaryCard
-                            label="Liberados"
-                            value={analytics.liberados}
-                            icon={CheckCircle2}
-                            glowColor="rgba(0,230,118,0.4)"
-                            sub={analytics.total ? `${Math.round(analytics.liberados / analytics.total * 100)}% do total` : undefined}
-                            trend={analytics.liberados > 0 ? 'up' : 'neutral'}
-                        />
-                        <SummaryCard
-                            label="Cancelados"
-                            value={analytics.cancelados}
-                            icon={AlertTriangle}
-                            glowColor="rgba(255,69,0,0.4)"
-                            trend={analytics.cancelados > 0 ? 'down' : 'neutral'}
-                        />
-                        <SummaryCard
-                            label="Tempo Médio"
-                            value={waitLabel(analytics.avgWait)}
-                            icon={Clock}
-                            glowColor="rgba(255,215,0,0.3)"
-                            sub="registros liberados"
-                        />
-                    </div>
-                </div>
-
-                {/* ── 500-record cap warning ── */}
-                {records.length >= 500 && (
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '10px',
-                        background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
-                        borderRadius: '10px', padding: '12px 18px',
-                    }}>
-                        <AlertTriangle size={15} color="#fbbf24" style={{ flexShrink: 0 }} />
-                        <p style={{ fontSize: '11px', color: '#fbbf24', fontFamily: 'Roboto Mono, monospace', margin: 0 }}>
-                            Limite de 500 registros atingido — análises podem estar incompletas. Selecione um período menor para dados precisos.
-                        </p>
-                    </div>
-                )}
-
-                {/* ─── ANALYTICS VIEW ─────────────────────────────────────────── */}
-                {activeView === 'analytics' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
-                        {/* Retiradas por Hora do Dia */}
-                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(77,166,255,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                <Clock size={15} color="#4da6ff" />
-                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Retiradas por Hora do Dia</h3>
-                            </div>
-                            {records.length > 0 ? (
-                                <MiniBarChart data={analytics.hourBuckets} color="#4da6ff" />
-                            ) : (
-                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados para o período.</p>
-                            )}
+                <section className="no-print rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex flex-col gap-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="mr-1 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-500">
+                                <CalendarDays className="h-4 w-4" />
+                                Periodo
+                            </span>
+                            {(['day', 'week', 'month', 'year'] as Period[]).map(item => (
+                                <FilterButton key={item} active={period === item} onClick={() => setPeriod(item)}>
+                                    {PERIOD_LABELS[item]}
+                                </FilterButton>
+                            ))}
+                            <span className="mx-1 h-8 w-px bg-slate-200" />
+                            {(['pick-day', 'pick-month', 'pick-year', 'custom'] as Period[]).map(item => (
+                                <FilterButton key={item} active={period === item} onClick={() => setPeriod(item)}>
+                                    {PERIOD_LABELS[item]}
+                                </FilterButton>
+                            ))}
                         </div>
 
-                        {/* Retiradas por Dia da Semana */}
-                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(166,77,255,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                <Calendar size={15} color="#a64dff" />
-                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Retiradas por Dia da Semana</h3>
+                        {period === 'pick-day' && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <label className="text-sm font-bold text-slate-600" htmlFor="pick-day">Dia</label>
+                                <input id="pick-day" type="date" value={pickDay} max={toDateInput(new Date())} onChange={event => setPickDay(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900" />
                             </div>
-                            {records.length > 0 ? (
-                                <MiniBarChart data={analytics.dayBuckets} color="#a64dff" />
-                            ) : (
-                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados para o período.</p>
-                            )}
-                        </div>
+                        )}
 
-                        {/* Top Responsáveis */}
-                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(77,166,255,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                <Users size={15} color="#4da6ff" />
-                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Responsáveis Mais Frequentes</h3>
+                        {period === 'pick-month' && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <label className="text-sm font-bold text-slate-600" htmlFor="pick-month">Mes</label>
+                                <select id="pick-month" value={pickMonth} onChange={event => setPickMonth(Number(event.target.value))} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900">
+                                    {MONTH_NAMES.map((month, index) => <option key={month} value={index}>{month}</option>)}
+                                </select>
+                                <label className="text-sm font-bold text-slate-600" htmlFor="pick-month-year">Ano</label>
+                                <select id="pick-month-year" value={pickMonthYear} onChange={event => setPickMonthYear(Number(event.target.value))} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900">
+                                    {yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
+                                </select>
                             </div>
-                            {analytics.topGuardians.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {analytics.topGuardians.map((g, i) => (
-                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{
-                                                width: 26, height: 26, borderRadius: '6px', flexShrink: 0,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                background: i === 0 ? 'rgba(77,166,255,0.2)' : 'rgba(255,255,255,0.05)',
-                                                border: i === 0 ? '1px solid rgba(77,166,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                                                color: i === 0 ? '#4da6ff' : '#8892b0',
-                                                fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                            }}>{i + 1}</div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
-                                                <div style={{ width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', height: '4px', marginTop: '4px' }}>
-                                                    <div style={{ background: '#4da6ff', height: '4px', borderRadius: '3px', width: `${(g.count / (analytics.topGuardians[0]?.count || 1)) * 100}%` }} />
-                                                </div>
-                                            </div>
-                                            <span style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff', flexShrink: 0 }}>{g.count}x</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados.</p>
-                            )}
-                        </div>
+                        )}
 
-                        {/* Alunos com mais retiradas */}
-                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                <Shield size={15} color="#00e676" />
-                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Alunos com Mais Retiradas</h3>
+                        {period === 'pick-year' && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <label className="text-sm font-bold text-slate-600" htmlFor="pick-year">Ano</label>
+                                <select id="pick-year" value={pickYear} onChange={event => setPickYear(Number(event.target.value))} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900">
+                                    {yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
+                                </select>
                             </div>
-                            {analytics.topStudents.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {analytics.topStudents.map((s, i) => (
-                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{
-                                                width: 26, height: 26, borderRadius: '6px', flexShrink: 0,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                background: i === 0 ? 'rgba(0,230,118,0.15)' : 'rgba(255,255,255,0.05)',
-                                                border: i === 0 ? '1px solid rgba(0,230,118,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                                                color: i === 0 ? '#00e676' : '#8892b0',
-                                                fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                            }}>{i + 1}</div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                                                <p style={{ fontSize: '10px', color: '#8892b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.turma}</p>
-                                                <div style={{ width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', height: '4px', marginTop: '4px' }}>
-                                                    <div style={{ background: '#00e676', height: '4px', borderRadius: '3px', width: `${(s.count / (analytics.topStudents[0]?.count || 1)) * 100}%` }} />
-                                                </div>
-                                            </div>
-                                            <span style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#00e676', flexShrink: 0 }}>{s.count}x</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p style={{ fontSize: '11px', color: '#8892b0', textAlign: 'center', padding: '32px 0', fontStyle: 'italic' }}>Sem dados.</p>
-                            )}
-                        </div>
+                        )}
 
-                        {/* Auditoria de Segurança */}
-                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(255,69,0,0.3)', borderRadius: '12px', padding: '24px', backdropFilter: 'blur(12px)', gridColumn: 'span 2' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                <TrendingUp size={15} color="#b0914f" />
-                                <h3 style={{ fontSize: '12px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Auditoria de Segurança — Alertas e Cancelamentos</h3>
+                        {period === 'custom' && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <label className="text-sm font-bold text-slate-600" htmlFor="custom-start">De</label>
+                                <input id="custom-start" type="date" value={customStart} max={toDateInput(new Date())} onChange={event => setCustomStart(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900" />
+                                <label className="text-sm font-bold text-slate-600" htmlFor="custom-end">Ate</label>
+                                <input id="custom-end" type="date" value={customEnd} max={toDateInput(new Date())} onChange={event => setCustomEnd(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900" />
                             </div>
-                            {analytics.cancelados > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {records.filter(r => r.status === 'CANCELADO').slice(0, 8).map(r => (
-                                        <div
-                                            key={r.id}
-                                            onClick={() => setDetailRecord(r)}
-                                            className="ph-hover-row"
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '14px',
-                                                padding: '12px 14px', borderRadius: '8px',
-                                                background: 'rgba(255,69,0,0.05)', border: '1px solid rgba(255,69,0,0.2)',
-                                                cursor: 'pointer', transition: 'background 0.2s',
-                                            }}
-                                        >
-                                            <AlertCircle size={16} color="rgba(255,69,0,0.85)" style={{ flexShrink: 0 }} />
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.aluno?.nome_completo}</p>
-                                                <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{r.responsavel?.nome_completo || 'Responsável não identificado'} · {fmtDate(r.horario_solicitacao)} às {fmtTime(r.horario_solicitacao)}</p>
-                                            </div>
-                                            {r.observacoes && <p style={{ fontSize: '10px', color: 'rgba(255,69,0,0.8)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{r.observacoes}</p>}
-                                            <Eye size={15} color="rgba(255,69,0,0.5)" style={{ flexShrink: 0 }} />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '20px 18px', background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.2)', borderRadius: '8px' }}>
-                                    <CheckCircle2 size={18} color="#00e676" style={{ flexShrink: 0 }} />
-                                    <p style={{ fontSize: '13px', fontWeight: 700, color: '#00e676' }}>Nenhum cancelamento ou alerta registrado no período.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+                        )}
 
-                {/* ─── LIST VIEW ──────────────────────────────────────────────── */}
-                {activeView === 'list' && (
-                    <>
-                        {/* Filters row */}
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {/* Search */}
-                            <div style={{ position: 'relative' }}>
-                                <Search size={15} color="#8892b0" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar aluno, responsável, turma..."
-                                    value={searchTerm}
-                                    onChange={e => { setSearchTerm(e.target.value); setPage(0); }}
-                                    style={{
-                                        width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px',
-                                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(77,166,255,0.2)',
-                                        borderRadius: '8px', color: '#e0e6ed',
-                                        fontFamily: 'Roboto, sans-serif', fontSize: '12px',
-                                        outline: 'none', boxSizing: 'border-box',
-                                    }}
-                                />
-                            </div>
-
-                            {/* Method + Status filters */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
-                                <Filter size={14} color="#8892b0" style={{ flexShrink: 0 }} />
-                                {/* Method */}
-                                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '7px', padding: '3px' }}>
-                                    {['all', 'TOTEM', 'RECEPCAO'].map(m => (
-                                        <button
-                                            key={m}
-                                            onClick={() => { setMethodFilter(m); setPage(0); }}
-                                            className="ph-filter-btn"
-                                            style={darkBtn(methodFilter === m)}
-                                        >
-                                            {m === 'all' ? 'Todos Métodos' : m === 'TOTEM' ? 'Totem' : 'Recepção'}
-                                        </button>
-                                    ))}
-                                </div>
-                                {/* Status */}
-                                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '7px', padding: '3px', flexWrap: 'wrap' }}>
-                                    {['all', 'CONCLUIDO', 'LIBERADO', 'CONFIRMADO', 'NOTIFICADO', 'SOLICITADO', 'CANCELADO'].map(s => (
-                                        <button
-                                            key={s}
-                                            onClick={() => { setStatusFilter(s); setPage(0); }}
-                                            className="ph-filter-btn"
-                                            style={darkBtn(statusFilter === s, STATUS_COLOR[s]?.color || '#4da6ff')}
-                                        >
-                                            {s === 'all' ? 'Todos Status' : STATUS_PT[s]}
-                                        </button>
-                                    ))}
-                                </div>
-                                <span style={{ fontSize: '10px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', marginLeft: 'auto' }}>
-                                    {filtered.length} registro{filtered.length !== 1 ? 's' : ''}
+                        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4">
+                            <span className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                                <Clock3 className="h-4 w-4 text-blue-600" />
+                                Exibindo {dateRangeLabel}
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-700">
+                                {totalCount} registro{totalCount === 1 ? '' : 's'} no periodo
+                            </span>
+                            {truncated && (
+                                <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800">
+                                    Exibindo os {REPORT_LIMIT} mais recentes
                                 </span>
-                            </div>
+                            )}
                         </div>
+                    </div>
+                </section>
 
-                        {/* Table panel */}
-                        <div style={{ background: 'rgba(10,15,30,0.6)', border: '1px solid rgba(77,166,255,0.2)', borderRadius: '14px', overflow: 'hidden', backdropFilter: 'blur(12px)' }}>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid rgba(77,166,255,0.15)' }}>
-                                            {['Aluno', 'Turma / Sala', 'Responsável', 'Método', 'Status', 'Solicitado', 'Liberado', 'Espera', ''].map((h, i) => (
-                                                <th
-                                                    key={i}
-                                                    style={{
-                                                        padding: '14px 18px',
-                                                        fontSize: '9px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700,
-                                                        color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.1em',
-                                                        textAlign: 'left', whiteSpace: 'nowrap',
-                                                        background: 'rgba(255,255,255,0.02)',
-                                                    }}
-                                                >{h}</th>
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <StatCard label="Total no periodo" value={analytics.total} icon={Activity} tone="blue" sub={`${filtered.length} visivel apos filtros`} />
+                    <StatCard label="Concluidas/liberadas" value={analytics.done} icon={CheckCircle2} tone="green" sub={analytics.total ? `${Math.round((analytics.done / analytics.total) * 100)}% do periodo` : 'Sem registros'} />
+                    <StatCard label="Canceladas" value={analytics.cancelled} icon={XCircle} tone="rose" sub="Alertas operacionais" />
+                    <StatCard label="Tempo medio" value={waitLabel(analytics.avgWait)} icon={Clock3} tone="amber" sub="Apenas registros com tempo medido" />
+                </section>
+
+                {view === 'records' && (
+                    <>
+                        <section className="no-print rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex flex-col gap-4">
+                                <div className="relative">
+                                    <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={event => { setSearchTerm(event.target.value); setPage(0); }}
+                                        placeholder="Buscar por aluno, responsavel, matricula, turma, sala, status..."
+                                        className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-1 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-500">
+                                        <Filter className="h-4 w-4" />
+                                        Metodo
+                                    </span>
+                                    <FilterButton active={methodFilter === 'all'} onClick={() => { setMethodFilter('all'); setPage(0); }}>Todos</FilterButton>
+                                    <FilterButton active={methodFilter === 'totem'} onClick={() => { setMethodFilter('totem'); setPage(0); }}>Totem</FilterButton>
+                                    <FilterButton active={methodFilter === 'reception'} onClick={() => { setMethodFilter('reception'); setPage(0); }}>Recepcao</FilterButton>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-1 text-sm font-black uppercase tracking-wide text-slate-500">Status</span>
+                                    <FilterButton active={statusFilter === 'all'} onClick={() => { setStatusFilter('all'); setPage(0); }}>Todos</FilterButton>
+                                    {STATUS_OPTIONS.map(status => (
+                                        <FilterButton key={status} active={statusFilter === status} onClick={() => { setStatusFilter(status); setPage(0); }}>
+                                            {statusLabel(status)}
+                                        </FilterButton>
+                                    ))}
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                                    <p className="text-sm font-bold text-slate-600">
+                                        {filtered.length} registro{filtered.length === 1 ? '' : 's'} encontrado{filtered.length === 1 ? '' : 's'}
+                                    </p>
+                                    {hasFilters && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSearchTerm(''); setStatusFilter('all'); setMethodFilter('all'); setPage(0); }}
+                                            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700"
+                                        >
+                                            Limpar filtros
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="print-panel overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[1050px] border-collapse">
+                                    <thead className="bg-slate-100">
+                                        <tr>
+                                            {['Aluno', 'Turma / sala', 'Responsavel', 'Metodo', 'Status', 'Solicitado', 'Liberado', 'Espera', ''].map(header => (
+                                                <th key={header} className="border-b border-slate-200 px-5 py-4 text-left text-xs font-black uppercase tracking-wide text-slate-600">
+                                                    {header}
+                                                </th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {paginated.map(record => (
-                                            <tr
-                                                key={record.id}
-                                                className="ph-hover-row"
-                                                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
-                                            >
-                                                {/* Aluno */}
-                                                <td style={{ padding: '14px 18px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        {record.aluno?.foto_url ? (
-                                                            <img src={record.aluno.foto_url} style={{ width: 32, height: 32, borderRadius: '7px', objectFit: 'cover', border: '1px solid rgba(77,166,255,0.2)', flexShrink: 0 }} alt="" />
-                                                        ) : (
-                                                            <div style={{
-                                                                width: 32, height: 32, borderRadius: '7px', flexShrink: 0,
-                                                                background: 'rgba(77,166,255,0.1)', border: '1px solid rgba(77,166,255,0.2)',
-                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                color: '#4da6ff', fontFamily: 'Roboto Mono, monospace', fontSize: '12px', fontWeight: 700,
-                                                            }}>
-                                                                {record.aluno?.nome_completo?.[0] || '?'}
-                                                            </div>
-                                                        )}
-                                                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#e0e6ed', whiteSpace: 'nowrap' }}>{record.aluno?.nome_completo || '—'}</p>
+                                            <tr key={record.id} className="border-b border-slate-100 hover:bg-blue-50/40">
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-sm font-black text-blue-700">
+                                                            {initials(record.aluno?.nome_completo)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-sm font-black text-slate-950">{record.aluno?.nome_completo || 'Aluno nao identificado'}</p>
+                                                            <p className="text-xs font-semibold text-slate-500">Matricula {record.aluno?.matricula || '-'}</p>
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                {/* Turma / Sala */}
-                                                <td style={{ padding: '14px 18px' }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed', fontFamily: 'Roboto Mono, monospace' }}>{record.aluno?.turma || '—'}</p>
-                                                    <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>Sala {record.aluno?.sala || '—'}</p>
+                                                <td className="px-5 py-4">
+                                                    <p className="text-sm font-bold text-slate-900">{record.aluno?.turma || '-'}</p>
+                                                    <p className="text-xs font-semibold text-slate-500">Sala {record.aluno?.sala || '-'}</p>
                                                 </td>
-                                                {/* Responsável */}
-                                                <td style={{ padding: '14px 18px' }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: 700, color: '#e0e6ed' }}>{record.responsavel?.nome_completo || '—'}</p>
-                                                    <p style={{ fontSize: '10px', color: '#8892b0', fontFamily: 'Roboto Mono, monospace' }}>{maskCpf(record.responsavel?.cpf)}</p>
+                                                <td className="px-5 py-4">
+                                                    <p className="max-w-[220px] truncate text-sm font-bold text-slate-900">{record.responsavel?.nome_completo || 'Nao informado'}</p>
+                                                    <p className="text-xs font-semibold text-slate-500">{record.responsavel?.cpf || '***.***.***-**'}</p>
                                                 </td>
-                                                {/* Método */}
-                                                <td style={{ padding: '14px 18px' }}>
-                                                    <span style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                                        padding: '3px 10px', borderRadius: '5px',
-                                                        border: record.tipo_solicitacao === 'ROTINA' ? '1px solid rgba(166,77,255,0.35)' : '1px solid rgba(77,166,255,0.35)',
-                                                        background: record.tipo_solicitacao === 'ROTINA' ? 'rgba(166,77,255,0.08)' : 'rgba(77,166,255,0.08)',
-                                                        color: record.tipo_solicitacao === 'ROTINA' ? '#a64dff' : '#4da6ff',
-                                                        fontSize: '10px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700,
-                                                        textTransform: 'uppercase', letterSpacing: '0.06em',
-                                                    }}>
-                                                        {record.tipo_solicitacao === 'ROTINA' ? 'Totem' : 'Recepção'}
+                                                <td className="px-5 py-4">
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-black ${record.tipo_solicitacao === 'ROTINA' ? 'bg-violet-100 text-violet-800' : 'bg-cyan-100 text-cyan-800'}`}>
+                                                        {methodLabel(record.tipo_solicitacao)}
                                                     </span>
                                                 </td>
-                                                {/* Status */}
-                                                <td style={{ padding: '14px 18px' }}>
-                                                    <StatusBadge status={record.status} />
+                                                <td className="px-5 py-4"><StatusBadge status={record.status} /></td>
+                                                <td className="px-5 py-4">
+                                                    <p className="text-sm font-black text-slate-900">{formatDate(record.horario_solicitacao)}</p>
+                                                    <p className="text-xs font-semibold text-slate-500">{formatTime(record.horario_solicitacao)}</p>
                                                 </td>
-                                                {/* Solicitado */}
-                                                <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
-                                                    <p style={{ fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#e0e6ed' }}>{fmtDate(record.horario_solicitacao)}</p>
-                                                    <p style={{ fontSize: '10px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0' }}>{fmtTime(record.horario_solicitacao)}</p>
-                                                </td>
-                                                {/* Liberado */}
-                                                <td style={{ padding: '14px 18px', fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#00e676', whiteSpace: 'nowrap' }}>
-                                                    {fmtTime(record.horario_liberacao)}
-                                                </td>
-                                                {/* Espera */}
-                                                <td style={{ padding: '14px 18px', fontSize: '11px', fontFamily: 'Roboto Mono, monospace', fontWeight: 700, color: '#4da6ff', whiteSpace: 'nowrap' }}>
-                                                    {waitLabel(record.tempo_espera_segundos)}
-                                                </td>
-                                                {/* Detail */}
-                                                <td style={{ padding: '14px 18px' }}>
+                                                <td className="px-5 py-4 text-sm font-black text-emerald-700">{formatTime(record.horario_liberacao)}</td>
+                                                <td className="px-5 py-4 text-sm font-black text-blue-700">{waitLabel(record.tempo_espera_segundos)}</td>
+                                                <td className="px-5 py-4">
                                                     <button
+                                                        type="button"
                                                         onClick={() => setDetailRecord(record)}
-                                                        className="ph-btn-icon"
-                                                        style={{
-                                                            width: 32, height: 32, borderRadius: '7px',
-                                                            border: '1px solid rgba(255,255,255,0.08)',
-                                                            background: 'transparent', cursor: 'pointer',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            color: 'rgba(136,146,176,0.5)', transition: 'all 0.2s',
-                                                        }}
+                                                        className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                                                        title="Ver detalhes"
                                                     >
-                                                        <Eye size={14} />
+                                                        <Eye className="h-4 w-4" />
                                                     </button>
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
-
-                                {paginated.length === 0 && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '72px 24px' }}>
-                                        <div style={{
-                                            width: 56, height: 56, borderRadius: '50%',
-                                            border: '2px solid rgba(77,166,255,0.3)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px',
-                                            animation: 'pulseDot 2s ease-in-out infinite',
-                                        }}>
-                                            <Search size={24} color="rgba(77,166,255,0.5)" />
-                                        </div>
-                                        <p style={{ fontFamily: 'Roboto Mono, monospace', fontSize: '12px', fontWeight: 700, color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nenhum Registro Encontrado</p>
-                                        <p style={{ fontSize: '11px', color: 'rgba(136,146,176,0.5)', marginTop: '6px' }}>Ajuste os filtros ou o período selecionado.</p>
-                                    </div>
-                                )}
                             </div>
 
-                            {/* Pagination */}
-                            <div style={{
-                                padding: '14px 20px', borderTop: '1px solid rgba(77,166,255,0.12)',
-                                background: 'rgba(255,255,255,0.02)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            }}>
-                                <span style={{ fontSize: '10px', fontFamily: 'Roboto Mono, monospace', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                    {filtered.length} registro{filtered.length !== 1 ? 's' : ''} · Página {page + 1} de {Math.max(totalPages, 1)}
-                                </span>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                            {paginated.length === 0 && (
+                                <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                                        <Search className="h-8 w-8" />
+                                    </div>
+                                    <h3 className="mt-4 text-lg font-black text-slate-900">Nenhum registro encontrado</h3>
+                                    <p className="mt-2 max-w-md text-sm font-medium text-slate-500">Nao ha retiradas para o periodo e filtros selecionados.</p>
+                                </div>
+                            )}
+
+                            <div className="no-print flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm font-bold text-slate-600">
+                                    Pagina {safePage + 1} de {totalPages} · {filtered.length} registro{filtered.length === 1 ? '' : 's'}
+                                </p>
+                                <div className="flex gap-2">
                                     <button
-                                        disabled={page === 0}
-                                        onClick={() => setPage(p => p - 1)}
-                                        className="ph-filter-btn"
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '5px',
-                                            padding: '6px 12px', borderRadius: '6px',
-                                            border: '1px solid rgba(255,215,0,0.2)', background: 'rgba(255,255,255,0.03)',
-                                            color: page === 0 ? 'rgba(136,146,176,0.3)' : '#8892b0',
-                                            fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                            cursor: page === 0 ? 'default' : 'pointer',
-                                            transition: 'all 0.2s',
-                                        }}
+                                        type="button"
+                                        disabled={safePage === 0}
+                                        onClick={() => setPage(current => Math.max(current - 1, 0))}
+                                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
-                                        <ArrowLeft size={13} /> Anterior
+                                        <ArrowLeft className="h-4 w-4" />
+                                        Anterior
                                     </button>
                                     <button
-                                        disabled={page >= totalPages - 1}
-                                        onClick={() => setPage(p => p + 1)}
-                                        className="ph-filter-btn"
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '5px',
-                                            padding: '6px 12px', borderRadius: '6px',
-                                            border: '1px solid rgba(255,215,0,0.2)', background: 'rgba(255,255,255,0.03)',
-                                            color: page >= totalPages - 1 ? 'rgba(136,146,176,0.3)' : '#8892b0',
-                                            fontFamily: 'Roboto Mono, monospace', fontSize: '10px', fontWeight: 700,
-                                            cursor: page >= totalPages - 1 ? 'default' : 'pointer',
-                                            transition: 'all 0.2s',
-                                        }}
+                                        type="button"
+                                        disabled={safePage >= totalPages - 1}
+                                        onClick={() => setPage(current => Math.min(current + 1, totalPages - 1))}
+                                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
-                                        Próxima <ArrowRight size={13} />
+                                        Proxima
+                                        <ArrowRight className="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </section>
                     </>
+                )}
+
+                {view === 'analysis' && (
+                    <section className="grid gap-5 lg:grid-cols-2">
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Distribuicao</p>
+                                    <h2 className="text-lg font-black text-slate-950">Retiradas por horario</h2>
+                                </div>
+                                <Clock3 className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <MiniBars data={analytics.byHour} color="#2563eb" />
+                        </div>
+
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Status</p>
+                                    <h2 className="text-lg font-black text-slate-950">Composicao do periodo</h2>
+                                </div>
+                                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div className="space-y-3">
+                                {analytics.byStatus.length > 0 ? analytics.byStatus.map(item => (
+                                    <div key={item.label}>
+                                        <div className="flex items-center justify-between text-sm font-bold">
+                                            <span className="text-slate-700">{item.label}</span>
+                                            <span className="text-slate-950">{item.value}</span>
+                                        </div>
+                                        <div className="mt-2 h-3 rounded-full bg-slate-100">
+                                            <div className="h-3 rounded-full bg-emerald-500" style={{ width: `${analytics.total ? (item.value / analytics.total) * 100 : 0}%` }} />
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-sm font-bold text-slate-500">Sem dados para analisar.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Alunos</p>
+                                    <h2 className="text-lg font-black text-slate-950">Mais retirados</h2>
+                                </div>
+                                <Users className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <RankingList rows={analytics.topStudents} empty="Sem alunos no periodo." />
+                        </div>
+
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Responsaveis</p>
+                                    <h2 className="text-lg font-black text-slate-950">Mais frequentes</h2>
+                                </div>
+                                <Users className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <RankingList rows={analytics.topGuardians} empty="Sem responsaveis no periodo." />
+                        </div>
+
+                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-5 shadow-sm lg:col-span-2">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="mt-1 h-6 w-6 text-rose-700" />
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-wide text-rose-700">Auditoria operacional</p>
+                                        <h2 className="text-lg font-black text-rose-950">Cancelamentos e alertas</h2>
+                                        <p className="mt-1 text-sm font-semibold text-rose-800">
+                                            {analytics.cancelled === 0
+                                                ? 'Nenhum cancelamento registrado no periodo.'
+                                                : `${analytics.cancelled} registro(s) cancelado(s) no periodo selecionado.`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { setView('records'); setStatusFilter('CANCELADO'); setPage(0); }}
+                                    className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-bold text-white hover:bg-rose-800"
+                                >
+                                    Ver cancelamentos
+                                </button>
+                            </div>
+                        </div>
+                    </section>
                 )}
             </main>
 
-            {/* Detail Modal */}
-            {detailRecord && <RecordDetail record={detailRecord} onClose={() => setDetailRecord(null)} />}
+            {detailRecord && <DetailModal record={detailRecord} onClose={() => setDetailRecord(null)} />}
+        </div>
+    );
+}
+
+function RankingList({ rows, empty }: { rows: { name: string; sub: string; count: number }[]; empty: string }) {
+    const top = rows[0]?.count || 1;
+
+    if (rows.length === 0) {
+        return <p className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-sm font-bold text-slate-500">{empty}</p>;
+    }
+
+    return (
+        <div className="space-y-4">
+            {rows.map((row, index) => (
+                <div key={`${row.name}-${index}`} className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">
+                        {index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                            <p className="truncate text-sm font-black text-slate-950">{row.name}</p>
+                            <span className="text-sm font-black text-blue-700">{row.count}x</span>
+                        </div>
+                        <p className="truncate text-xs font-semibold text-slate-500">{row.sub}</p>
+                        <div className="mt-2 h-2 rounded-full bg-slate-100">
+                            <div className="h-2 rounded-full bg-blue-600" style={{ width: `${(row.count / top) * 100}%` }} />
+                        </div>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
