@@ -60,7 +60,7 @@ const T = {
 function buildStats(s: DashboardStats) {
     return [
         { label: 'Total de Alunos',  value: String(s.total_students),      sub: 'matrículas ativas',   Icon: Users,      accent: T.rust },
-        { label: 'Funcionários',     value: String(s.total_staff),          sub: 'usuários ativos',     Icon: UserPlus,   accent: T.navy },
+        { label: 'Usuários',         value: String(s.total_staff),          sub: 'contas ativas',       Icon: UserPlus,   accent: T.navy },
         { label: 'Retiradas Hoje',   value: String(s.total_pickups_today),  sub: 'movimentos no dia',   Icon: TrendingUp, accent: T.teal },
         { label: 'Tempo Médio',      value: s.avg_pickup_time,              sub: 'por atendimento',     Icon: Clock,      accent: T.gold },
     ];

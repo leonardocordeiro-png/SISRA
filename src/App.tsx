@@ -30,7 +30,6 @@ const PickupHistory         = lazy(() => import('./pages/admin/PickupHistory'));
 const DataExportCenter      = lazy(() => import('./pages/admin/DataExportCenter'));
 const UserManagement        = lazy(() => import('./pages/admin/UserManagement'));
 const ClassroomManagement   = lazy(() => import('./pages/admin/ClassroomManagement'));
-const ManageStaff           = lazy(() => import('./pages/admin/ManageStaff'));
 const AddGuardian           = lazy(() => import('./pages/admin/AddGuardian'));
 const StudentRegistration   = lazy(() => import('./pages/admin/StudentRegistration'));
 const SystemSettings        = lazy(() => import('./pages/admin/SystemSettings'));
@@ -263,7 +262,7 @@ function App() {
                 } />
                 <Route path="/admin/staff" element={
                   <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
-                    <ManageStaff />
+                    <Navigate to="/admin/usuarios" replace />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/guardians/add" element={

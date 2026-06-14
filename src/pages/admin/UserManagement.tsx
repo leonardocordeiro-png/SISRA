@@ -343,15 +343,15 @@ export default function UserManagement() {
 
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Gerenciar Usuarios</h1>
-                    <p className="text-slate-500">Controle de acesso, credenciais e permissoes da escola</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Usuarios e Equipe</h1>
+                    <p className="text-slate-500">Controle real de funcionarios, credenciais, perfis e permissoes da escola.</p>
                 </div>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition-colors hover:bg-slate-800"
                 >
                     <Plus className="h-5 w-5" />
-                    Novo Usuario
+                    Novo Usuario da Equipe
                 </button>
             </div>
 

@@ -528,7 +528,7 @@ export default function AdminDashboard() {
                 }}>
                     {[
                         { icon: FileText,   label: 'Histórico',    path: '/admin/historico-retiradas' },
-                        { icon: UserCheck,  label: 'Funcionários', path: '/admin/staff' },
+                        { icon: UserCheck,  label: 'Usuários',      path: '/admin/usuarios' },
                         { icon: TrendingUp, label: 'Relatórios',   path: '/admin/exportar-dados' },
                     ].map((item, i) => (
                         <button
