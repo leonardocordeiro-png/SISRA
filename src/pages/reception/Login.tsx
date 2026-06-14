@@ -63,7 +63,7 @@ export default function ReceptionLogin() {
                 // Verify role
                 const { data: userData, error: userError } = await supabase
                     .from('usuarios')
-                    .select('tipo_usuario, ativo')
+                    .select('tipo_usuario, ativo, escola_id')
                     .eq('id', data.user.id)
                     .is('excluido_em', null)
                     .maybeSingle();
@@ -71,18 +71,18 @@ export default function ReceptionLogin() {
                 if (userError) throw userError;
 
                 if (!userData || userData.ativo === false) {
+                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado', portal: 'RECEPCAO' }, data.user.id, userData?.escola_id);
                     await supabase.auth.signOut();
-                    logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado', portal: 'RECEPCAO' });
                     throw new Error('Usuario bloqueado. Contate a administracao.');
                 }
 
                 if (userData.tipo_usuario !== 'RECEPCIONISTA' && userData.tipo_usuario !== 'ADMIN' && userData.tipo_usuario !== 'COORDENADOR') {
+                    await logAudit('ACESSO_NEGADO', 'usuarios', data.user.id, { email, motivo: 'Perfil sem permissão de acesso ao terminal de recepção', perfil: userData.tipo_usuario, portal: 'RECEPCAO' }, data.user.id, userData.escola_id);
                     await supabase.auth.signOut();
-                    logAudit('ACESSO_NEGADO', 'usuarios', data.user.id, { email, motivo: 'Perfil sem permissão de acesso ao terminal de recepção', perfil: userData.tipo_usuario, portal: 'RECEPCAO' });
                     throw new Error('Acesso não autorizado para este perfil.');
                 }
 
-                logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: userData.tipo_usuario, portal: 'RECEPCAO' }, data.user.id);
+                await logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: userData.tipo_usuario, portal: 'RECEPCAO' }, data.user.id, userData.escola_id);
                 navigate('/recepcao/busca');
             }
         } catch (err: any) {

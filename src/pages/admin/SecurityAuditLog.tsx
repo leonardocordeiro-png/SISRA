@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import {
@@ -17,7 +17,7 @@ type AuditLog = {
     id: string;
     usuario_id: string | null;
     acao: string;
-    detalhes: any;
+    detalhes: Record<string, unknown> | null;
     descricao?: string;
     tabela_afetada?: string;
     registro_id?: string;
@@ -26,6 +26,12 @@ type AuditLog = {
     criado_em: string;
     escola_id?: string;
     usuario?: { nome: string; email: string } | null;
+};
+
+type AuditRpcResponse = {
+    logs?: AuditLog[];
+    total_count?: number;
+    tab_counts?: Record<string, number>;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -41,18 +47,6 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
-
-const TAB_FILTERS: Record<TabId, string[]> = {
-    all:         [],
-    auth:        ['LOGIN_SUCESSO', 'LOGIN_FALHA', 'SISTEMA_LOGIN', 'SISTEMA_LOGOUT', 'ACESSO_NEGADO'],
-    data:        ['CADASTRO_ESTUDANTE', 'EDICAO_ESTUDANTE', 'EXCLUSAO_ESTUDANTE', 'EXCLUSAO_ESTUDANTE_MASSA',
-                  'EXCLUSAO_USUARIO', 'CADASTRO_RESPONSAVEL', 'REMANEJAMENTO_TURMA', 'LIMPEZA_REGISTROS',
-                  'GERACAO_LINK_ACESSO', 'EXPORTACAO_DADOS', 'ANALISE'],
-    withdrawals: ['SOLICITACAO_RETIRADA', 'CONFIRMACAO_ENTREGA'],
-    qr:          ['GERACAO_CARTAO_QR', 'GERACAO_RELATORIO'],
-    system:      ['ALTERACAO_CONFIGURACAO', 'MANUTENCAO', 'MANIPULACAO_DADOS', 'ASSINATURA_DIARIA'],
-    alerts:      ['LOGIN_FALHA', 'ACESSO_NEGADO', 'EXCLUSAO_ESTUDANTE_MASSA', 'LIMPEZA_REGISTROS'],
-};
 
 const PAGINATION_OPTIONS = [20, 40, 60, 80, 100];
 
@@ -110,31 +104,38 @@ function getEventIcon(acao: string) {
     }
 }
 
+function detailText(details: Record<string, unknown>, key: string, fallback = '—'): string {
+    const value = details[key];
+    if (value === null || value === undefined || value === '') return fallback;
+    return String(value);
+}
+
 function describeLog(log: AuditLog): string {
     const d = log.detalhes;
     if (!d) return 'Ação registrada via sistema.';
     switch (log.acao) {
-        case 'CADASTRO_ESTUDANTE': return `Cadastrou aluno: ${d.nome || '—'} (${d.turma || '—'})`;
-        case 'EDICAO_ESTUDANTE': return `Editou aluno: ${d.nome || '—'} (${d.turma || '—'})`;
-        case 'EXCLUSAO_ESTUDANTE': return `Removeu aluno: ${d.nome || '—'} (Matrícula: ${d.matricula || '—'})`;
-        case 'EXCLUSAO_ESTUDANTE_MASSA': return `Removeu ${d.quantidade || '?'} alunos em massa.`;
-        case 'LIMPEZA_REGISTROS': return `Limpeza de banco: ${d.alunos_removidos ?? '?'} alunos removidos.`;
-        case 'REMANEJAMENTO_TURMA': return `Moveu ${d.nome || '—'} de ${d.turma_anterior || '—'} → ${d.turma_nova || '—'}.`;
-        case 'GERACAO_LINK_ACESSO': return `Gerou link mágico para ${d.aluno_nome || '—'}.`;
-        case 'GERACAO_CARTAO_QR': return `Cartão QR ${d.acao === 'REATIVACAO' ? 'reativado' : 'gerado'} para ${d.responsavel_nome || '—'}.`;
-        case 'GERACAO_RELATORIO': return `Relatório gerado: ${d.tipo || '—'} (${d.total_registros ?? '?'} registros).`;
-        case 'SOLICITACAO_RETIRADA': return `Retirada: ${d.aluno_nome || '—'} por ${d.responsavel_nome || 'responsável'} via ${d.tipo || '—'}.`;
-        case 'CONFIRMACAO_ENTREGA': return `Entrega confirmada: ${d.aluno_nome || '—'} retirado por ${d.responsavel_nome || '—'}.`;
-        case 'LOGIN_SUCESSO': case 'SISTEMA_LOGIN': return `Login: ${d.email || '—'} (${d.portal || d.role || 'ADMIN'})`;
-        case 'LOGIN_FALHA': return `Falha de login: ${d.motivo || '—'} — ${d.email || '—'} (${d.portal || 'ADMIN'})`;
-        case 'ACESSO_NEGADO': return `Acesso negado: ${d.email || '—'} — Perfil: ${d.perfil || '—'} (${d.portal || '—'})`;
-        case 'SISTEMA_LOGOUT': return `Logout: ${d.email || '—'}`;
-        case 'CADASTRO_RESPONSAVEL': return `Responsável: ${d.nome || '—'} cadastrado.`;
-        case 'EXPORTACAO_DADOS': case 'ANALISE': return d.message || d.motivo || `Análise/exportação: ${d.tipo || 'dados'}.`;
-        case 'ALTERACAO_CONFIGURACAO': return `Configuração alterada: ${d.campo || d.message || '—'}`;
-        case 'EXCLUSAO_USUARIO': return `Usuário removido: ${d.nome || '—'} (${d.email || '—'})`;
-        case 'ASSINATURA_DIARIA': return `Assinatura diária: turma ${d.turma || '—'} (${d.total_alunos ?? '?'} alunos presentes)`;
-        default: return d.message || d.motivo || log.descricao || 'Ação registrada.';
+        case 'CADASTRO_ESTUDANTE': return `Cadastrou aluno: ${detailText(d, 'nome')} (${detailText(d, 'turma')})`;
+        case 'EDICAO_ESTUDANTE': return `Editou aluno: ${detailText(d, 'nome')} (${detailText(d, 'turma')})`;
+        case 'EXCLUSAO_ESTUDANTE': return `Removeu aluno: ${detailText(d, 'nome')} (Matrícula: ${detailText(d, 'matricula')})`;
+        case 'EXCLUSAO_ESTUDANTE_MASSA': return `Removeu ${detailText(d, 'quantidade', '?')} alunos em massa.`;
+        case 'LIMPEZA_REGISTROS': return `Limpeza de banco: ${detailText(d, 'alunos_removidos', '?')} alunos removidos.`;
+        case 'REMANEJAMENTO_TURMA': return `Moveu ${detailText(d, 'nome')} de ${detailText(d, 'turma_anterior')} para ${detailText(d, 'turma_nova')}.`;
+        case 'GERACAO_LINK_ACESSO': return `Gerou link mágico para ${detailText(d, 'aluno_nome')}.`;
+        case 'GERACAO_CARTAO_QR': return `Cartão QR ${d.acao === 'REATIVACAO' ? 'reativado' : 'gerado'} para ${detailText(d, 'responsavel_nome')}.`;
+        case 'GERACAO_RELATORIO': return `Relatório gerado: ${detailText(d, 'tipo')} (${detailText(d, 'total_registros', '?')} registros).`;
+        case 'SOLICITACAO_RETIRADA': return `Retirada: ${detailText(d, 'aluno_nome')} por ${detailText(d, 'responsavel_nome', 'responsável')} via ${detailText(d, 'tipo')}.`;
+        case 'CONFIRMACAO_ENTREGA': return `Entrega confirmada: ${detailText(d, 'aluno_nome')} retirado por ${detailText(d, 'responsavel_nome')}.`;
+        case 'LOGIN_SUCESSO': case 'SISTEMA_LOGIN': return `Login: ${detailText(d, 'email')} (${detailText(d, 'portal', detailText(d, 'role', 'ADMIN'))})`;
+        case 'LOGIN_FALHA': return `Falha de login: ${detailText(d, 'motivo')} - ${detailText(d, 'email')} (${detailText(d, 'portal', 'ADMIN')})`;
+        case 'ACESSO_NEGADO': return `Acesso negado: ${detailText(d, 'email')} - Perfil: ${detailText(d, 'perfil')} (${detailText(d, 'portal')})`;
+        case 'SISTEMA_LOGOUT': return `Logout: ${detailText(d, 'email')}`;
+        case 'CADASTRO_RESPONSAVEL': return `Responsável: ${detailText(d, 'nome')} cadastrado.`;
+        case 'EXPORTACAO_DADOS': case 'ANALISE': return detailText(d, 'message', detailText(d, 'motivo', `Análise/exportação: ${detailText(d, 'tipo', 'dados')}.`));
+        case 'IMPORTACAO_FOTOS_LOTE': return `Importação de fotos em lote: ${detailText(d, 'registros', detailText(d, 'total', '?'))} registro(s).`;
+        case 'ALTERACAO_CONFIGURACAO': return `Configuração alterada: ${detailText(d, 'campo', detailText(d, 'message'))}`;
+        case 'EXCLUSAO_USUARIO': return `Usuário removido: ${detailText(d, 'nome')} (${detailText(d, 'email')})`;
+        case 'ASSINATURA_DIARIA': return `Assinatura diária: turma ${detailText(d, 'turma')} (${detailText(d, 'total_alunos', '?')} alunos presentes)`;
+        default: return detailText(d, 'message', detailText(d, 'motivo', log.descricao || 'Ação registrada.'));
     }
 }
 
@@ -172,9 +173,10 @@ function exportToCSV(logs: AuditLog[], tabLabel: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SecurityAuditLog() {
-    const { escolaId } = useAuth();
+    const { user, escolaId } = useAuth();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<TabId>('all');
     const [error, setError] = useState<string | null>(null);
@@ -200,80 +202,59 @@ export default function SecurityAuditLog() {
 
     const totalPages = Math.ceil(totalCount / pageSize);
 
+    const buildDateParams = useCallback(() => {
+        const from = dateFrom ? new Date(`${dateFrom}T00:00:00`).toISOString() : null;
+        const to = dateTo ? new Date(`${dateTo}T23:59:59.999`).toISOString() : null;
+        return { from, to };
+    }, [dateFrom, dateTo]);
+
     const fetchLogs = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         else setIsRefreshing(true);
         setError(null);
 
         try {
-            let query = supabase
-                .from('logs_auditoria')
-                .select('*, usuario:usuarios(nome, email)', { count: 'exact' });
-
-            if (escolaId) query = query.eq('escola_id', escolaId);
-
-            const tabActions = TAB_FILTERS[activeTab];
-            if (tabActions.length > 0) {
-                query = query.in('acao', tabActions);
+            if (!escolaId) {
+                setLogs([]);
+                setTotalCount(0);
+                setTabCounts({});
+                setError('Escola não identificada. Entre novamente para carregar a auditoria.');
+                return;
             }
 
-            if (searchTerm.trim()) {
-                const safeTerm = searchTerm.trim().replace(/[%_\\]/g, '\\$&').slice(0, 100);
-                query = query.or(`acao.ilike.%${safeTerm}%,tabela_afetada.ilike.%${safeTerm}%,ip_address.ilike.%${safeTerm}%`);
-            }
-
-            if (dateFrom) query = query.gte('criado_em', new Date(dateFrom).toISOString());
-            if (dateTo) {
-                const to = new Date(dateTo);
-                to.setHours(23, 59, 59, 999);
-                query = query.lte('criado_em', to.toISOString());
-            }
+            const dateParams = buildDateParams();
 
             const from = (currentPage - 1) * pageSize;
-            const to = from + pageSize - 1;
-
-            const { data, error: fetchError, count } = await query
-                .order('criado_em', { ascending: false })
-                .range(from, to);
+            const { data, error: fetchError } = await supabase.rpc('sisra_get_security_audit_logs', {
+                p_escola_id: escolaId,
+                p_tab: activeTab,
+                p_search: searchTerm.trim(),
+                p_date_from: dateParams.from,
+                p_date_to: dateParams.to,
+                p_limit: pageSize,
+                p_offset: from,
+            });
 
             if (fetchError) throw fetchError;
-            setLogs(data || []);
-            setTotalCount(count || 0);
+            const payload = (data || {}) as AuditRpcResponse;
+            setLogs(Array.isArray(payload.logs) ? payload.logs : []);
+            setTotalCount(payload.total_count || 0);
+            setTabCounts(payload.tab_counts || {});
             setLastRefresh(new Date());
         } catch (err: any) {
+            console.error('Error loading security audit logs:', err);
             if (!silent) {
                 setError(err.code === '42501'
-                    ? 'Permissão negada (RLS). Verifique as políticas de segurança do banco de dados.'
+                    ? 'Permissão negada. Verifique seu perfil administrativo e a escola vinculada.'
                     : 'Erro ao carregar registros de auditoria.');
             }
         } finally {
             setLoading(false);
             setIsRefreshing(false);
         }
-    }, [activeTab, searchTerm, currentPage, pageSize, dateFrom, dateTo, escolaId]);
-
-    const fetchTabCounts = useCallback(async () => {
-        try {
-            const results: Record<string, number> = {};
-            await Promise.all(
-                TABS.filter(t => t.id !== 'all').map(async tab => {
-                    const actions = TAB_FILTERS[tab.id];
-                    if (actions.length === 0) return;
-                    let cq = supabase
-                        .from('logs_auditoria')
-                        .select('id', { count: 'exact', head: true })
-                        .in('acao', actions);
-                    if (escolaId) cq = cq.eq('escola_id', escolaId);
-                    const { count } = await cq;
-                    results[tab.id] = count || 0;
-                })
-            );
-            setTabCounts(results);
-        } catch { /* silent */ }
-    }, [escolaId]);
+    }, [activeTab, searchTerm, currentPage, pageSize, escolaId, buildDateParams]);
 
     useEffect(() => { fetchLogs(); }, [fetchLogs]);
-    useEffect(() => { fetchTabCounts(); }, [fetchTabCounts]);
 
     useEffect(() => {
         if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
@@ -285,15 +266,45 @@ export default function SecurityAuditLog() {
 
     useEffect(() => { setCurrentPage(1); }, [activeTab, searchTerm, dateFrom, dateTo]);
 
-    const handleExportCSV = () => {
+    const handleExportCSV = async () => {
+        if (!escolaId || exporting) return;
+
         const tab = TABS.find(t => t.id === activeTab);
         const label = tab?.label || 'todos';
-        logAudit('GERACAO_RELATORIO', 'logs_auditoria', undefined, {
-            tipo: `CSV - Auditoria: ${label}`,
-            total_registros: totalCount,
-            filtros: { tab: activeTab, searchTerm, dateFrom, dateTo }
-        });
-        exportToCSV(logs, label);
+        setExporting(true);
+
+        try {
+            const dateParams = buildDateParams();
+            const { data, error: exportError } = await supabase.rpc('sisra_get_security_audit_logs', {
+                p_escola_id: escolaId,
+                p_tab: activeTab,
+                p_search: searchTerm.trim(),
+                p_date_from: dateParams.from,
+                p_date_to: dateParams.to,
+                p_limit: Math.min(Math.max(totalCount || logs.length, pageSize), 5000),
+                p_offset: 0,
+            });
+
+            if (exportError) throw exportError;
+
+            const payload = (data || {}) as AuditRpcResponse;
+            const exportRows = Array.isArray(payload.logs) ? payload.logs : logs;
+
+            await logAudit('GERACAO_RELATORIO', 'logs_auditoria', undefined, {
+                tipo: `CSV - Auditoria: ${label}`,
+                total_registros: exportRows.length,
+                total_filtrado: totalCount,
+                limite_exportacao: 5000,
+                filtros: { tab: activeTab, searchTerm, dateFrom, dateTo }
+            }, user?.id, escolaId);
+
+            exportToCSV(exportRows, label);
+        } catch (err) {
+            console.error('Error exporting security audit logs:', err);
+            setError('Erro ao exportar auditoria. Tente novamente.');
+        } finally {
+            setExporting(false);
+        }
     };
 
     // ─── Loading State ──────────────────────────────────────────────────────
@@ -491,12 +502,12 @@ export default function SecurityAuditLog() {
                         {/* Export CSV */}
                         <button
                             onClick={handleExportCSV}
-                            disabled={logs.length === 0}
+                            disabled={logs.length === 0 || exporting}
                             title={`Exportar ${activeTabInfo.label} para CSV`}
                             className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex-shrink-0"
                         >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>CSV</span>
+                            {exporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                            <span>{exporting ? 'Gerando' : 'CSV'}</span>
                         </button>
                     </div>
 
@@ -526,9 +537,8 @@ export default function SecurityAuditLog() {
                                     const isExpanded = expandedRow === log.id;
                                     const hasDetails = log.detalhes && Object.keys(log.detalhes).length > 0;
                                     return (
-                                        <>
+                                        <Fragment key={log.id}>
                                             <tr
-                                                key={log.id}
                                                 className={`transition-colors ${isExpanded ? 'bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/30'}`}
                                             >
                                                 {/* Expand */}
@@ -592,7 +602,7 @@ export default function SecurityAuditLog() {
 
                                             {/* Expanded details */}
                                             {isExpanded && hasDetails && (
-                                                <tr key={`${log.id}-expanded`} className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-700">
+                                                <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-700">
                                                     <td colSpan={6} className="px-8 py-4">
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Dados Detalhados do Evento</p>
                                                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mb-3">
@@ -619,7 +629,7 @@ export default function SecurityAuditLog() {
                                                     </td>
                                                 </tr>
                                             )}
-                                        </>
+                                        </Fragment>
                                     );
                                 })}
                             </tbody>

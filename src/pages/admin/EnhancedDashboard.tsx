@@ -68,7 +68,7 @@ function buildStats(s: DashboardStats) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function EnhancedAdminDashboard() {
-    const { user, signOut } = useAuth();
+    const { user, signOut, escolaId } = useAuth();
     const navigate = useNavigate();
 
     const [stats, setStats] = useState<DashboardStats>({
@@ -90,10 +90,10 @@ export default function EnhancedAdminDashboard() {
         }
         if (!user) { navigate('/admin/login'); return; }
         fetchDashboardData();
-        logAudit('SISTEMA_LOGIN', undefined, undefined, { modulo: 'ADMIN_DASHBOARD_V2' });
+        logAudit('SISTEMA_LOGIN', 'usuarios', user.id, { modulo: 'ADMIN_DASHBOARD_V2', email: user.email }, user.id, escolaId || undefined);
         const t = setTimeout(() => setVisible(true), 80);
         return () => clearTimeout(t);
-    }, [user]);
+    }, [user, escolaId, navigate]);
 
     const fetchDashboardData = async () => {
         try {
@@ -207,7 +207,7 @@ export default function EnhancedAdminDashboard() {
                         }}>{user?.email}</span>
                         <button
                             onClick={async () => {
-                                logAudit('SISTEMA_LOGOUT', undefined, undefined, { modulo: 'ADMIN_DASHBOARD_V2' });
+                                logAudit('SISTEMA_LOGOUT', 'usuarios', user?.id, { modulo: 'ADMIN_DASHBOARD_V2', email: user?.email }, user?.id, escolaId || undefined);
                                 await signOut();
                             }}
                             style={{

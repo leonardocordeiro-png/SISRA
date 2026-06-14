@@ -188,7 +188,7 @@ function DeckItem({ icon: Icon, label, path }: { icon: any; label: string; path:
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-    const { signOut } = useAuth();
+    const { user, signOut, escolaId } = useAuth();
     const navigate    = useNavigate();
     const [mounted, setMounted] = useState(false);
     const [stats, setStats] = useState({
@@ -310,13 +310,15 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchStats();
-        logAudit('SISTEMA_LOGIN', undefined, undefined, { modulo: 'ADMIN_DASHBOARD_V2' });
+        if (user) {
+            logAudit('SISTEMA_LOGIN', 'usuarios', user.id, { modulo: 'ADMIN_DASHBOARD_V2', email: user.email }, user.id, escolaId || undefined);
+        }
         const interval = setInterval(fetchStats, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [user, escolaId]);
 
     const handleLogout = async () => {
-        logAudit('SISTEMA_LOGOUT', undefined, undefined, { modulo: 'ADMIN_DASHBOARD_V2' });
+        logAudit('SISTEMA_LOGOUT', 'usuarios', user?.id, { modulo: 'ADMIN_DASHBOARD_V2', email: user?.email }, user?.id, escolaId || undefined);
         await signOut();
         navigate('/admin/login');
     };

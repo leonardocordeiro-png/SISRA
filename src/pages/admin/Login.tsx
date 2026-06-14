@@ -73,7 +73,7 @@ export default function AdminLogin() {
             if (data.user) {
                 const { data: userData, error: userError } = await supabase
                     .from('usuarios')
-                    .select('tipo_usuario, ativo')
+                    .select('tipo_usuario, ativo, escola_id')
                     .eq('id', data.user.id)
                     .is('excluido_em', null)
                     .maybeSingle();
@@ -81,18 +81,18 @@ export default function AdminLogin() {
                 if (userError) throw userError;
 
                 if (!userData || userData.ativo === false) {
+                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado' }, data.user.id, userData?.escola_id);
                     await supabase.auth.signOut();
-                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado' });
                     throw new Error('Usuario bloqueado. Contate a administracao.');
                 }
 
                 if (userData.tipo_usuario !== 'ADMIN') {
+                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Acesso negado: Não é administrador' }, data.user.id, userData.escola_id);
                     await supabase.auth.signOut();
-                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Acesso negado: Não é administrador' });
                     throw new Error('Acesso exclusivo para administradores.');
                 }
 
-                await logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: 'ADMIN' }, data.user.id);
+                await logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: 'ADMIN' }, data.user.id, userData.escola_id);
                 navigate('/admin/dashboard');
             }
         } catch (err: any) {

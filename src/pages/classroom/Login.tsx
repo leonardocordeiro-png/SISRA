@@ -68,7 +68,7 @@ export default function ClassroomLogin() {
                 // Verify role
                 const { data: userData, error: userError } = await supabase
                     .from('usuarios')
-                    .select('tipo_usuario, turma_atribuida, ativo')
+                    .select('tipo_usuario, turma_atribuida, ativo, escola_id')
                     .eq('id', data.user.id)
                     .is('excluido_em', null)
                     .maybeSingle();
@@ -76,18 +76,18 @@ export default function ClassroomLogin() {
                 if (userError) throw userError;
 
                 if (!userData || userData.ativo === false) {
+                    await logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado', portal: 'SALA' }, data.user.id, userData?.escola_id);
                     await supabase.auth.signOut();
-                    logAudit('LOGIN_FALHA', 'usuarios', data.user.id, { email, motivo: 'Usuario bloqueado', portal: 'SALA' });
                     throw new Error('Usuario bloqueado. Contate a administracao.');
                 }
 
                 if (userData.tipo_usuario !== 'SCT' && userData.tipo_usuario !== 'ADMIN' && userData.tipo_usuario !== 'COORDENADOR') {
+                    await logAudit('ACESSO_NEGADO', 'usuarios', data.user.id, { email, motivo: 'Perfil sem permissão de acesso ao portal de sala', perfil: userData.tipo_usuario, portal: 'SALA' }, data.user.id, userData.escola_id);
                     await supabase.auth.signOut();
-                    logAudit('ACESSO_NEGADO', 'usuarios', data.user.id, { email, motivo: 'Perfil sem permissão de acesso ao portal de sala', perfil: userData.tipo_usuario, portal: 'SALA' });
                     throw new Error('Acesso restrito para SCTs.');
                 }
 
-                logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: userData.tipo_usuario, turma: userData.turma_atribuida, portal: 'SALA' }, data.user.id);
+                await logAudit('LOGIN_SUCESSO', 'usuarios', data.user.id, { email, role: userData.tipo_usuario, turma: userData.turma_atribuida, portal: 'SALA' }, data.user.id, userData.escola_id);
                 navigate('/sala/dashboard');
             }
         } catch (err: any) {
