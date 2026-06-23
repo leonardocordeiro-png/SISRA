@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, ArrowRight, ArrowLeft, Upload, Info, X, Check, Save, Phone, CreditCard, Users, Plus, Edit2, Trash2, Camera, Loader2 } from 'lucide-react';
+import { User, ArrowRight, ArrowLeft, Upload, Info, X, Check, Save, Phone, CreditCard, Users, Plus, Edit2, Trash2, Camera, Loader2, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NavigationControls from '../../components/NavigationControls';
 import CameraCapture from '../../components/admin/CameraCapture';
 import { fileToDataUrl } from '../../lib/imageUtils';
 import { useToast } from '../../components/ui/Toast';
+import { supabase } from '../../lib/supabase';
 
 import type { Guardian } from '../../types';
 
@@ -45,6 +46,10 @@ export default function AddGuardian() {
     const [showCamera, setShowCamera] = useState(false);
     const [photoLoading, setPhotoLoading] = useState(false);
 
+    // CPF lookup state
+    const [cpfLookupLoading, setCpfLookupLoading] = useState(false);
+    const [cpfFound, setCpfFound] = useState(false);
+
     useEffect(() => {
         const student = sessionStorage.getItem('temp_student_data');
         if (student) {
@@ -56,6 +61,55 @@ export default function AddGuardian() {
             setGuardians(JSON.parse(gData));
         }
     }, []);
+
+    // Auto-fill guardian data from the database when a valid CPF is typed
+    useEffect(() => {
+        const cleanCpf = formData.cpf.replace(/\D/g, '');
+        setCpfFound(false);
+
+        // Only look up complete, valid CPFs
+        if (cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
+            return;
+        }
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setCpfLookupLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('responsaveis')
+                    .select('nome_completo, telefone, parentesco, foto_url')
+                    .eq('cpf', cleanCpf)
+                    .maybeSingle();
+
+                if (cancelled || error || !data) return;
+
+                setFormData(prev => {
+                    // Don't clobber the CPF the user is typing
+                    if (prev.cpf.replace(/\D/g, '') !== cleanCpf) return prev;
+                    return {
+                        ...prev,
+                        nome_completo: data.nome_completo || prev.nome_completo,
+                        telefone: data.telefone || prev.telefone,
+                        parentesco: data.parentesco || prev.parentesco,
+                        foto_url: data.foto_url || prev.foto_url,
+                    };
+                });
+                setCpfFound(true);
+                toast.info(
+                    'Responsável encontrado',
+                    `${data.nome_completo} já está cadastrado. Os dados foram preenchidos automaticamente.`
+                );
+            } finally {
+                if (!cancelled) setCpfLookupLoading(false);
+            }
+        }, 500);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [formData.cpf]);
 
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -279,12 +333,23 @@ export default function AddGuardian() {
                                                         <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                                         <input
                                                             required
-                                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium"
+                                                            className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium"
                                                             value={formData.cpf}
                                                             onChange={e => setFormData({ ...formData, cpf: e.target.value })}
                                                             placeholder="000.000.000-00"
                                                         />
+                                                        {cpfLookupLoading && (
+                                                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 w-4 h-4 animate-spin" />
+                                                        )}
+                                                        {!cpfLookupLoading && cpfFound && (
+                                                            <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 w-4 h-4" />
+                                                        )}
                                                     </div>
+                                                    {cpfFound && (
+                                                        <p className="mt-1.5 text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                                                            <Check className="w-3 h-3" /> Cadastro encontrado e preenchido
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Vínculo</label>
