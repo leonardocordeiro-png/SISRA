@@ -35,6 +35,7 @@ const StudentRegistration   = lazy(() => import('./pages/admin/StudentRegistrati
 const SystemSettings        = lazy(() => import('./pages/admin/SystemSettings'));
 const StaffLeaderboard      = lazy(() => import('./pages/admin/StaffLeaderboard'));
 const AdminQRGenerator      = lazy(() => import('./pages/admin/QRGenerator'));
+const AutoCadastroQR        = lazy(() => import('./pages/admin/AutoCadastroQR'));
 const MassScheduleUpdate    = lazy(() => import('./pages/admin/MassScheduleUpdate'));
 const SalaManagement        = lazy(() => import('./pages/admin/SalaManagement'));
 
@@ -47,6 +48,7 @@ const LostAndFound          = lazy(() => import('./pages/parent/LostAndFound'));
 const ParentPickupStatus    = lazy(() => import('./pages/parent/PickupStatus'));
 const ParentLogin           = lazy(() => import('./pages/parent/Login'));
 const SelfRegistration      = lazy(() => import('./pages/parent/SelfRegistration'));
+const SelfRegistrationByMatricula = lazy(() => import('./pages/parent/SelfRegistrationByMatricula'));
 
 const SystemStatus          = lazy(() => import('./pages/system/SystemStatus'));
 const ReceptionBoard        = lazy(() => import('./pages/display/ReceptionBoard'));
@@ -159,6 +161,7 @@ function App() {
                 <Route path="/parent/achados-perdidos" element={<LostAndFound />} />
                 <Route path="/parent/status/:id" element={<ParentPickupStatus />} />
                 <Route path="/parent/cadastro/:token" element={<SelfRegistration />} />
+                <Route path="/parent/autocadastro/:escolaId" element={<SelfRegistrationByMatricula />} />
 
                 {/* Reception Routes — Protected */}
                 <Route path="/recepcao/busca" element={
@@ -283,6 +286,11 @@ function App() {
                 <Route path="/admin/cartoes-qr" element={
                   <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
                     <AdminQRGenerator />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/qr-autocadastro" element={
+                  <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login">
+                    <AutoCadastroQR />
                   </ProtectedRoute>
                 } />
 

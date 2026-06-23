@@ -276,6 +276,75 @@ export async function getGuardianQrCard(guardianId: string) {
     }) | null };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-cadastro via QR único da recepção (identifica aluno por matrícula + nascimento)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type AutocadastroStudent = {
+    nome_mascarado: string;
+    turma: string | null;
+};
+
+export async function identifyStudentByMatricula(input: {
+    escolaId: string;
+    matricula: string;
+    dataNascimento: string; // 'YYYY-MM-DD'
+}) {
+    const { data, error } = await supabase.rpc('sisra_autocadastro_identificar_aluno', {
+        p_escola_id: input.escolaId,
+        p_matricula: input.matricula,
+        p_data_nascimento: input.dataNascimento,
+    });
+    if (error) throw error;
+    return (data ?? { student: null }) as {
+        student: AutocadastroStudent | null;
+        error?: 'DADOS_INCOMPLETOS' | 'BLOQUEADO' | 'CADASTRO_INCOMPLETO';
+    };
+}
+
+export async function lookupAutocadastroGuardianByCpf(escolaId: string, cpf: string) {
+    const { data, error } = await supabase.rpc('sisra_autocadastro_guardian_by_cpf', {
+        p_escola_id: escolaId,
+        p_cpf: cpf,
+    });
+    if (error) throw error;
+    return (data ?? { guardian: null }) as { guardian: (PublicGuardian & {
+        cpf?: string;
+        telefone?: string | null;
+        codigo_acesso?: string | null;
+    }) | null };
+}
+
+export async function registerGuardianByMatricula(input: {
+    escolaId: string;
+    matricula: string;
+    dataNascimento: string; // 'YYYY-MM-DD'
+    nome: string;
+    cpf: string;
+    telefone: string;
+    parentesco: string;
+    fotoUrl?: string | null;
+}) {
+    const { data, error } = await supabase.rpc('sisra_autocadastro_register_guardian', {
+        p_escola_id: input.escolaId,
+        p_matricula: input.matricula,
+        p_data_nascimento: input.dataNascimento,
+        p_nome: input.nome,
+        p_cpf: input.cpf,
+        p_telefone: input.telefone,
+        p_parentesco: input.parentesco,
+        p_foto_url: input.fotoUrl ?? null,
+    });
+    if (error) throw error;
+    return (data ?? { guardian: null }) as { guardian: (PublicGuardian & {
+        cpf: string;
+        telefone: string | null;
+        codigo_acesso: string | null;
+        qr_code: string;
+        expires_at: string;
+    }) | null };
+}
+
 export type PublicSchoolProfile = {
     id?: string;
     nome?: string;
