@@ -85,19 +85,25 @@ export default function AddGuardian() {
                 // Note: `parentesco` is a per-link attribute (it lives on the
                 // student↔guardian relationship), not on the guardian record, so
                 // it is intentionally not pulled here.
+                // Order newest-first so that, when legacy duplicates exist, the most
+                // recent record's data wins (avoids pulling stale data).
                 const { data, error } = await supabase
                     .from('responsaveis')
                     .select('nome_completo, telefone, foto_url, cpf')
-                    .in('cpf', [cleanCpf, formattedCpf]);
+                    .in('cpf', [cleanCpf, formattedCpf])
+                    .order('criado_em', { ascending: false });
 
                 if (cancelled || error || !data || data.length === 0) return;
 
-                // Prefer the most complete record among duplicates.
-                const match = [...data].sort((a, b) => {
-                    const score = (g: any) =>
-                        (g.nome_completo ? 1 : 0) + (g.telefone ? 1 : 0) + (g.foto_url ? 1 : 0);
-                    return score(b) - score(a);
-                })[0];
+                // Merge fields newest-first: take each value from the most recent
+                // record that has it, falling back to older duplicates only for gaps.
+                const pick = (field: 'nome_completo' | 'telefone' | 'foto_url') =>
+                    data.find((g: any) => g[field])?.[field] || '';
+                const match = {
+                    nome_completo: pick('nome_completo'),
+                    telefone: pick('telefone'),
+                    foto_url: pick('foto_url'),
+                };
 
                 setFormData(prev => {
                     // Don't clobber the CPF the user is typing
@@ -112,7 +118,7 @@ export default function AddGuardian() {
                 setCpfFound(true);
                 toast.info(
                     'Responsável encontrado',
-                    `${match.nome_completo} já está cadastrado. Os dados foram preenchidos automaticamente.`
+                    `${match.nome_completo || 'Responsável'} já está cadastrado. Os dados foram preenchidos automaticamente.`
                 );
             } finally {
                 if (!cancelled) setCpfLookupLoading(false);

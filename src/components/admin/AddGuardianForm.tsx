@@ -71,13 +71,18 @@ export default function AddGuardianForm({ isOpen, onClose, escolaId, onSuccess }
                 return;
             }
 
-            // 1. Check if guardian already exists by CPF
-            const { data: existingGuardian } = await supabase
+            // 1. Check if guardian already exists by CPF.
+            // CPFs may be stored clean (00000000000) or formatted (000.000.000-00);
+            // match both so we reuse the record instead of creating a duplicate, and
+            // tolerate legacy duplicate rows by taking the most recent one.
+            const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            const { data: existingGuardians } = await supabase
                 .from('responsaveis')
                 .select('id')
-                .eq('cpf', cleanCpf)
-                .maybeSingle();
+                .in('cpf', [cleanCpf, formattedCpf])
+                .order('criado_em', { ascending: false });
 
+            const existingGuardian = existingGuardians?.[0];
             let guardianId;
 
             if (existingGuardian) {
@@ -85,6 +90,7 @@ export default function AddGuardianForm({ isOpen, onClose, escolaId, onSuccess }
                     .from('responsaveis')
                     .update({
                         nome_completo: guardianData.nome_completo,
+                        cpf: cleanCpf, // normalize any legacy formatted CPF to clean digits
                         telefone: guardianData.telefone,
                         email: guardianData.email,
                         parentesco: guardianData.parentesco,

@@ -194,13 +194,18 @@ export default function AuthorizationRules() {
                     continue;
                 }
 
-                const { data: existingGuardian } = await supabase
+                // CPFs may already exist in the DB in either clean (00000000000)
+                // or formatted (000.000.000-00) form. Match both so we reuse the
+                // existing record instead of creating a duplicate. Tolerate multiple
+                // rows (legacy duplicates) by taking the most recent one.
+                const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                const { data: existingGuardians } = await supabase
                     .from('responsaveis')
                     .select('id')
-                    .eq('cpf', cleanCpf)
-                    .maybeSingle();
+                    .in('cpf', [cleanCpf, formattedCpf])
+                    .order('criado_em', { ascending: false });
 
-                let guardianId = existingGuardian?.id;
+                let guardianId = existingGuardians?.[0]?.id;
 
                 if (!guardianId) {
                     const { data: newGuardian, error: guardianError } = await supabase
@@ -221,6 +226,7 @@ export default function AuthorizationRules() {
                         .from('responsaveis')
                         .update({
                             nome_completo: g.nome_completo,
+                            cpf: cleanCpf, // normalize any legacy formatted CPF to clean digits
                             telefone: g.telefone,
                             foto_url: g.foto_url || null
                         })
