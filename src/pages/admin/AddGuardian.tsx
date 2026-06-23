@@ -72,33 +72,47 @@ export default function AddGuardian() {
             return;
         }
 
+        // CPFs may be stored either as clean digits or formatted (000.000.000-00),
+        // and there can be duplicate rows for the same person. Match both formats
+        // and tolerate multiple results instead of using .maybeSingle() (which errors
+        // when more than one row matches).
+        const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
         let cancelled = false;
         const timer = setTimeout(async () => {
             setCpfLookupLoading(true);
             try {
+                // Note: `parentesco` is a per-link attribute (it lives on the
+                // student↔guardian relationship), not on the guardian record, so
+                // it is intentionally not pulled here.
                 const { data, error } = await supabase
                     .from('responsaveis')
-                    .select('nome_completo, telefone, parentesco, foto_url')
-                    .eq('cpf', cleanCpf)
-                    .maybeSingle();
+                    .select('nome_completo, telefone, foto_url, cpf')
+                    .in('cpf', [cleanCpf, formattedCpf]);
 
-                if (cancelled || error || !data) return;
+                if (cancelled || error || !data || data.length === 0) return;
+
+                // Prefer the most complete record among duplicates.
+                const match = [...data].sort((a, b) => {
+                    const score = (g: any) =>
+                        (g.nome_completo ? 1 : 0) + (g.telefone ? 1 : 0) + (g.foto_url ? 1 : 0);
+                    return score(b) - score(a);
+                })[0];
 
                 setFormData(prev => {
                     // Don't clobber the CPF the user is typing
                     if (prev.cpf.replace(/\D/g, '') !== cleanCpf) return prev;
                     return {
                         ...prev,
-                        nome_completo: data.nome_completo || prev.nome_completo,
-                        telefone: data.telefone || prev.telefone,
-                        parentesco: data.parentesco || prev.parentesco,
-                        foto_url: data.foto_url || prev.foto_url,
+                        nome_completo: match.nome_completo || prev.nome_completo,
+                        telefone: match.telefone || prev.telefone,
+                        foto_url: match.foto_url || prev.foto_url,
                     };
                 });
                 setCpfFound(true);
                 toast.info(
                     'Responsável encontrado',
-                    `${data.nome_completo} já está cadastrado. Os dados foram preenchidos automaticamente.`
+                    `${match.nome_completo} já está cadastrado. Os dados foram preenchidos automaticamente.`
                 );
             } finally {
                 if (!cancelled) setCpfLookupLoading(false);
