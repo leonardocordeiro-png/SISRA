@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown, ArrowLeftRight, AlertTriangle, GraduationCap, LayoutGrid, Camera } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, User, Upload, Share2, Filter, X, CheckCircle2, Circle, AlertCircle, Loader2, ChevronDown, ArrowLeftRight, AlertTriangle, GraduationCap, LayoutGrid, Camera, CalendarDays } from 'lucide-react';
 import { generateToken, getSalaBySerie } from '../../lib/utils';
 import { logAudit } from '../../lib/audit';
 import NavigationControls from '../../components/NavigationControls';
 import BulkImportModal from '../../components/admin/BulkImportModal';
 import BulkPhotoImportModal from '../../components/admin/BulkPhotoImportModal';
+import BulkBirthdateModal from '../../components/admin/BulkBirthdateModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 
@@ -25,6 +26,7 @@ export default function StudentManagement() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [showBulkPhotoModal, setShowBulkPhotoModal] = useState(false);
+    const [showBirthdateModal, setShowBirthdateModal] = useState(false);
     const [filterTurma, setFilterTurma] = useState<string>('TODAS');
     const [filterSala, setFilterSala] = useState<string>('TODAS');
     const [availableTurmas, setAvailableTurmas] = useState<string[]>([]);
@@ -434,6 +436,13 @@ export default function StudentManagement() {
                         title="Importar fotos de alunos em lote usando o número de matrícula"
                     >
                         <Camera className="w-4 h-4" /> Importar Fotos
+                    </button>
+                    <button
+                        onClick={() => setShowBirthdateModal(true)}
+                        className="flex-1 sm:flex-none bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
+                        title="Preencher datas de nascimento em massa (libera o auto-cadastro de responsáveis)"
+                    >
+                        <CalendarDays className="w-4 h-4" /> Datas de Nascimento
                     </button>
                     <button
                         onClick={() => setShowBulkModal(true)}
@@ -947,6 +956,16 @@ export default function StudentManagement() {
                     onSuccess={() => {
                         fetchStudents();
                         setShowBulkPhotoModal(false);
+                    }}
+                />
+            )}
+
+            {showBirthdateModal && (
+                <BulkBirthdateModal
+                    escolaId={escolaId || ''}
+                    onClose={() => setShowBirthdateModal(false)}
+                    onSuccess={() => {
+                        fetchStudents();
                     }}
                 />
             )}
