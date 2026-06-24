@@ -31,6 +31,8 @@ export default function AdminQRGenerator() {
     const [editingValidity, setEditingValidity] = useState(false);
     const [newValidityDate, setNewValidityDate] = useState('');
     const [updatingValidity, setUpdatingValidity] = useState(false);
+    const [bulkValidityDate, setBulkValidityDate] = useState('');
+    const [bulkUpdating, setBulkUpdating] = useState(false);
 
     useEffect(() => {
         if (selectedGuardian && qrRef.current) {
@@ -106,14 +108,15 @@ export default function AdminQRGenerator() {
             width: 300,
             height: 300,
             data: selectedGuardian.qr_code,
-            type: 'canvas', // Explicitly use canvas for better html2canvas support
+            type: 'canvas', // canvas renderiza bem na captura/impressão
             dotsOptions: {
-                color: '#047857',
+                color: '#1F3057',
                 type: 'rounded'
             },
             backgroundOptions: {
                 color: '#ffffff'
             },
+            cornersSquareOptions: { color: '#6B3D8F', type: 'extra-rounded' },
             imageOptions: {
                 crossOrigin: 'anonymous',
                 margin: 10
@@ -306,6 +309,40 @@ export default function AdminQRGenerator() {
         }
     };
 
+    const handleBulkValidity = async () => {
+        if (!bulkValidityDate) {
+            toast.error('Selecione uma data', 'Escolha a nova validade antes de aplicar.');
+            return;
+        }
+        if (!escolaId) {
+            toast.error('Escola nao identificada', 'Entre novamente para carregar o contexto da escola.');
+            return;
+        }
+        setBulkUpdating(true);
+        try {
+            const { data, error } = await supabase.rpc('sisra_bulk_update_admin_qr_validity', {
+                p_escola_id: escolaId,
+                p_expires_at: new Date(bulkValidityDate).toISOString(),
+            });
+            if (error) throw error;
+
+            const updated = (data as { updated?: number } | null)?.updated ?? 0;
+            // Refletir a nova validade no responsável selecionado e na lista, se houver.
+            const iso = new Date(bulkValidityDate).toISOString();
+            if (selectedGuardian) setSelectedGuardian({ ...selectedGuardian, expires_at: iso });
+            setGuardians(current => current.map(g => ({ ...g, expires_at: iso })));
+            toast.success('Validade aplicada em lote', `${updated} cartão(ões) atualizado(s) para ${new Date(bulkValidityDate).toLocaleDateString('pt-BR')}.`);
+        } catch (err: any) {
+            console.error('Error bulk updating validity:', err);
+            const msg = err.message === 'VALIDADE_INVALIDA'
+                ? 'Data inválida (deve estar entre hoje e 5 anos).'
+                : 'Verifique sua permissão e tente novamente.';
+            toast.error('Erro ao atualizar em lote', msg);
+        } finally {
+            setBulkUpdating(false);
+        }
+    };
+
     const handlePrint = () => {
         window.print();
     };
@@ -457,6 +494,54 @@ export default function AdminQRGenerator() {
                             </form>
                         </div>
 
+                        {/* Bulk validity panel */}
+                        <div style={{
+                            background: 'rgba(124,58,237,0.06)',
+                            border: '1px solid rgba(124,58,237,0.25)',
+                            borderRadius: 16, padding: 20
+                        }}>
+                            <p style={{
+                                fontFamily: "'Roboto Mono', monospace",
+                                fontSize: 10, fontWeight: 700, letterSpacing: 3,
+                                color: 'rgba(196,181,253,0.8)', textTransform: 'uppercase',
+                                marginBottom: 6
+                            }}>// validade em lote</p>
+                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginBottom: 14, lineHeight: 1.5 }}>
+                                Define a mesma data de validade para <strong style={{ color: 'rgba(255,255,255,0.6)' }}>todos</strong> os cartões da escola.
+                            </p>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                    type="date"
+                                    value={bulkValidityDate}
+                                    onChange={(e) => setBulkValidityDate(e.target.value)}
+                                    style={{
+                                        flex: 1, padding: '11px 12px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(124,58,237,0.3)',
+                                        borderRadius: 10, outline: 'none',
+                                        color: '#e2e8f0', fontSize: 13,
+                                        fontFamily: 'inherit', boxSizing: 'border-box'
+                                    }}
+                                />
+                                <button
+                                    onClick={handleBulkValidity}
+                                    disabled={bulkUpdating || !escolaId || !bulkValidityDate}
+                                    style={{
+                                        padding: '11px 16px',
+                                        background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                                        border: 'none', borderRadius: 10,
+                                        cursor: bulkUpdating || !bulkValidityDate ? 'not-allowed' : 'pointer',
+                                        color: '#fff', display: 'flex', alignItems: 'center', gap: 8,
+                                        fontFamily: "'Roboto Mono', monospace", fontSize: 11, fontWeight: 700,
+                                        letterSpacing: 1, textTransform: 'uppercase',
+                                        opacity: bulkUpdating || !bulkValidityDate ? 0.6 : 1, whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {bulkUpdating ? <Loader2 size={14} className="animate-spin" /> : <Calendar size={14} />} Aplicar
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Results */}
                         {guardians.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -468,10 +553,10 @@ export default function AdminQRGenerator() {
                                             width: '100%', textAlign: 'left',
                                             padding: '14px 16px',
                                             background: selectedGuardian?.id === g.id
-                                                ? 'rgba(0,230,118,0.08)'
+                                                ? 'rgba(124,58,237,0.1)'
                                                 : 'rgba(255,255,255,0.03)',
                                             border: selectedGuardian?.id === g.id
-                                                ? '1px solid rgba(0,230,118,0.4)'
+                                                ? '1px solid rgba(124,58,237,0.45)'
                                                 : '1px solid rgba(255,255,255,0.07)',
                                             borderRadius: 12, cursor: 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -480,7 +565,7 @@ export default function AdminQRGenerator() {
                                     >
                                         <div>
                                             <p style={{
-                                                color: selectedGuardian?.id === g.id ? '#00e676' : '#e2e8f0',
+                                                color: selectedGuardian?.id === g.id ? '#a78bfa' : '#e2e8f0',
                                                 fontWeight: 700, fontSize: 14, marginBottom: 2,
                                                 textTransform: 'uppercase', letterSpacing: 0.5
                                             }}>{g.nome_completo}</p>
@@ -490,7 +575,7 @@ export default function AdminQRGenerator() {
                                             }}>{g.cpf}</p>
                                             <p style={{
                                                 fontFamily: "'Roboto Mono', monospace",
-                                                color: 'rgba(0,230,118,0.5)', fontSize: 10, marginTop: 4
+                                                color: 'rgba(167,139,250,0.6)', fontSize: 10, marginTop: 4
                                             }}>
                                                 {g.alunos_count ?? 0} aluno(s) vinculado(s)
                                             </p>
@@ -504,7 +589,7 @@ export default function AdminQRGenerator() {
                                                 </p>
                                             )}
                                         </div>
-                                        <QrCode size={16} color={selectedGuardian?.id === g.id ? '#00e676' : 'rgba(255,255,255,0.2)'} />
+                                        <QrCode size={16} color={selectedGuardian?.id === g.id ? '#a78bfa' : 'rgba(255,255,255,0.2)'} />
                                     </button>
                                 ))}
                             </div>
@@ -536,7 +621,7 @@ export default function AdminQRGenerator() {
                                             background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(4px)',
                                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12
                                         }}>
-                                            <Loader2 size={36} color="#047857" className="animate-spin" />
+                                            <Loader2 size={36} color="#7c3aed" className="animate-spin" />
                                             <p style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 10, fontWeight: 700, color: '#0f172a', letterSpacing: 3, textTransform: 'uppercase' }}>
                                                 Capturando...
                                             </p>
@@ -545,9 +630,9 @@ export default function AdminQRGenerator() {
 
                                     {/* Card Header */}
                                     <div className="print-header" style={{ background: '#0f172a', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
-                                        <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, background: 'rgba(16,185,129,0.1)', borderRadius: '50%', filter: 'blur(40px)', marginRight: -48, marginTop: -48 }} />
+                                        <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, background: 'rgba(124,58,237,0.18)', borderRadius: '50%', filter: 'blur(40px)', marginRight: -48, marginTop: -48 }} />
                                         <div style={{ position: 'relative', zIndex: 1 }}>
-                                            <h2 style={{ color: '#10B981', fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4, fontFamily: "'Roboto Mono', monospace" }}>Instituição de Ensino</h2>
+                                            <h2 style={{ color: '#c4b5fd', fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4, fontFamily: "'Roboto Mono', monospace" }}>Instituição de Ensino</h2>
                                             <p style={{ color: '#fff', fontSize: 20, fontWeight: 900, fontStyle: 'italic', letterSpacing: -0.5, textTransform: 'uppercase', lineHeight: 1 }}>Colégio La Salle Sobradinho</p>
                                         </div>
                                         <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -594,53 +679,51 @@ export default function AdminQRGenerator() {
                                             </div>
                                         </div>
 
-                                        {/* Data grid */}
-                                        <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                                        {/* Data fields — linhas de largura total com valores grandes */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                             {/* CPF */}
-                                            <div className="val-box" style={{ background: '#f8fafc', borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                                <p style={{ color: '#94a3b8', fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace", marginBottom: 4 }}>CPF</p>
-                                                <p style={{ color: '#334155', fontSize: 10, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", whiteSpace: 'nowrap' }}>{selectedGuardian.cpf}</p>
+                                            <div className="val-box" style={{ background: '#f8fafc', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                                <p style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace" }}>CPF</p>
+                                                <p style={{ color: '#0f172a', fontSize: 19, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", whiteSpace: 'nowrap' }}>{selectedGuardian.cpf}</p>
                                             </div>
                                             {/* Access Code */}
-                                            <div className="val-box" style={{ background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                                <p style={{ color: '#4f46e5', fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace", marginBottom: 4 }}>Cód. Acesso</p>
-                                                <p style={{ color: '#4338ca', fontSize: 13, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", letterSpacing: 2 }}>{selectedGuardian.codigo_acesso || '---'}</p>
+                                            <div className="val-box" style={{ background: '#f5f3ff', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                                <p style={{ color: '#7c3aed', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace" }}>Cód. Acesso</p>
+                                                <p style={{ color: '#5b21b6', fontSize: 24, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", letterSpacing: 4, whiteSpace: 'nowrap' }}>{selectedGuardian.codigo_acesso || '---'}</p>
                                             </div>
                                             {/* Validity */}
-                                            <div className="val-box" style={{ background: '#f8fafc', borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
-                                                <p style={{ color: 'rgba(5,150,105,0.5)', fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace", marginBottom: 4 }}>Validade</p>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <Calendar size={10} color="#10B981" />
-                                                        {editingValidity ? (
-                                                            <input
-                                                                type="date"
-                                                                style={{ fontSize: 10, fontWeight: 700, color: '#059669', background: 'transparent', outline: 'none', borderBottom: '1px solid rgba(16,185,129,0.3)', width: '100%', fontFamily: "'Roboto Mono', monospace" }}
-                                                                value={newValidityDate || (selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : '')}
-                                                                onChange={(e) => setNewValidityDate(e.target.value)}
-                                                            />
-                                                        ) : (
-                                                            <p style={{ color: '#059669', fontSize: 10, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", whiteSpace: 'nowrap' }}>
-                                                                {selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toLocaleDateString('pt-BR') : '--/--/----'}
-                                                            </p>
-                                                        )}
-                                                    </div>
+                                            <div className="val-box" style={{ background: '#f8fafc', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                                <p style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', fontFamily: "'Roboto Mono', monospace" }}>Validade</p>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <Calendar size={16} color="#7c3aed" />
+                                                    {editingValidity ? (
+                                                        <input
+                                                            type="date"
+                                                            style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', background: 'transparent', outline: 'none', borderBottom: '1px solid rgba(124,58,237,0.4)', fontFamily: "'Roboto Mono', monospace" }}
+                                                            value={newValidityDate || (selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : '')}
+                                                            onChange={(e) => setNewValidityDate(e.target.value)}
+                                                        />
+                                                    ) : (
+                                                        <p style={{ color: '#0f172a', fontSize: 18, fontWeight: 700, fontFamily: "'Roboto Mono', monospace", whiteSpace: 'nowrap' }}>
+                                                            {selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toLocaleDateString('pt-BR') : '--/--/----'}
+                                                        </p>
+                                                    )}
                                                     <div className="no-print">
                                                         {editingValidity ? (
-                                                            <div style={{ display: 'flex', gap: 2 }}>
-                                                                <button onClick={handleUpdateValidity} disabled={updatingValidity} style={{ padding: 3, borderRadius: 5, border: 'none', background: 'rgba(16,185,129,0.1)', cursor: 'pointer', color: '#059669' }}>
-                                                                    {updatingValidity ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                                <button onClick={handleUpdateValidity} disabled={updatingValidity} style={{ padding: 4, borderRadius: 6, border: 'none', background: 'rgba(124,58,237,0.1)', cursor: 'pointer', color: '#7c3aed' }}>
+                                                                    {updatingValidity ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                                                                 </button>
-                                                                <button onClick={() => setEditingValidity(false)} style={{ padding: 3, borderRadius: 5, border: 'none', background: 'rgba(239,68,68,0.1)', cursor: 'pointer', color: '#dc2626' }}>
-                                                                    <X size={10} />
+                                                                <button onClick={() => setEditingValidity(false)} style={{ padding: 4, borderRadius: 6, border: 'none', background: 'rgba(239,68,68,0.1)', cursor: 'pointer', color: '#dc2626' }}>
+                                                                    <X size={14} />
                                                                 </button>
                                                             </div>
                                                         ) : (
                                                             <button
                                                                 onClick={() => { setEditingValidity(true); setNewValidityDate(selectedGuardian.expires_at ? new Date(selectedGuardian.expires_at).toISOString().split('T')[0] : ''); }}
-                                                                style={{ padding: 3, borderRadius: 5, border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8' }}
+                                                                style={{ padding: 4, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8' }}
                                                             >
-                                                                <Edit2 size={10} />
+                                                                <Edit2 size={14} />
                                                             </button>
                                                         )}
                                                     </div>
@@ -682,10 +765,10 @@ export default function AdminQRGenerator() {
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                                             padding: '16px 20px',
-                                            background: 'linear-gradient(135deg, rgba(0,230,118,0.15), rgba(0,230,118,0.08))',
-                                            border: '1px solid rgba(0,230,118,0.4)',
+                                            background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(124,58,237,0.1))',
+                                            border: '1px solid rgba(124,58,237,0.45)',
                                             borderRadius: 14, cursor: 'pointer',
-                                            color: '#00e676',
+                                            color: '#a78bfa',
                                             fontFamily: "'Roboto Mono', monospace",
                                             fontSize: 11, fontWeight: 700, letterSpacing: 2,
                                             textTransform: 'uppercase', transition: 'all 0.15s ease'
