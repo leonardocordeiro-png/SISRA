@@ -74,29 +74,36 @@ export default function AutoCadastroQR() {
      * captura para o domtoimage não inserir artefatos, e exporta em 2x.
      */
     const capturePosterPng = async (): Promise<string> => {
-        const el = document.getElementById('autocadastro-poster');
+        const el = document.getElementById('autocadastro-capture');
         if (!el) throw new Error('Pôster não encontrado.');
 
-        // Tailwind v4 preflight sets `border-style: solid` on every element (with
-        // width 0, invisible in the browser). dom-to-image-more honors the solid
-        // style and draws a currentColor hairline around each element — the black
-        // boxes. Force `border: none` (kills the style, not just the color),
-        // outline none and shadows off on every element during capture.
+        // Notas de captura:
+        // - Tailwind v4 preflight aplica `border-style: solid` em todo elemento
+        //   (largura 0, invisível na tela); o dom-to-image-more desenha esse fio
+        //   na cor do texto -> caixas pretas. Forçamos `border: none`.
+        // - Largura fixa folgada (640px) evita o corte da faixa da direita (o
+        //   título transborda levemente os 576px e renderiza mais largo).
+        // - O dom-to-image-more NÃO recorta os filhos pelo border-radius do card;
+        //   por isso o cabeçalho/rodapé saíam quadrados. A própria faixa recebe
+        //   rounded-t/rounded-b e o wrapper adiciona uma margem branca, deixando
+        //   o card arredondado "flutuando" como na referência.
         const captureStyle = document.createElement('style');
         captureStyle.id = 'poster-capture-override';
         captureStyle.innerHTML = `
-            /* Largura fixa e folgada durante a captura: o título em text-2xl
-               transborda levemente a caixa de 576px e o dom-to-image-more renderiza
-               o texto um pouco mais largo que a tela, cortando a faixa da direita.
-               Com 640px tudo cabe e fica centralizado. */
-            #autocadastro-poster {
-                width: 640px !important;
-                max-width: 640px !important;
+            #autocadastro-capture {
+                width: 696px !important;
+                max-width: 696px !important;
+                background: #ffffff !important;
+                padding: 28px !important;
             }
-            #autocadastro-poster,
-            #autocadastro-poster *,
-            #autocadastro-poster *::before,
-            #autocadastro-poster *::after {
+            #autocadastro-poster {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            #autocadastro-capture,
+            #autocadastro-capture *,
+            #autocadastro-capture *::before,
+            #autocadastro-capture *::after {
                 border: 0 none transparent !important;
                 border-image: none !important;
                 outline: 0 none transparent !important;
@@ -249,32 +256,36 @@ export default function AutoCadastroQR() {
                     </p>
                 </div>
 
-                {/* Pôster (capturado para PNG na impressão/download) */}
-                <div
-                    id="autocadastro-poster"
-                    className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden max-w-xl mx-auto"
-                    style={{ backgroundColor: '#ffffff' }}
-                >
-                    <div className="bg-slate-900 px-10 py-8 text-center" style={{ backgroundColor: '#0f172a' }}>
-                        <p className="text-xs font-black text-violet-300 uppercase tracking-[0.3em] mb-2" style={{ color: '#c4b5fd' }}>Cadastro de Responsável</p>
-                        <h2 className="text-2xl font-black text-white italic tracking-tight">Escaneie para se cadastrar</h2>
-                    </div>
-
-                    <div className="p-10 flex flex-col items-center">
-                        <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
-                            <div ref={qrRef} />
+                {/* Pôster (capturado para PNG na impressão/download).
+                    O wrapper recebe a margem branca durante a captura; as faixas
+                    têm rounded próprio para não saírem quadradas no PNG. */}
+                <div id="autocadastro-capture" className="max-w-xl mx-auto">
+                    <div
+                        id="autocadastro-poster"
+                        className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden w-full"
+                        style={{ backgroundColor: '#ffffff' }}
+                    >
+                        <div className="bg-slate-900 px-10 py-8 text-center rounded-t-[2.5rem]" style={{ backgroundColor: '#0f172a' }}>
+                            <p className="text-xs font-black text-violet-300 uppercase tracking-[0.3em] mb-2" style={{ color: '#c4b5fd' }}>Cadastro de Responsável</p>
+                            <h2 className="text-2xl font-black text-white italic tracking-tight">Escaneie para se cadastrar</h2>
                         </div>
 
-                        <div className="mt-8 w-full space-y-4">
-                            <Step icon={<ScanLine className="w-5 h-5" />} n={1} text="Escaneie este QR com a câmera do celular" />
-                            <Step icon={<GraduationCap className="w-5 h-5" />} n={2} text="Informe a matrícula do aluno" />
-                            <Step icon={<Calendar className="w-5 h-5" />} n={3} text="Confirme com a data de nascimento do aluno" />
-                            <Step icon={<Smartphone className="w-5 h-5" />} n={4} text="Cadastre seus dados e receba seu cartão QR" />
-                        </div>
-                    </div>
+                        <div className="p-10 flex flex-col items-center">
+                            <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+                                <div ref={qrRef} />
+                            </div>
 
-                    <div className="bg-slate-100 px-10 py-5 text-center" style={{ backgroundColor: '#f1f5f9' }}>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Sistema SISRA · Acesso Seguro</p>
+                            <div className="mt-8 w-full space-y-4">
+                                <Step icon={<ScanLine className="w-5 h-5" />} n={1} text="Escaneie este QR com a câmera do celular" />
+                                <Step icon={<GraduationCap className="w-5 h-5" />} n={2} text="Informe a matrícula do aluno" />
+                                <Step icon={<Calendar className="w-5 h-5" />} n={3} text="Confirme com a data de nascimento do aluno" />
+                                <Step icon={<Smartphone className="w-5 h-5" />} n={4} text="Cadastre seus dados e receba seu cartão QR" />
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-100 px-10 py-5 text-center rounded-b-[2.5rem]" style={{ backgroundColor: '#f1f5f9' }}>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Sistema SISRA · Acesso Seguro</p>
+                        </div>
                     </div>
                 </div>
 
