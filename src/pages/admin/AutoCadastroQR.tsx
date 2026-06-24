@@ -17,6 +17,10 @@ export default function AutoCadastroQR() {
     const qrRef = useRef<HTMLDivElement>(null);
     const qrCode = useRef<QRCodeStyling | null>(null);
     const [downloading, setDownloading] = useState(false);
+    const [printing, setPrinting] = useState(false);
+    // Quando definido, a impressão usa esta imagem (PNG limpo) em vez do DOM,
+    // garantindo qualidade e centralização sem distorção/corte.
+    const [printSrc, setPrintSrc] = useState<string | null>(null);
 
     const registrationUrl = escolaId
         ? `${window.location.origin}/parent/autocadastro/${escolaId}`
@@ -25,8 +29,7 @@ export default function AutoCadastroQR() {
     useEffect(() => {
         if (!registrationUrl || !qrRef.current) return;
 
-        // Render at high resolution (constrained via CSS) so the QR stays crisp
-        // when the poster is scaled up for A3 printing.
+        // Alta resolução (exibido menor via CSS) para o QR sair nítido na impressão.
         qrCode.current = new QRCodeStyling({
             width: 1000,
             height: 1000,
@@ -41,6 +44,82 @@ export default function AutoCadastroQR() {
         qrCode.current.append(qrRef.current);
     }, [registrationUrl]);
 
+    // Dispara a impressão assim que a imagem do pôster estiver pronta no DOM.
+    useEffect(() => {
+        if (!printSrc) return;
+        let cancelled = false;
+        const img = new Image();
+        img.onload = () => {
+            if (cancelled) return;
+            window.print();
+            setPrintSrc(null);
+            setPrinting(false);
+        };
+        img.onerror = () => {
+            if (cancelled) return;
+            setPrintSrc(null);
+            setPrinting(false);
+            toast.error('Erro ao preparar impressão', 'Tente novamente.');
+        };
+        img.src = printSrc;
+        return () => { cancelled = true; };
+    }, [printSrc]);
+
+    /**
+     * Captura o pôster como PNG de alta resolução usando a mesma técnica do
+     * cartão QR (/admin/cartoes-qr): zera bordas/contornos/sombras durante a
+     * captura para o domtoimage não inserir artefatos, e exporta em 2x.
+     */
+    const capturePosterPng = async (): Promise<string> => {
+        const el = document.getElementById('autocadastro-poster');
+        if (!el) throw new Error('Pôster não encontrado.');
+
+        const captureStyle = document.createElement('style');
+        captureStyle.id = 'poster-capture-override';
+        captureStyle.innerHTML = `
+            #autocadastro-poster { box-shadow: none !important; outline: none !important; }
+            #autocadastro-poster *,
+            #autocadastro-poster *::before,
+            #autocadastro-poster *::after {
+                border-color: transparent !important;
+                border-image: none !important;
+                outline: none !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
+            #autocadastro-poster canvas { border: none !important; outline: none !important; }
+        `;
+        document.head.appendChild(captureStyle);
+
+        const allElements = [el, ...Array.from(el.querySelectorAll('*'))] as HTMLElement[];
+        const savedStyles = allElements.map(node => node.getAttribute('style'));
+        allElements.forEach(node => {
+            node.style.borderColor = 'transparent';
+            node.style.outline = 'none';
+            node.style.boxShadow = 'none';
+            if (node.tagName === 'CANVAS') node.style.border = 'none';
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        try {
+            const scale = 2; // 2x = alta resolução para A3
+            return await domtoimage.toPng(el, {
+                bgcolor: '#ffffff',
+                width: el.offsetWidth * scale,
+                height: el.offsetHeight * scale,
+                style: { transform: `scale(${scale})`, transformOrigin: 'top left' },
+                cacheBust: true,
+            });
+        } finally {
+            captureStyle.remove();
+            allElements.forEach((node, i) => {
+                if (savedStyles[i] !== null) node.setAttribute('style', savedStyles[i]!);
+                else node.removeAttribute('style');
+            });
+        }
+    };
+
     const handleCopyLink = async () => {
         try {
             await navigator.clipboard.writeText(registrationUrl);
@@ -51,19 +130,9 @@ export default function AutoCadastroQR() {
     };
 
     const handleDownload = async () => {
-        const el = document.getElementById('autocadastro-poster');
-        if (!el) return;
         setDownloading(true);
         try {
-            // Export at 2x for a high-resolution, print-ready image.
-            const scale = 2;
-            const dataUrl = await domtoimage.toPng(el, {
-                bgcolor: '#ffffff',
-                width: el.offsetWidth * scale,
-                height: el.offsetHeight * scale,
-                style: { transform: `scale(${scale})`, transformOrigin: 'top left' },
-                cacheBust: true,
-            });
+            const dataUrl = await capturePosterPng();
             const link = document.createElement('a');
             link.download = 'qr-autocadastro-responsaveis.png';
             link.href = dataUrl;
@@ -73,9 +142,23 @@ export default function AutoCadastroQR() {
             toast.success('Sucesso', 'Pôster baixado!');
         } catch (err) {
             console.error('Error downloading poster:', err);
-            toast.error('Erro ao baixar', 'Tente imprimir a tela.');
+            document.getElementById('poster-capture-override')?.remove();
+            toast.error('Erro ao baixar', 'Tente novamente.');
         } finally {
             setDownloading(false);
+        }
+    };
+
+    const handlePrint = async () => {
+        setPrinting(true);
+        try {
+            const dataUrl = await capturePosterPng();
+            setPrintSrc(dataUrl); // o useEffect dispara window.print()
+        } catch (err) {
+            console.error('Error preparing print:', err);
+            document.getElementById('poster-capture-override')?.remove();
+            setPrinting(false);
+            toast.error('Erro ao imprimir', 'Tente novamente.');
         }
     };
 
@@ -97,30 +180,48 @@ export default function AutoCadastroQR() {
         <div className="bg-slate-50 min-h-screen text-slate-800 font-display">
             <style>
                 {`
-                /* High-res QR canvas shown at a fixed size on screen */
+                /* QR de alta resolução exibido em tamanho fixo na tela */
                 #autocadastro-poster canvas { width: 300px !important; height: 300px !important; display: block; }
 
+                /* Camada de impressão baseada em imagem (oculta na tela) */
+                #poster-print-layer { display: none; }
+
                 @media print {
-                    /* A3 sheet with no browser headers/footers (URL, date, page number) */
+                    /* Folha A3 sem cabeçalhos/rodapés do navegador (URL, data, nº da página) */
                     @page { size: A3; margin: 0; }
                     html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
                     body * { visibility: hidden !important; }
-                    #autocadastro-poster, #autocadastro-poster * { visibility: visible !important; }
-                    /* Center on the page and scale up uniformly for A3 */
-                    #autocadastro-poster {
+                    #poster-print-layer, #poster-print-layer * { visibility: visible !important; }
+                    /* Imagem centralizada que se ajusta à folha sem cortar nem distorcer */
+                    #poster-print-layer {
+                        display: flex !important;
                         position: fixed !important;
-                        top: 50% !important;
-                        left: 50% !important;
-                        transform: translate(-50%, -50%) scale(1.55) !important;
-                        transform-origin: center center !important;
-                        margin: 0 !important;
-                        box-shadow: none !important;
+                        inset: 0 !important;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 12mm;
+                        background: #ffffff;
                         -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                    }
+                    #poster-print-layer img {
+                        max-width: 100%;
+                        max-height: 100%;
+                        width: auto;
+                        height: auto;
+                        object-fit: contain;
                     }
                     .no-print { display: none !important; }
                 }
                 `}
             </style>
+
+            {/* Camada usada apenas na impressão */}
+            {printSrc && (
+                <div id="poster-print-layer">
+                    <img src={printSrc} alt="Pôster de auto-cadastro" />
+                </div>
+            )}
+
             <div className="max-w-3xl mx-auto px-6 py-8">
                 <NavigationControls />
 
@@ -132,7 +233,7 @@ export default function AutoCadastroQR() {
                     </p>
                 </div>
 
-                {/* Printable poster */}
+                {/* Pôster (capturado para PNG na impressão/download) */}
                 <div
                     id="autocadastro-poster"
                     className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden max-w-xl mx-auto"
@@ -161,20 +262,21 @@ export default function AutoCadastroQR() {
                     </div>
                 </div>
 
-                {/* Actions */}
+                {/* Ações */}
                 <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center no-print">
                     <button
                         onClick={handleDownload}
-                        disabled={downloading}
+                        disabled={downloading || printing}
                         className="flex items-center justify-center gap-3 px-6 py-4 bg-slate-100 hover:bg-slate-200 rounded-2xl font-bold text-sm text-slate-700 transition-all border border-slate-200 disabled:opacity-50"
                     >
-                        {downloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />} Baixar Pôster
+                        {downloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />} Baixar Pôster (PNG)
                     </button>
                     <button
-                        onClick={() => window.print()}
-                        className="flex items-center justify-center gap-3 px-6 py-4 bg-violet-600 hover:bg-violet-700 rounded-2xl font-bold text-sm text-white transition-all shadow-lg shadow-violet-500/20"
+                        onClick={handlePrint}
+                        disabled={printing || downloading}
+                        className="flex items-center justify-center gap-3 px-6 py-4 bg-violet-600 hover:bg-violet-700 rounded-2xl font-bold text-sm text-white transition-all shadow-lg shadow-violet-500/20 disabled:opacity-50"
                     >
-                        <Printer className="w-5 h-5" /> Imprimir
+                        {printing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />} Imprimir (A3)
                     </button>
                     <button
                         onClick={handleCopyLink}
