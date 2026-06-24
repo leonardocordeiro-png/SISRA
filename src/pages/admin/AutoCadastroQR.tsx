@@ -85,6 +85,14 @@ export default function AutoCadastroQR() {
         const captureStyle = document.createElement('style');
         captureStyle.id = 'poster-capture-override';
         captureStyle.innerHTML = `
+            /* Largura fixa e folgada durante a captura: o título em text-2xl
+               transborda levemente a caixa de 576px e o dom-to-image-more renderiza
+               o texto um pouco mais largo que a tela, cortando a faixa da direita.
+               Com 640px tudo cabe e fica centralizado. */
+            #autocadastro-poster {
+                width: 640px !important;
+                max-width: 640px !important;
+            }
             #autocadastro-poster,
             #autocadastro-poster *,
             #autocadastro-poster *::before,
