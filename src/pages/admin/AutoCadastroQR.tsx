@@ -29,10 +29,13 @@ export default function AutoCadastroQR() {
     useEffect(() => {
         if (!registrationUrl || !qrRef.current) return;
 
-        // Alta resolução (exibido menor via CSS) para o QR sair nítido na impressão.
+        // O tamanho do canvas precisa BATER com o tamanho exibido. Forçar um
+        // backing maior via CSS faz o dom-to-image-more inflar a largura do clone
+        // (usa o tamanho do atributo do canvas), o que cortava o cabeçalho/rodapé
+        // e fazia o QR sumir na captura. Renderiza no tamanho real exibido.
         qrCode.current = new QRCodeStyling({
-            width: 1000,
-            height: 1000,
+            width: 360,
+            height: 360,
             data: registrationUrl,
             type: 'canvas',
             dotsOptions: { color: '#1F3057', type: 'rounded' },
@@ -186,8 +189,7 @@ export default function AutoCadastroQR() {
         <div className="bg-slate-50 min-h-screen text-slate-800 font-display">
             <style>
                 {`
-                /* QR de alta resolução exibido em tamanho fixo na tela */
-                #autocadastro-poster canvas { width: 300px !important; height: 300px !important; display: block; }
+                #autocadastro-poster canvas { display: block; }
 
                 /* Camada de impressão baseada em imagem (oculta na tela) */
                 #poster-print-layer { display: none; }
