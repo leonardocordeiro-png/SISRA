@@ -74,30 +74,34 @@ export default function AutoCadastroQR() {
         const el = document.getElementById('autocadastro-poster');
         if (!el) throw new Error('Pôster não encontrado.');
 
+        // Tailwind v4 preflight sets `border-style: solid` on every element (with
+        // width 0, invisible in the browser). dom-to-image-more honors the solid
+        // style and draws a currentColor hairline around each element — the black
+        // boxes. Force `border: none` (kills the style, not just the color),
+        // outline none and shadows off on every element during capture.
         const captureStyle = document.createElement('style');
         captureStyle.id = 'poster-capture-override';
         captureStyle.innerHTML = `
-            #autocadastro-poster { box-shadow: none !important; outline: none !important; }
+            #autocadastro-poster,
             #autocadastro-poster *,
             #autocadastro-poster *::before,
             #autocadastro-poster *::after {
-                border-color: transparent !important;
+                border: 0 none transparent !important;
                 border-image: none !important;
-                outline: none !important;
+                outline: 0 none transparent !important;
                 box-shadow: none !important;
                 text-shadow: none !important;
             }
-            #autocadastro-poster canvas { border: none !important; outline: none !important; }
         `;
         document.head.appendChild(captureStyle);
 
         const allElements = [el, ...Array.from(el.querySelectorAll('*'))] as HTMLElement[];
         const savedStyles = allElements.map(node => node.getAttribute('style'));
         allElements.forEach(node => {
-            node.style.borderColor = 'transparent';
-            node.style.outline = 'none';
-            node.style.boxShadow = 'none';
-            if (node.tagName === 'CANVAS') node.style.border = 'none';
+            node.style.setProperty('border', 'none', 'important');
+            node.style.setProperty('outline', 'none', 'important');
+            node.style.setProperty('box-shadow', 'none', 'important');
+            node.style.setProperty('text-shadow', 'none', 'important');
         });
 
         await new Promise(resolve => setTimeout(resolve, 250));
