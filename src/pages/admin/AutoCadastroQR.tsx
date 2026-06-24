@@ -107,12 +107,14 @@ export default function AutoCadastroQR() {
         await new Promise(resolve => setTimeout(resolve, 250));
 
         try {
-            const scale = 2; // 2x = alta resolução para A3
+            // Capture at natural size (same as the /admin/cartoes-qr card). A scale
+            // transform here misaligns the full-width header/footer backgrounds.
+            // The QR is rendered at high resolution and the print layer fits it to
+            // the A3 sheet, so quality stays good.
             return await domtoimage.toPng(el, {
                 bgcolor: '#ffffff',
-                width: el.offsetWidth * scale,
-                height: el.offsetHeight * scale,
-                style: { transform: `scale(${scale})`, transformOrigin: 'top left' },
+                width: el.offsetWidth,
+                height: el.offsetHeight,
                 cacheBust: true,
             });
         } finally {
