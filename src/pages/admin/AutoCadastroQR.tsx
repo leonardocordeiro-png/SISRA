@@ -25,9 +25,11 @@ export default function AutoCadastroQR() {
     useEffect(() => {
         if (!registrationUrl || !qrRef.current) return;
 
+        // Render at high resolution (constrained via CSS) so the QR stays crisp
+        // when the poster is scaled up for A3 printing.
         qrCode.current = new QRCodeStyling({
-            width: 320,
-            height: 320,
+            width: 1000,
+            height: 1000,
             data: registrationUrl,
             type: 'canvas',
             dotsOptions: { color: '#1F3057', type: 'rounded' },
@@ -53,10 +55,13 @@ export default function AutoCadastroQR() {
         if (!el) return;
         setDownloading(true);
         try {
+            // Export at 2x for a high-resolution, print-ready image.
+            const scale = 2;
             const dataUrl = await domtoimage.toPng(el, {
                 bgcolor: '#ffffff',
-                width: el.offsetWidth,
-                height: el.offsetHeight,
+                width: el.offsetWidth * scale,
+                height: el.offsetHeight * scale,
+                style: { transform: `scale(${scale})`, transformOrigin: 'top left' },
                 cacheBust: true,
             });
             const link = document.createElement('a');
@@ -92,12 +97,24 @@ export default function AutoCadastroQR() {
         <div className="bg-slate-50 min-h-screen text-slate-800 font-display">
             <style>
                 {`
+                /* High-res QR canvas shown at a fixed size on screen */
+                #autocadastro-poster canvas { width: 300px !important; height: 300px !important; display: block; }
+
                 @media print {
-                    body * { visibility: hidden; }
-                    #autocadastro-poster, #autocadastro-poster * { visibility: visible; }
+                    /* A3 sheet with no browser headers/footers (URL, date, page number) */
+                    @page { size: A3; margin: 0; }
+                    html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
+                    body * { visibility: hidden !important; }
+                    #autocadastro-poster, #autocadastro-poster * { visibility: visible !important; }
+                    /* Center on the page and scale up uniformly for A3 */
                     #autocadastro-poster {
-                        position: fixed !important; left: 0 !important; top: 0 !important;
-                        width: 100% !important; box-shadow: none !important;
+                        position: fixed !important;
+                        top: 50% !important;
+                        left: 50% !important;
+                        transform: translate(-50%, -50%) scale(1.55) !important;
+                        transform-origin: center center !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
                         -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
                     .no-print { display: none !important; }
