@@ -6,7 +6,7 @@ import {
     Activity, Clock, Terminal, ChevronLeft, ChevronRight,
     Trash2, Download, RefreshCw, ChevronDown, ChevronUp,
     LogIn, LogOut, UserCheck, QrCode, FileText, Settings,
-    Users, Eye, XCircle, Calendar
+    Users, Eye, XCircle, Calendar, DoorOpen
 } from 'lucide-react';
 import NavigationControls from '../../components/NavigationControls';
 import { useAuth } from '../../context/AuthContext';
@@ -73,6 +73,8 @@ function getEventStyle(acao: string) {
             return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
         case 'SOLICITACAO_RETIRADA': case 'CONFIRMACAO_ENTREGA':
             return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20';
+        case 'LIBERACAO_SALA':
+            return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
         case 'SISTEMA_LOGOUT':
             return 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20';
         case 'GERACAO_CARTAO_QR': case 'GERACAO_LINK_ACESSO': case 'GERACAO_RELATORIO':
@@ -96,6 +98,7 @@ function getEventIcon(acao: string) {
         case 'CADASTRO_ESTUDANTE': case 'CADASTRO_RESPONSAVEL': return <Users className={cls} />;
         case 'EDICAO_ESTUDANTE': case 'REMANEJAMENTO_TURMA': return <Filter className={cls} />;
         case 'SOLICITACAO_RETIRADA': case 'CONFIRMACAO_ENTREGA': return <UserCheck className={cls} />;
+        case 'LIBERACAO_SALA': return <DoorOpen className={cls} />;
         case 'GERACAO_CARTAO_QR': case 'GERACAO_LINK_ACESSO': return <QrCode className={cls} />;
         case 'GERACAO_RELATORIO': case 'ANALISE': case 'EXPORTACAO_DADOS': case 'ASSINATURA_DIARIA': return <FileText className={cls} />;
         case 'ALTERACAO_CONFIGURACAO': case 'MANUTENCAO': return <Settings className={cls} />;
@@ -124,7 +127,24 @@ function describeLog(log: AuditLog): string {
         case 'GERACAO_CARTAO_QR': return `Cartão QR ${d.acao === 'REATIVACAO' ? 'reativado' : 'gerado'} para ${detailText(d, 'responsavel_nome')}.`;
         case 'GERACAO_RELATORIO': return `Relatório gerado: ${detailText(d, 'tipo')} (${detailText(d, 'total_registros', '?')} registros).`;
         case 'SOLICITACAO_RETIRADA': return `Retirada: ${detailText(d, 'aluno_nome')} por ${detailText(d, 'responsavel_nome', 'responsável')} via ${detailText(d, 'tipo')}.`;
-        case 'CONFIRMACAO_ENTREGA': return `Entrega confirmada: ${detailText(d, 'aluno_nome')} retirado por ${detailText(d, 'responsavel_nome')}.`;
+        case 'LIBERACAO_SALA': {
+            const aluno = detailText(d, 'aluno_nome', 'aluno');
+            const por = detailText(d, 'liberado_sala_por', 'sala');
+            const lote = d.lote ? ' (liberação em lote)' : '';
+            return `Liberação em sala: ${aluno} liberado por ${por}${lote}.`;
+        }
+        case 'CONFIRMACAO_ENTREGA': {
+            const aluno = detailText(d, 'aluno_nome', '');
+            const resp = detailText(d, 'responsavel_nome', '');
+            const sala = detailText(d, 'liberado_sala_por', '');
+            const recep = detailText(d, 'liberado_recepcao_por', '');
+            const isChegada = d.acao === 'CHEGOU_NA_PORTARIA';
+            const parts: string[] = [`${isChegada ? 'Chegada na recepção' : 'Entrega confirmada'}${aluno ? `: ${aluno}` : ''}`];
+            if (resp) parts.push(`retirado por ${resp}`);
+            if (sala) parts.push(`liberado em sala por ${sala}`);
+            if (recep) parts.push(`recepção por ${recep}`);
+            return parts.join(' · ') + '.';
+        }
         case 'LOGIN_SUCESSO': case 'SISTEMA_LOGIN': return `Login: ${detailText(d, 'email')} (${detailText(d, 'portal', detailText(d, 'role', 'ADMIN'))})`;
         case 'LOGIN_FALHA': return `Falha de login: ${detailText(d, 'motivo')} - ${detailText(d, 'email')} (${detailText(d, 'portal', 'ADMIN')})`;
         case 'ACESSO_NEGADO': return `Acesso negado: ${detailText(d, 'email')} - Perfil: ${detailText(d, 'perfil')} (${detailText(d, 'portal')})`;

@@ -30,12 +30,19 @@ type PickupRequest = {
 export default function ReceptionConfirmation() {
     const { id } = useParams();
     const navigate = useNavigate();
-    useAuth();
+    const { user } = useAuth();
     const toast = useToast();
     const { openPhoto } = usePhotoZoom();
     const [request, setRequest] = useState<PickupRequest | null>(null);
     const [loading, setLoading] = useState(true);
     const [confirmedIdentity, setConfirmedIdentity] = useState(false);
+    const [operatorName, setOperatorName] = useState<string>('');
+
+    useEffect(() => {
+        if (!user?.id) return;
+        supabase.from('usuarios').select('nome').eq('id', user.id).maybeSingle()
+            .then(({ data }) => { setOperatorName(data?.nome || user.email || 'Recepção'); });
+    }, [user?.id]);
 
     async function fetchRequest(requestId: string) {
         const { data, error } = await supabase
@@ -92,8 +99,11 @@ export default function ReceptionConfirmation() {
         await logAudit('CONFIRMACAO_ENTREGA', 'solicitacoes_retirada', request.id, {
             aluno_nome: request.aluno.nome_completo,
             responsavel_nome: request.responsavel?.nome_completo,
+            liberado_sala_por: (request as any).liberado_sala_por_nome || undefined,
+            liberado_recepcao_por: operatorName || undefined,
+            acao: 'ENTREGA_CONCLUIDA',
             horario: new Date().toISOString()
-        }, undefined, request.aluno.escola_id);
+        }, user?.id, request.aluno.escola_id);
 
         navigate('/recepcao/busca');
     }

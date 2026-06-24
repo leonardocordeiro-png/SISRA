@@ -19,6 +19,7 @@ type PickupRequest = {
     tempo_espera_segundos?: number;
     mensagem_sala?: string;
     mensagem_recepcao?: string;
+    liberado_sala_por_nome?: string | null;
     latitude?: number;
     longitude?: number;
     distancia_estimada_metros?: number;
@@ -29,6 +30,13 @@ export default function WithdrawalQueue() {
     const { user, escolaId } = useAuth();
     const toast = useToast();
     const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>([]);
+    const [operatorName, setOperatorName] = useState<string>('');
+
+    useEffect(() => {
+        if (!user?.id) return;
+        supabase.from('usuarios').select('nome').eq('id', user.id).maybeSingle()
+            .then(({ data }) => { setOperatorName(data?.nome || user.email || 'Recepção'); });
+    }, [user?.id]);
 
     const fetchPending = async () => {
         if (!escolaId) return;
@@ -40,6 +48,7 @@ export default function WithdrawalQueue() {
                 horario_solicitacao,
                 mensagem_recepcao,
                 mensagem_sala,
+                liberado_sala_por_nome,
                 aluno:alunos (
                     id,
                     nome_completo,
@@ -71,6 +80,7 @@ export default function WithdrawalQueue() {
                 responsavel: item.responsavel,
                 mensagem_recepcao: item.mensagem_recepcao,
                 mensagem_sala: item.mensagem_sala,
+                liberado_sala_por_nome: item.liberado_sala_por_nome,
                 distancia_estimada_metros: item.distancia_estimada_metros,
                 status_geofence: item.status_geofence
             })));
@@ -79,6 +89,7 @@ export default function WithdrawalQueue() {
 
     const markAsAtReception = async (pickupId: string) => {
         try {
+            const pickup = pendingPickups.find(p => p.id === pickupId);
             const { error } = await supabase
                 .from('solicitacoes_retirada')
                 .update({
@@ -92,7 +103,14 @@ export default function WithdrawalQueue() {
                 'CONFIRMACAO_ENTREGA',
                 'solicitacoes_retirada',
                 pickupId,
-                { status_anterior: 'LIBERADO', acao: 'CHEGOU_NA_PORTARIA' },
+                {
+                    status_anterior: 'LIBERADO',
+                    acao: 'CHEGOU_NA_PORTARIA',
+                    aluno_nome: pickup?.aluno?.nome_completo,
+                    responsavel_nome: pickup?.responsavel?.nome_completo,
+                    liberado_sala_por: pickup?.liberado_sala_por_nome || undefined,
+                    liberado_recepcao_por: operatorName || undefined,
+                },
                 user?.id,
                 escolaId || undefined
             );
@@ -106,6 +124,7 @@ export default function WithdrawalQueue() {
 
     const finalizePickup = async (pickupId: string) => {
         try {
+            const pickup = pendingPickups.find(p => p.id === pickupId);
             const { error } = await supabase
                 .from('solicitacoes_retirada')
                 .update({
@@ -121,7 +140,14 @@ export default function WithdrawalQueue() {
                 'CONFIRMACAO_ENTREGA',
                 'solicitacoes_retirada',
                 pickupId,
-                { status_anterior: 'CONFIRMADO', acao: 'ENTREGA_CONCLUIDA' },
+                {
+                    status_anterior: 'CONFIRMADO',
+                    acao: 'ENTREGA_CONCLUIDA',
+                    aluno_nome: pickup?.aluno?.nome_completo,
+                    responsavel_nome: pickup?.responsavel?.nome_completo,
+                    liberado_sala_por: pickup?.liberado_sala_por_nome || undefined,
+                    liberado_recepcao_por: operatorName || undefined,
+                },
                 user?.id,
                 escolaId || undefined
             );

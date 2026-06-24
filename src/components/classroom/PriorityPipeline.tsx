@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { User as UserIcon, Check, Search, ArrowDownNarrowWide, Clock, ChevronDown, ChevronUp, MapPin, Building2, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import { logAudit } from '../../lib/audit';
 
 interface Aluno {
     id: string;
@@ -34,6 +35,7 @@ interface PriorityPipelineProps {
     onSelectRequest: (request: RequestItem) => void;
     onQueueChange?: (requests: RequestItem[]) => void;
     userId: string;
+    operatorName?: string;
     escolaId?: string;
 }
 
@@ -46,6 +48,7 @@ export default function PriorityPipeline({
     onSelectRequest,
     onQueueChange,
     userId,
+    operatorName,
     escolaId
 }: PriorityPipelineProps) {
     const toast = useToast();
@@ -128,17 +131,31 @@ export default function PriorityPipeline({
     async function handleLiberarTodos() {
         if (requests.length === 0) return;
 
-        const ids = requests.map(r => r.id);
+        const liberados = [...requests];
+        const ids = liberados.map(r => r.id);
+        const nomeOperador = operatorName || 'Operador da sala';
 
         const { error } = await supabase
             .from('solicitacoes_retirada')
             .update({
                 status: 'LIBERADO',
                 horario_liberacao: new Date().toISOString(),
+                liberado_sala_por: userId || null,
+                liberado_sala_por_nome: nomeOperador,
             })
             .in('id', ids);
 
         if (!error) {
+            liberados.forEach(req => {
+                logAudit('LIBERACAO_SALA', 'solicitacoes_retirada', req.id, {
+                    aluno_nome: req.aluno?.nome_completo,
+                    turma: req.aluno?.turma,
+                    sala: req.aluno?.sala,
+                    responsavel_nome: req.responsavel?.nome_completo,
+                    liberado_sala_por: nomeOperador,
+                    lote: true,
+                }, userId, escolaId);
+            });
             fetchRequests();
             toast.success('Todos os alunos liberados com sucesso!');
         } else {

@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import PriorityPipeline from '../../components/classroom/PriorityPipeline';
 import { useToast } from '../../components/ui/Toast';
+import { logAudit } from '../../lib/audit';
 
 type PickupRequest = {
     id: string;
@@ -125,6 +126,7 @@ export default function ClassroomDashboard() {
     const [sendingNote, setSendingNote]       = useState(false);
     const [confirmPending, setConfirmPending] = useState<'AGUARDAR' | 'RECUSAR' | null>(null);
     const [escolaId, setEscolaId]             = useState<string | undefined>();
+    const [operatorName, setOperatorName]     = useState<string>('');
     const [mounted, setMounted]               = useState(false);
     const [emergencyAlert, setEmergencyAlert] = useState<{ title: string; message: string } | null>(null);
 
@@ -141,10 +143,11 @@ export default function ClassroomDashboard() {
 
     useEffect(() => {
         if (!user) return;
-        supabase.from('usuarios').select('turma_atribuida, sala_atribuida, escola_id')
+        supabase.from('usuarios').select('nome, turma_atribuida, sala_atribuida, escola_id')
             .eq('id', user.id).single()
             .then(({ data }) => {
                 if (data?.escola_id) setEscolaId(data.escola_id);
+                setOperatorName(data?.nome || user.email || 'Operador da sala');
                 if (data?.sala_atribuida) {
                     setSelectedClass(data.sala_atribuida === 'TODAS' ? 'TODAS' : data.sala_atribuida);
                 } else if (data?.turma_atribuida) {
@@ -214,12 +217,27 @@ export default function ClassroomDashboard() {
     const handleResponse = async (requestId: string, action: 'LIBERAR' | 'AGUARDAR' | 'RECUSAR') => {
         const statusMap = { LIBERAR: 'LIBERADO', AGUARDAR: 'AGUARDANDO', RECUSAR: 'CANCELADO' };
         const msgMap    = { LIBERAR: 'Aluno liberado com sucesso!', AGUARDAR: 'Solicitação colocada em espera.', RECUSAR: 'Solicitação rejeitada e removida.' };
+        const isLiberar = action === 'LIBERAR';
         const { error } = await supabase.from('solicitacoes_retirada')
-            .update({ status: statusMap[action], horario_liberacao: action === 'LIBERAR' ? new Date().toISOString() : null })
+            .update({
+                status: statusMap[action],
+                horario_liberacao: isLiberar ? new Date().toISOString() : null,
+                ...(isLiberar ? { liberado_sala_por: user?.id, liberado_sala_por_nome: operatorName } : {}),
+            })
             .eq('id', requestId);
         if (error) { toast.error('Erro ao atualizar status', error.message); }
         else {
             toast.success('Sucesso', msgMap[action]);
+            if (isLiberar) {
+                const req = requests.find(r => r.id === requestId) || (activeRequest?.id === requestId ? activeRequest : null);
+                logAudit('LIBERACAO_SALA', 'solicitacoes_retirada', requestId, {
+                    aluno_nome: req?.aluno?.nome_completo,
+                    turma: req?.aluno?.turma,
+                    sala: req?.aluno?.sala,
+                    responsavel_nome: req?.responsavel?.nome_completo,
+                    liberado_sala_por: operatorName,
+                }, user?.id, escolaId);
+            }
             if ((action === 'RECUSAR' || action === 'AGUARDAR') && activeRequest?.id === requestId)
                 setActiveRequest(null);
         }
@@ -410,6 +428,7 @@ export default function ClassroomDashboard() {
             }}>
                 <PriorityPipeline
                     userId={user?.id || ''}
+                    operatorName={operatorName}
                     selectedClass={selectedClass}
                     activeRequestId={activeRequest?.id}
                     onSelectRequest={req => setActiveRequest(req as any)}
