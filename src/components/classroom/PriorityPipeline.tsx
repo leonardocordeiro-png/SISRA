@@ -275,7 +275,6 @@ export default function PriorityPipeline({
                 <div className="flex-1 min-w-0">
                     <p
                         className={`font-black uppercase italic tracking-tighter leading-snug mb-1.5 text-sm ${isActive ? 'text-slate-950' : 'text-white'}`}
-                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                     >
                         {req.aluno.nome_completo}
                     </p>
@@ -358,7 +357,7 @@ export default function PriorityPipeline({
     };
 
     return (
-        <div className="w-full md:w-[400px] border-b md:border-b-0 md:border-r border-white/10 bg-slate-950/40 backdrop-blur-3xl flex flex-col z-20 shrink-0 relative overflow-hidden">
+        <div className="w-full h-full md:w-[400px] border-b md:border-b-0 md:border-r border-white/10 bg-slate-950/40 backdrop-blur-3xl flex flex-col z-20 shrink-0 relative overflow-hidden">
 
             {/* Mobile toggle bar */}
             <button

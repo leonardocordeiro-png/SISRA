@@ -290,7 +290,6 @@ export default function WithdrawalQueue() {
                                 <div className="flex-1 min-w-0 overflow-hidden">
                                     <p
                                         className="font-black text-white leading-snug uppercase italic tracking-tighter text-sm group-hover:text-emerald-400 transition-colors mb-1"
-                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                                     >{pickup.aluno.nome_completo}</p>
                                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                                         <div className="flex flex-wrap items-center gap-1.5">
