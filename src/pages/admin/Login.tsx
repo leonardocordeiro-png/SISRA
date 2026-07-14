@@ -378,48 +378,7 @@ export default function AdminLogin() {
                     </form>
                 </GlassPanel>
 
-                {/* ── Footer — two glass badges ───────────────────────────── */}
-                <div
-                    className="sisra-adm-footer"
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 16, width: '100%',
-                    }}
-                >
-                    <GlassPanel
-                        outerStyle={{ flex: 1 }}
-                        innerStyle={{
-                            padding: '12px 20px',
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            fontSize: 11, color: TEXT_MUTED,
-                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
-                        }}
-                    >
-                        <Settings style={{ width: 13, height: 13, color: GOLD, flexShrink: 0 }} />
-                        <div>
-                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Ambiente Seguro</div>
-                            <div>SSL Integrado</div>
-                        </div>
-                    </GlassPanel>
 
-                    <GlassPanel
-                        outerStyle={{ flex: 1 }}
-                        innerStyle={{
-                            padding: '12px 20px',
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            fontSize: 11, color: TEXT_MUTED,
-                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
-                        }}
-                    >
-                        <Wifi style={{ width: 13, height: 13, color: GOLD, flexShrink: 0 }} />
-                        <div>
-                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Suporte Técnico</div>
-                            <div style={{ color: '#fff' }}>admin@lasalle.org.br</div>
-                        </div>
-                    </GlassPanel>
-                </div>
             </div>
         </div>
     );
