@@ -248,121 +248,113 @@ export default function WithdrawalQueue() {
                     const minutosNaFila = Math.floor((Date.now() - new Date(pickup.horario_solicitacao).getTime()) / 60000);
 
                     return (
-                        <div key={pickup.id} className="group relative p-4 bg-[#020617]/40 rounded-3xl border border-white/5 hover:border-emerald-500/40 hover:bg-[#020617]/60 transition-all duration-500 shadow-xl">
+                        <div key={pickup.id} className="group relative p-3 lg:pr-4 bg-[#020617]/40 rounded-[1.5rem] border border-white/5 hover:border-emerald-500/40 hover:bg-[#020617]/60 transition-all duration-300 flex flex-col lg:flex-row lg:items-center gap-4 shadow-lg">
                             {/* Scanning effect on hover */}
                             <div className="absolute inset-x-0 h-[1px] bg-emerald-500/20 blur-[1px] top-0 opacity-0 group-hover:opacity-100 animate-scan pointer-events-none"></div>
 
-                            {/* Barra de posição na fila */}
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-[11px] font-black text-white shadow-inner">
-                                        {posicao}
-                                    </div>
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">#{posicao} na fila</span>
+                            {/* Posição e Tempo - lado esquerdo (Compacto) */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <div className="w-8 h-8 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center text-[11px] font-black text-white shadow-inner">
+                                    {posicao}
                                 </div>
-                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-600 uppercase tracking-wide">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{chegouHora}</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{chegouHora}</span>
                                     {minutosNaFila > 0 && (
-                                        <span className={`ml-1 ${minutosNaFila > 10 ? 'text-amber-400' : 'text-slate-600'}`}>
-                                            · {minutosNaFila}min
+                                        <span className={`text-[9px] font-black uppercase tracking-wider ${minutosNaFila > 10 ? 'text-amber-400' : 'text-slate-600'}`}>
+                                            {minutosNaFila}m
                                         </span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-3 mb-4">
-                                {/* Photo */}
+                            {/* Foto e Info Aluno */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="relative shrink-0">
-                                    <div className="w-14 h-14 bg-[#020617] rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 shadow-2xl">
+                                    <div className="w-10 h-10 bg-[#020617] rounded-xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-300">
                                         {pickup.aluno.foto_url ? (
                                             <img src={pickup.aluno.foto_url} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-slate-700">
-                                                <UserIcon className="w-7 h-7" />
+                                                <UserIcon className="w-5 h-5" />
                                             </div>
                                         )}
                                     </div>
-                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-[#020617] rounded-full animate-pulse shadow-lg"></div>
                                 </div>
 
-                                {/* Info + badge */}
-                                <div className="flex-1 min-w-0 overflow-hidden">
-                                    <p
-                                        className="font-black text-white leading-snug uppercase italic tracking-tighter text-sm group-hover:text-emerald-400 transition-colors mb-1"
-                                    >{pickup.aluno.nome_completo}</p>
-                                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            <p className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest leading-none">{pickup.aluno.turma}</p>
-                                            <div className="w-1 h-1 bg-white/10 rounded-full shrink-0"></div>
-                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">SALA {pickup.aluno.sala}</p>
-                                        </div>
-                                        <div className="shrink-0">
+                                <div className="flex-1 min-w-0 overflow-hidden flex flex-col justify-center">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-black text-white leading-snug uppercase italic tracking-tighter text-[13px] truncate group-hover:text-emerald-400 transition-colors">
+                                            {pickup.aluno.nome_completo}
+                                        </p>
+                                        <div className="shrink-0 scale-90 origin-left">
                                             <StatusBadge status={pickup.status} />
                                         </div>
                                     </div>
-
-                                    {pickup.distancia_estimada_metros && (
-                                        <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xl border backdrop-blur-md transition-all duration-500 ${isAtDoor ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 animate-pulse' :
-                                            isNear ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-slate-500'
-                                            }`}>
-                                            <MapPin className={`w-3 h-3 shrink-0 ${isAtDoor ? 'animate-bounce' : ''}`} />
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">
-                                                {isAtDoor ? 'NA RECEPÇÃO' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
-                                                {' '}({pickup.distancia_estimada_metros}m)
-                                            </span>
+                                    
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-[9px] font-black text-emerald-500/80 uppercase tracking-widest truncate">{pickup.aluno.turma.split(' - ')[0]}</p>
+                                            <div className="w-1 h-1 bg-white/10 rounded-full shrink-0"></div>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">SALA {pickup.aluno.sala}</p>
                                         </div>
-                                    )}
+                                        
+                                        {pickup.distancia_estimada_metros && (
+                                            <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg border backdrop-blur-md transition-all duration-500 ${isAtDoor ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 animate-pulse' :
+                                                isNear ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/10 text-slate-500'
+                                                }`}>
+                                                <MapPin className={`w-2.5 h-2.5 shrink-0 ${isAtDoor ? 'animate-bounce' : ''}`} />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.2em]">
+                                                    {isAtDoor ? 'RECEPÇÃO' : isNear ? 'CHEGANDO' : 'A CAMINHO'}
+                                                    {' '}({pickup.distancia_estimada_metros}m)
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {pickup.mensagem_sala && (
-                                <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500 backdrop-blur-md">
-                                    <MessageSquare className="w-4 h-4 text-rose-500 shrink-0 mt-0.5 animate-pulse" />
-                                    <p className="text-[10px] font-black text-rose-400 uppercase italic leading-tight tracking-tight">
-                                        NOTA: "{pickup.mensagem_sala}"
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="space-y-2.5">
-                                {pickup.status === 'LIBERADO' ? (
-                                    <div className="flex flex-col gap-2.5 relative">
-                                        <button
-                                            onClick={() => markAsAtReception(pickup.id)}
-                                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all duration-500 shadow-lg shadow-blue-500/20 group/btn active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden"
-                                        >
-                                            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
-                                            <Clock className="w-4 h-4 relative z-10" /> <span className="relative z-10">Confirmar Recepção</span>
-                                        </button>
-                                        <button
-                                            onClick={() => resetMissingStudent(pickup.id)}
-                                            className="w-full py-3 bg-white/5 border border-white/10 text-rose-500/70 hover:text-rose-500 hover:bg-rose-500/10 rounded-2xl font-black text-[9px] uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 group/btn_alt"
-                                        >
-                                            <AlertCircle className="w-3.5 h-3.5 group-hover/btn_alt:rotate-12 transition-transform" /> ALUNO AUSENTE
-                                        </button>
-                                    </div>
-                                ) : pickup.status === 'CONFIRMADO' ? (
-                                    <div className="flex flex-col gap-2.5">
-                                        <button
-                                            onClick={() => finalizePickup(pickup.id)}
-                                            className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-[#020617] rounded-2xl font-black text-xs uppercase tracking-[0.4em] transition-all duration-500 shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 relative overflow-hidden"
-                                        >
-                                            <div className="absolute inset-0 bg-white/20 translate-y-full hover:translate-y-0 transition-transform duration-500"></div>
-                                            <Check className="w-5 h-5 relative z-10" /> <span className="relative z-10">ENTREGAR AGORA</span>
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col gap-3 p-4 bg-white/[0.02] border border-white/5 rounded-2xl opacity-60">
-                                        <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                                            <div className="bg-gradient-to-r from-emerald-500 to-blue-500 h-full w-1/3 animate-[shimmer_2s_infinite_linear]"></div>
-                                        </div>
-                                        <div className="flex items-center justify-center gap-3 text-slate-500">
-                                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] italic">Procedimento em Curso</span>
-                                        </div>
+                            {/* Mensagem e Ações */}
+                            <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 shrink-0">
+                                {pickup.mensagem_sala && (
+                                    <div className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2 max-w-[200px] truncate" title={pickup.mensagem_sala}>
+                                        <MessageSquare className="w-3.5 h-3.5 text-rose-500 shrink-0 animate-pulse" />
+                                        <p className="text-[9px] font-black text-rose-400 uppercase italic truncate">
+                                            {pickup.mensagem_sala}
+                                        </p>
                                     </div>
                                 )}
+
+                                <div className="flex gap-2 shrink-0 justify-end">
+                                    {pickup.status === 'LIBERADO' ? (
+                                        <>
+                                            <button
+                                                onClick={() => markAsAtReception(pickup.id)}
+                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all duration-300 shadow-md flex items-center gap-2"
+                                            >
+                                                <Clock className="w-3.5 h-3.5" /> CONFIRMAR
+                                            </button>
+                                            <button
+                                                onClick={() => resetMissingStudent(pickup.id)}
+                                                className="px-3 py-2 bg-white/5 border border-white/10 text-rose-500/70 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-2"
+                                                title="Aluno Ausente"
+                                            >
+                                                <AlertCircle className="w-3.5 h-3.5" />
+                                            </button>
+                                        </>
+                                    ) : pickup.status === 'CONFIRMADO' ? (
+                                        <button
+                                            onClick={() => finalizePickup(pickup.id)}
+                                            className="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-[#020617] rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-300 shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+                                        >
+                                            <Check className="w-4 h-4" /> ENTREGAR
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2 px-3 py-2 opacity-50">
+                                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-ping" />
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Aguardando</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     );
