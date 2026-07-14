@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Loader2, Eye, EyeOff, Lock, Mail, AlertCircle, ChevronRight, Settings, Wifi, Menu } from 'lucide-react';
+import { Shield, Loader2, Eye, EyeOff, Lock, Mail, AlertCircle, ChevronRight, Menu } from 'lucide-react';
 import { logAudit } from '../../lib/audit';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
