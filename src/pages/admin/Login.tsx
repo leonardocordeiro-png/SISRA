@@ -179,10 +179,10 @@ export default function AdminLogin() {
                                 fontSize: 11, fontWeight: 600, color: GOLD,
                                 textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3,
                             }}>
-                                Manifesto de Comando — Portal Administrativo Seguro
+                                SISRA — Sistema de Gestão Escolar
                             </div>
-                            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0, fontStyle: 'italic' }}>
-                                Manifesto de Comando
+                            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>
+                                Portal Administrativo
                             </h1>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -215,7 +215,7 @@ export default function AdminLogin() {
                             width: 16, height: 16, color: CYAN,
                             filter: `drop-shadow(0 0 6px rgba(71,184,255,0.5))`,
                         }} />
-                        Manifesto de Comando&nbsp;
+                        Portal Administrativo&nbsp;
                         <strong style={{ color: '#fff' }}>V{__APP_VERSION__}</strong>
                     </div>
 
@@ -224,15 +224,15 @@ export default function AdminLogin() {
                         <h2 style={{
                             fontSize: 22, fontWeight: 800, color: GOLD,
                             marginBottom: 6, textTransform: 'uppercase',
-                            fontStyle: 'italic', letterSpacing: 1,
+                            letterSpacing: 1,
                         }}>
-                            Manifesto de Comando
+                            Portal Administrativo
                         </h2>
                         <p style={{
                             fontSize: 11, color: TEXT_MUTED,
                             textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
                         }}>
-                            • Portal Administrativo Seguro
+                            • SISRA Gestão Escolar
                         </p>
                     </div>
 
@@ -250,7 +250,7 @@ export default function AdminLogin() {
                                 color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
                             }}>
                                 <Mail style={{ width: 13, height: 13, color: CYAN }} />
-                                Identidade de Acesso
+                                E-mail de Acesso
                             </div>
                             <div style={{
                                 borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)',
@@ -282,7 +282,7 @@ export default function AdminLogin() {
                                 color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
                             }}>
                                 <Lock style={{ width: 13, height: 13, color: CYAN }} />
-                                Senha de Segurança
+                                Senha
                             </div>
                             <div style={{
                                 borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)',
@@ -370,7 +370,7 @@ export default function AdminLogin() {
                                             borderRadius: '50%', background: CYAN, flexShrink: 0,
                                         }}
                                     />
-                                    <span>Iniciar Acesso</span>
+                                    <span>Entrar no Sistema</span>
                                     <ChevronRight style={{ width: 16, height: 16, color: CYAN }} />
                                 </>
                             )}
@@ -399,8 +399,8 @@ export default function AdminLogin() {
                     >
                         <Settings style={{ width: 13, height: 13, color: GOLD, flexShrink: 0 }} />
                         <div>
-                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Protocolo de Acesso</div>
-                            <div>V{__APP_VERSION__} // Criptografado</div>
+                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Ambiente Seguro</div>
+                            <div>SSL Integrado</div>
                         </div>
                     </GlassPanel>
 
@@ -415,8 +415,8 @@ export default function AdminLogin() {
                     >
                         <Wifi style={{ width: 13, height: 13, color: GOLD, flexShrink: 0 }} />
                         <div>
-                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Nó do Sistema</div>
-                            <div style={{ color: '#fff' }}>SISRA_ADMIN_NODE_01</div>
+                            <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>Suporte Técnico</div>
+                            <div style={{ color: '#fff' }}>admin@lasalle.org.br</div>
                         </div>
                     </GlassPanel>
                 </div>
