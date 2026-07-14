@@ -200,7 +200,6 @@ export default function PriorityPipeline({
         const isWaiting  = req.status === 'AGUARDANDO';
         const isEmerg    = req.tipo_solicitacao === 'EMERGENCIA';
         const chegouHora = new Date(req.horario_solicitacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const minutosNaFila = Math.floor((Date.now() - new Date(req.horario_solicitacao).getTime()) / 60000);
 
         // Border color: red for emergency, green for at reception, amber for in transit
         const inactiveBorder = isEmerg
@@ -219,9 +218,9 @@ export default function PriorityPipeline({
             <button
                 key={req.id}
                 onClick={() => onSelectRequest(req)}
-                className={`w-full group relative p-4 rounded-[1.5rem] border-2 transition-all duration-500 flex items-start gap-4 text-left overflow-hidden ${
+                className={`w-full group relative p-3 rounded-[1.25rem] border-2 transition-all duration-300 flex items-center gap-3 text-left overflow-hidden ${
                     isActive
-                        ? 'bg-emerald-500 border-emerald-400 shadow-[0_15px_40px_rgba(16,185,129,0.25)] scale-[1.02] z-10'
+                        ? 'bg-emerald-500 border-emerald-400 shadow-[0_5px_20px_rgba(16,185,129,0.2)] z-10'
                         : `${inactiveBg} ${inactiveBorder} hover:translate-x-1`
                 }`}
             >
@@ -232,35 +231,35 @@ export default function PriorityPipeline({
 
                 {/* Left priority stripe */}
                 {!isActive && (
-                    <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${atRecep ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'}`} />
+                    <div className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full ${atRecep ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'}`} />
                 )}
 
                 {/* Avatar */}
                 <div className="relative shrink-0 ml-1">
-                    <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all duration-500 ${
+                    <div className={`w-10 h-10 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
                         isActive
-                            ? 'border-white/50 scale-110 shadow-lg'
+                            ? 'border-white/50 shadow-md'
                             : atRecep
                                 ? 'border-emerald-500/40 group-hover:border-emerald-400/80'
                                 : 'border-amber-500/30 group-hover:border-amber-400/60'
                     }`}>
                         {req.aluno.foto_url ? (
-                            <img src={req.aluno.foto_url} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                            <img src={req.aluno.foto_url} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                         ) : (
                             <div className={`w-full h-full flex items-center justify-center ${
                                 isActive ? 'bg-emerald-600' : 'bg-slate-900 shadow-inner'
                             }`}>
-                                <UserIcon className={`w-7 h-7 ${
+                                <UserIcon className={`w-5 h-5 ${
                                     isActive ? 'text-white/80' : atRecep ? 'text-emerald-600/50 group-hover:text-emerald-500/70' : 'text-amber-600/40 group-hover:text-amber-500/60'
                                 }`} />
                             </div>
                         )}
                     </div>
 
-                    {/* Position badge — número na fila (sequência global de chegada) */}
-                    <div className={`absolute -top-2 -right-2 w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black border-2 transition-all duration-500 ${
+                    {/* Position badge — número na fila */}
+                    <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black border-2 transition-all duration-300 ${
                         isActive
-                            ? 'bg-white text-emerald-600 border-emerald-600 scale-110 shadow-lg'
+                            ? 'bg-white text-emerald-600 border-emerald-600 shadow-sm'
                             : isEmerg
                                 ? 'bg-red-500 text-white border-red-400'
                                 : atRecep
@@ -272,82 +271,66 @@ export default function PriorityPipeline({
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
-                    <p
-                        className={`font-black uppercase italic tracking-tighter leading-snug mb-1.5 text-sm ${isActive ? 'text-slate-950' : 'text-white'}`}
-                    >
-                        {req.aluno.nome_completo}
-                    </p>
+                <div className="flex-1 min-w-0 flex flex-col justify-center pr-6">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <p className={`font-black uppercase italic tracking-tighter text-[13px] truncate ${isActive ? 'text-slate-950' : 'text-white'}`}>
+                            {req.aluno.nome_completo}
+                        </p>
+                        <span className={`text-[9px] font-bold uppercase tracking-widest shrink-0 ${isActive ? 'text-slate-950/60' : 'text-slate-500'}`}>
+                            {chegouHora}
+                        </span>
+                    </div>
+
                     <div className="flex flex-wrap items-center gap-1.5">
                         {/* EMERGÊNCIA badge */}
                         {isEmerg && (
-                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-red-500/20 border border-red-500/60'}`}>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-red-500/20 border border-red-500/60'}`}>
                                 <AlertTriangle className={`w-2.5 h-2.5 ${isActive ? 'text-slate-950' : 'text-red-400'}`} />
-                                <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-red-400'}`}>Emergência</span>
                             </div>
                         )}
 
                         {/* Turma badge */}
-                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-white/5'}`}>
-                            <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-slate-400'}`}>
-                                {req.aluno.turma}
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-white/5'}`}>
+                            <span className={`text-[8.5px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-slate-400'}`}>
+                                {req.aluno.turma.split(' - ')[0]}
                             </span>
                         </div>
 
                         {/* NA RECEPÇÃO badge — green */}
                         {atRecep && (
-                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md shrink-0 ${
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded shrink-0 ${
                                 isActive
                                     ? 'bg-slate-950/20'
                                     : 'bg-emerald-500/15 border border-emerald-500/40'
                             }`}>
                                 <Building2 className={`w-2.5 h-2.5 ${isActive ? 'text-slate-950' : 'text-emerald-400'}`} />
-                                <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-emerald-400'}`}>
-                                    NA RECEPÇÃO
-                                </span>
                                 {!isActive && <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse ml-0.5" />}
                             </div>
                         )}
 
                         {/* EM DESLOCAMENTO badge — amber */}
                         {!atRecep && (
-                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md shrink-0 ${
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded shrink-0 ${
                                 isActive
                                     ? 'bg-slate-950/20'
                                     : 'bg-amber-500/10 border border-amber-500/30'
                             }`}>
                                 <MapPin className={`w-2.5 h-2.5 ${isActive ? 'text-slate-950' : 'text-amber-400'}`} />
-                                <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-amber-400'}`}>
-                                    EM DESLOCAMENTO
-                                </span>
                             </div>
                         )}
 
                         {/* EM ESPERA badge */}
                         {isWaiting && (
-                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-blue-500/10 border border-blue-500/20'}`}>
-                                <Clock className={`w-3 h-3 ${isActive ? 'text-slate-950' : 'text-blue-400'}`} />
-                                <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-slate-950' : 'text-blue-400'}`}>EM ESPERA</span>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded shrink-0 ${isActive ? 'bg-slate-950/20' : 'bg-blue-500/10 border border-blue-500/20'}`}>
+                                <Clock className={`w-2.5 h-2.5 ${isActive ? 'text-slate-950' : 'text-blue-400'}`} />
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Horário de chegada + tempo na fila */}
-                <div className={`mt-2 flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest ${isActive ? 'text-slate-950/60' : 'text-slate-600'}`}>
-                    <Clock className="w-3 h-3 shrink-0" />
-                    <span>Chegou {chegouHora}</span>
-                    {minutosNaFila > 0 && (
-                        <>
-                            <span className="opacity-40">·</span>
-                            <span className={minutosNaFila > 10 ? 'text-amber-400' : ''}>{minutosNaFila}min na fila</span>
-                        </>
-                    )}
-                </div>
-
                 {isActive && (
-                    <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-500">
-                        <div className="w-8 h-8 rounded-full bg-slate-950/20 flex items-center justify-center">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-in fade-in zoom-in duration-300">
+                        <div className="w-6 h-6 rounded-full bg-slate-950/10 flex items-center justify-center">
                             <div className="w-1.5 h-1.5 bg-slate-950 rounded-full animate-ping" />
                         </div>
                     </div>
