@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader2, ChevronRight, AlertCircle, School, Settings, Wifi } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ChevronRight, AlertCircle, School } from 'lucide-react';
 
 // ── Design tokens (mirrors the reference HTML) ────────────────────────────────
 const GOLD        = '#c79e61';
@@ -174,13 +174,13 @@ export default function ReceptionLogin() {
                                     marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1,
                                     fontStyle: 'italic',
                                 }}>
-                                    Terminal Recepção
+                                    Recepção
                                 </h1>
                                 <p style={{
                                     fontSize: 12, color: TEXT_MUTED,
                                     textTransform: 'uppercase', fontWeight: 600, letterSpacing: 2,
                                 }}>
-                                    • Portal Administrativo Seguro
+                                    • SISRA — Gestão Escolar
                                 </p>
                             </div>
                             <p style={{
@@ -228,13 +228,13 @@ export default function ReceptionLogin() {
                                 marginBottom: 6, textTransform: 'uppercase',
                                 fontStyle: 'italic', letterSpacing: 1,
                             }}>
-                                Acesso Seguro
+                                Acesso ao Sistema
                             </h2>
                             <p style={{
                                 fontSize: 11, color: TEXT_MUTED,
                                 textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
                             }}>
-                                • Autenticação de Operador
+                                • Insira suas credenciais
                             </p>
                         </div>
 
@@ -252,7 +252,7 @@ export default function ReceptionLogin() {
                                     color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
                                 }}>
                                     <Mail style={{ width: 13, height: 13, color: GREEN }} />
-                                    Identidade de Acesso
+                                    E-mail de Acesso
                                 </div>
                                 <div style={{
                                     borderRadius: 8,
@@ -286,7 +286,7 @@ export default function ReceptionLogin() {
                                     color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
                                 }}>
                                     <Lock style={{ width: 13, height: 13, color: GREEN }} />
-                                    Senha de Segurança
+                                    Senha
                                 </div>
                                 <div style={{
                                     borderRadius: 8,
@@ -366,7 +366,7 @@ export default function ReceptionLogin() {
                                     <Loader2 className="animate-spin" style={{ width: 20, height: 20 }} />
                                 ) : (
                                     <>
-                                        <span>Iniciar Acesso</span>
+                                        <span>Entrar no Sistema</span>
                                         <ChevronRight style={{ width: 17, height: 17 }} />
                                     </>
                                 )}
@@ -386,35 +386,12 @@ export default function ReceptionLogin() {
                             >
                                 Esqueceu sua senha?
                             </a>
-                            <span>v{__APP_VERSION__} | La Salle, Cheguei!</span>
+                            <span>v{__APP_VERSION__}</span>
                         </div>
                     </div>
                 </GlassPanel>
 
-                {/* ── Global footer — spans both columns ──────────────────── */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                    <div
-                        className="sisra-recep-footer"
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            fontSize: 11, color: TEXT_MUTED,
-                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
-                            padding: '0 4px',
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Settings style={{ width: 13, height: 13, color: GOLD }} />
-                            <span>Sistema de Retirada SISRA // V{__APP_VERSION__}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Wifi style={{ width: 13, height: 13, color: GOLD }} />
-                            <span>Status do Link:</span>
-                            <span style={{ color: GREEN }}>Estável</span>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     );

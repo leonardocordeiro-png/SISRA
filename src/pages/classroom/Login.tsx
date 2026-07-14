@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import { useNavigate } from 'react-router-dom';
-import { School, Loader2, Eye, EyeOff, Mail, KeyRound, AlertCircle, ChevronRight, Shield, Settings, Wifi } from 'lucide-react';
+import { School, Loader2, Eye, EyeOff, Mail, KeyRound, AlertCircle, ChevronRight, Shield } from 'lucide-react';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const GOLD       = '#c79e61';
@@ -190,7 +190,7 @@ export default function ClassroomLogin() {
                                     fontSize: 12, color: TEXT_MUTED,
                                     textTransform: 'uppercase', fontWeight: 600, letterSpacing: 2,
                                 }}>
-                                    • Acesso Seguro
+                                    • SISRA — Gestão Escolar
                                 </p>
                             </div>
                             <p style={{
@@ -237,13 +237,13 @@ export default function ClassroomLogin() {
                                 marginBottom: 6, textTransform: 'uppercase',
                                 fontStyle: 'italic', letterSpacing: 1,
                             }}>
-                                Portal SCT
+                                Acesso ao Sistema
                             </h2>
                             <p style={{
                                 fontSize: 11, color: TEXT_MUTED,
                                 textTransform: 'uppercase', fontWeight: 600, letterSpacing: 3,
                             }}>
-                                • Ambiente de Liberação
+                                • Insira suas credenciais
                             </p>
                         </div>
 
@@ -260,7 +260,7 @@ export default function ClassroomLogin() {
                                     color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
                                 }}>
                                     <Mail style={{ width: 13, height: 13, color: CYAN }} />
-                                    E-mail da Sala
+                                    E-mail de Acesso
                                 </div>
                                 <div style={{
                                     borderRadius: 8,
@@ -294,7 +294,7 @@ export default function ClassroomLogin() {
                                     color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1,
                                 }}>
                                     <KeyRound style={{ width: 13, height: 13, color: CYAN }} />
-                                    Senha Digital
+                                    Senha
                                 </div>
                                 <div style={{
                                     borderRadius: 8,
@@ -384,7 +384,7 @@ export default function ClassroomLogin() {
                                                 borderRadius: '50%', background: CYAN, flexShrink: 0,
                                             }}
                                         />
-                                        <span>Conectar Terminal</span>
+                                        <span>Entrar no Sistema</span>
                                         <ChevronRight style={{ width: 16, height: 16, color: CYAN }} />
                                     </>
                                 )}
@@ -405,36 +405,13 @@ export default function ClassroomLogin() {
                                 Esqueceu sua senha?
                             </a>
                             <span style={{ fontSize: 10, opacity: 0.7 }}>
-                                v{__APP_VERSION__} | La Salle, Cheguei! | Intelligent School Ecosystem
+                                v{__APP_VERSION__}
                             </span>
                         </div>
                     </div>
                 </GlassPanel>
 
-                {/* ── Global footer — spans both columns ──────────────────── */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                    <div
-                        className="sisra-sala-footer"
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            fontSize: 11, color: TEXT_MUTED,
-                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1,
-                            padding: '0 4px',
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Settings style={{ width: 13, height: 13, color: GOLD }} />
-                            <span>Sistema de Retirada SISRA // V{__APP_VERSION__}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Wifi style={{ width: 13, height: 13, color: GOLD }} />
-                            <span>Status do Link:</span>
-                            <span style={{ color: GREEN }}>Estável</span>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     );
