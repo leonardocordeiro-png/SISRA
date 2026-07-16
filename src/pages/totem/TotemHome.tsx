@@ -152,35 +152,7 @@ export default function TotemHome() {
                     </div>
                 </div>
 
-                {/* Right: 3 method status boxes */}
-                <div style={{ display: 'flex', gap: 12 }}>
-                    {methods.map(({ icon: Icon, label, num, accent, glow }) => (
-                        <GlassPanel key={num} outerStyle={{ boxShadow: `0 4px 16px rgba(0,0,0,0.35)` }}>
-                            <div style={{
-                                padding: '10px 16px',
-                                display: 'flex', alignItems: 'center', gap: 10,
-                            }}>
-                                <div style={{
-                                    width: 32, height: 32, borderRadius: '50%',
-                                    background: `radial-gradient(circle, rgba(22,28,44,0.3), rgba(10,15,31,0.9))`,
-                                    border: `1px solid ${accent}`,
-                                    boxShadow: `0 0 14px ${glow}`,
-                                    display: 'grid', placeItems: 'center', flexShrink: 0,
-                                }}>
-                                    <Icon style={{ width: 15, height: 15, color: accent }} />
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: 8, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>
-                                        Opção {num}
-                                    </div>
-                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>
-                                        {label}
-                                    </div>
-                                </div>
-                            </div>
-                        </GlassPanel>
-                    ))}
-                </div>
+                {/* Right: Removed method status boxes */}
             </header>
 
             {/* ── MAIN ────────────────────────────────────────────────────────── */}
